@@ -122,13 +122,18 @@ const TaskItem = ({ task }: { task: Task }) => {
 
 const CyberpunkAvatarPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-primary transition-colors">
-    <circle cx="50" cy="35" r="15" stroke="currentColor" strokeWidth="3"/>
-    <path d="M25 70C25 55 35 50 50 50C65 50 75 55 75 70Z" stroke="currentColor" strokeWidth="3" fill="currentColor" fillOpacity="0.2"/>
-    <line x1="50" y1="50" x2="50" y2="60" stroke="currentColor" strokeWidth="2"/>
-    <path d="M40 80H60" stroke="currentColor" strokeWidth="2" />
-     {/* Simple data lines */}
-    <line x1="30" y1="25" x2="70" y2="25" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2"/>
-    <line x1="20" y1="40" x2="80" y2="40" stroke="currentColor" strokeWidth="1" strokeDasharray="3 1"/>
+    <defs>
+      <linearGradient id="cyberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style={{stopColor: 'hsl(var(--primary))', stopOpacity:0.5}} />
+        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.5}} />
+      </linearGradient>
+    </defs>
+    <path d="M50 25 C40 25 30 35 30 45 C30 55 40 65 50 65 C60 65 70 55 70 45 C70 35 60 25 50 25 Z" stroke="hsl(var(--primary))" strokeWidth="2" fill="url(#cyberGrad)" />
+    <path d="M20 90 C20 70 35 60 50 60 C65 60 80 70 80 90 L20 90 Z" stroke="hsl(var(--primary))" strokeWidth="2" fill="hsl(var(--primary) / 0.2)" />
+    {/* Simplified geometric details */}
+    <line x1="40" y1="45" x2="60" y2="45" stroke="hsl(var(--accent))" strokeWidth="1.5" />
+    <circle cx="50" cy="45" r="3" fill="hsl(var(--accent))" />
+    <rect x="45" y="15" width="10" height="5" stroke="hsl(var(--border))" strokeWidth="1" fill="hsl(var(--background))" />
   </svg>
 );
 
@@ -185,7 +190,7 @@ export default function HomePage() {
       <div className="space-y-6">
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-primary/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
-             <div className="avatar-arc-container mb-3 w-[110px] h-[110px]">
+             <div className="avatar-arc-container mb-3 w-[120px] h-[120px]"> {/* Container size matches largest arc */}
                 <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden mx-auto my-auto">
                     {userProfile.avatarUrl ? (
                     <Image 
@@ -205,8 +210,9 @@ export default function HomePage() {
                     <PlusCircle className="h-8 w-8 text-primary neon-icon-primary" />
                     </div>
                 </div>
-                <span className="avatar-static-arc avatar-static-arc-1" style={{ width: '110px', height: '110px', borderColor: 'hsla(var(--primary), 0.6)', transform: 'translate(-50%, -50%) rotate(20deg)', borderTopColor: 'transparent', borderLeftColor: 'transparent' }}></span>
-                <span className="avatar-static-arc avatar-static-arc-2" style={{ width: '120px', height: '120px', borderColor: 'hsla(var(--accent), 0.5)', transform: 'translate(-50%, -50%) rotate(-35deg)', borderBottomColor: 'transparent', borderRightColor: 'transparent'  }}></span>
+                <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '110px', height: '110px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(20deg)', borderLeftColor: 'transparent', borderBottomColor: 'transparent' }}></span>
+                <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: '120px', height: '120px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-35deg)', borderTopColor: 'transparent', borderBottomColor: 'transparent'  }}></span>
+                <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '100px', height: '100px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(50deg)', borderTopColor: 'transparent', borderRightColor: 'transparent' }}></span>
              </div>
               <input type="file" ref={userImageInputRef} onChange={handleUserAvatarChange} accept="image/*" className="hidden" />
 
@@ -285,3 +291,5 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
+
+    

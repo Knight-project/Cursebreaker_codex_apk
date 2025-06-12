@@ -12,12 +12,20 @@ import { Swords, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const CyberpunkRivalPlaceholder = () => (
-  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
-    <circle cx="50" cy="35" r="15" stroke="currentColor" strokeWidth="3" fill="hsl(var(--destructive) / 0.2)" />
-    <path d="M30 75C30 60 40 55 50 55C60 55 70 60 70 75Z" stroke="currentColor" strokeWidth="3" fill="currentColor" fillOpacity="0.3"/>
-    <line x1="50" y1="55" x2="50" y2="65" stroke="currentColor" strokeWidth="2"/>
-    <rect x="40" y="20" width="20" height="5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.4" />
-    <path d="M45 80H55" stroke="currentColor" strokeWidth="2" />
+   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
+    <defs>
+      <linearGradient id="cyberRivalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.5}} />
+        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.5}} />
+      </linearGradient>
+    </defs>
+    <path d="M50 25 C40 25 30 35 30 45 C30 55 40 65 50 65 C60 65 70 55 70 45 C70 35 60 25 50 25 Z" stroke="hsl(var(--destructive))" strokeWidth="2" fill="url(#cyberRivalGrad)" />
+    <path d="M20 90 C20 70 35 60 50 60 C65 60 80 70 80 90 L20 90 Z" stroke="hsl(var(--destructive))" strokeWidth="2" fill="hsl(var(--destructive) / 0.2)" />
+    {/* Simplified geometric details */}
+    <line x1="42" y1="42" x2="58" y2="58" stroke="hsl(var(--accent))" strokeWidth="1.5" />
+    <line x1="42" y1="58" x2="58" y2="42" stroke="hsl(var(--accent))" strokeWidth="1.5" />
+    <circle cx="50" cy="45" r="2" fill="hsl(var(--background))" />
+     <rect x="45" y="15" width="10" height="5" stroke="hsl(var(--border))" strokeWidth="1" fill="hsl(var(--background))" transform="rotate(15 50 17.5)" />
   </svg>
 );
 
@@ -82,7 +90,7 @@ export default function RivalPage() {
       <div className="space-y-6">
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-destructive/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
-            <div className="avatar-arc-container mb-3 w-[130px] h-[130px]"> {/* Adjusted for 120px avatar + arcs */}
+            <div className="avatar-arc-container mb-3 w-[150px] h-[150px]"> {/* Container size matches largest arc */}
               <div onClick={handleRivalAvatarClick} className="cursor-pointer relative group w-[120px] h-[120px] border-2 border-destructive p-0.5 rounded-full overflow-hidden mx-auto my-auto">
                 {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
                   <Image 
@@ -102,10 +110,10 @@ export default function RivalPage() {
                   <PlusCircle className="h-10 w-10 text-destructive neon-icon" />
                 </div>
               </div>
-              {/* Static Arcs for Rival */}
-              <span className="avatar-static-arc avatar-static-arc-1" style={{ width: '130px', height: '130px', borderColor: 'hsla(var(--destructive), 0.6)', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
-              <span className="avatar-static-arc avatar-static-arc-2" style={{ width: '140px', height: '140px', borderColor: 'hsla(var(--accent), 0.5)', transform: 'translate(-50%, -50%) rotate(-40deg)', borderLeftColor: 'transparent', borderTopColor: 'transparent' }}></span>
-              <span className="avatar-static-arc avatar-static-arc-3" style={{ width: '150px', height: '150px', borderColor: 'hsla(var(--border), 0.3)', transform: 'translate(-50%, -50%) rotate(60deg)', borderTopColor: 'transparent',  borderRightColor: 'transparent' }}></span>
+              {/* Animated Arcs for Rival */}
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '130px', height: '130px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: '140px', height: '140px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-40deg)', borderLeftColor: 'transparent', borderTopColor: 'transparent' }}></span>
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '150px', height: '150px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(60deg)', borderTopColor: 'transparent',  borderRightColor: 'transparent' }}></span>
             </div>
             <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
             
@@ -146,3 +154,5 @@ export default function RivalPage() {
     </AppWrapper>
   );
 }
+
+    

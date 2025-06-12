@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -59,15 +60,13 @@
   }
 }
 
-/* Removed horizontal scanning line animation */
-
 @keyframes line-scan-vertical {
   0% { 
     transform: translateY(0%); 
     opacity: 0; 
   }
   10%, 80% { 
-    opacity: 0.5; /* Slightly increased opacity */
+    opacity: 0.5; 
   }
   100% { 
     transform: translateY(calc(100vh + 100%)); 
@@ -82,7 +81,7 @@
   opacity: 0; 
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  box-shadow: 0 0 3px hsla(var(--primary), 0.8), 0 0 6px hsla(var(--primary), 0.6); /* Slightly more glow */
+  box-shadow: 0 0 3px hsla(var(--primary), 0.8), 0 0 6px hsla(var(--primary), 0.6); 
 }
 
 
@@ -127,20 +126,18 @@
 }
 
 @keyframes orbit-rotate {
-  0% { transform: translate(-50%, -50%) rotate(0deg); } /* Ensure transform is part of animation keyframes */
+  0% { transform: translate(-50%, -50%) rotate(0deg); } 
   100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .orbit-arc {
-  position: absolute; /* Ensures commonArcStyles' position:absolute is not overridden by mistake */
-  /* top, left, transform will be applied via inline styles for centering */
+  position: absolute; 
   border-radius: 50%;
   pointer-events: none;
   border-style: solid;
   border-width: 1.5px; 
   border-color: transparent;
-  /* Base animation applied to all arcs, individual delays in X classes */
-  animation-name: orbit-rotate; /* Reference the keyframe */
+  animation-name: orbit-rotate; 
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
@@ -161,33 +158,38 @@
   border-bottom-color: hsla(var(--primary), 0.9);
 }
 
-/* Static arcs for avatars */
+/* Arcs for avatars */
 .avatar-arc-container {
   position: relative;
-  display: inline-block; /* Or block, depending on layout needs */
+  display: inline-block; 
 }
 
-.avatar-static-arc {
+.avatar-orbiting-arc {
   position: absolute;
-  top: 50%;
-  left: 50%;
   border-radius: 50%;
-  border-style: solid;
-  border-width: 2px;
   pointer-events: none;
+  border-style: solid;
+  border-width: 2px; 
+  border-color: transparent; 
+  animation-name: orbit-rotate;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
-.avatar-static-arc-1 {
-  /* Example: outer arc */
-  border-color: hsla(var(--primary), 0.5);
-  /* transform needs to be set based on parent size, example below */
+.avatar-orbiting-arc-type1 {
+  animation-duration: 7s;
+  animation-delay: 0s;
+  border-top-color: hsla(var(--primary), 0.7); 
+}
+.avatar-orbiting-arc-type2 {
+  animation-duration: 9s;
+  animation-delay: -2s;
+  border-right-color: hsla(var(--accent), 0.6); 
+}
+.avatar-orbiting-arc-type3 {
+  animation-duration: 11s;
+  animation-delay: -4s;
+  border-left-color: hsla(var(--border), 0.5); 
 }
 
-.avatar-static-arc-2 {
-  /* Example: inner arc */
-  border-color: hsla(var(--accent), 0.4);
-   /* transform needs to be set based on parent size, example below */
-}
-.avatar-static-arc-3 {
-  border-color: hsla(var(--border), 0.3);
-}
+    
