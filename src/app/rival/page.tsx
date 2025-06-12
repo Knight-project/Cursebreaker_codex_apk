@@ -1,3 +1,4 @@
+
 // src/app/rival/page.tsx
 'use client';
 import AppWrapper from '@/components/layout/AppWrapper';
@@ -34,7 +35,7 @@ export default function RivalPage() {
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-destructive/30">
           <CardHeader className="items-center text-center">
             <Image 
-              src={rival.avatarUrl || `https://placehold.co/150x150.png`} 
+              src={rival.avatarUrl || `https://placehold.co/100x100.png`} 
               alt={`${rival.name}'s Avatar`}
               width={120} 
               height={120} 
@@ -88,3 +89,4 @@ export default function RivalPage() {
     </AppWrapper>
   );
 }
+
