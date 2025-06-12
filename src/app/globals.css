@@ -35,8 +35,8 @@
 
     --radius: 0.5rem; /* Slightly rounded corners */
 
-    --neon-glow-primary: 0 0 1px hsl(var(--primary)), 0 0 2px hsl(var(--primary));
-    --neon-glow-accent: 0 0 1px hsl(var(--accent)), 0 0 2px hsl(var(--accent));
+    --neon-glow-primary: 0 0 2px hsl(var(--primary)), 0 0 5px hsl(var(--primary)), 0 0 8px hsla(var(--primary), 0.7);
+    --neon-glow-accent: 0 0 2px hsl(var(--accent)), 0 0 5px hsl(var(--accent)), 0 0 8px hsla(var(--accent), 0.7);
     
     --chart-1: 180 100% 50%; /* Cyan */
     --chart-2: 30 100% 55%;  /* Orange */
@@ -81,7 +81,7 @@
   opacity: 0;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  box-shadow: 0 0 1px hsla(var(--primary), 0.5), 0 0 2px hsla(var(--primary), 0.3); /* Subtle glow for particles */
+  box-shadow: 0 0 2px hsla(var(--primary), 0.8), 0 0 4px hsla(var(--primary), 0.6), 0 0 7px hsla(var(--primary), 0.4); /* Enhanced glow for particles */
 }
 
 
@@ -169,7 +169,7 @@
   border-radius: 50%;
   pointer-events: none;
   border-style: solid;
-  border-width: 2px;
+  border-width: 2px; /* Slightly thicker border for avatar arcs */
   border-color: transparent;
   animation-name: orbit-rotate;
   animation-timing-function: linear;
