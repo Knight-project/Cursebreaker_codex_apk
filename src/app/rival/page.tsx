@@ -8,24 +8,22 @@ import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
 import React, { useEffect, useState, useRef, type ChangeEvent } from 'react';
 import Image from 'next/image';
-import { Swords, PlusCircle } from 'lucide-react'; 
+import { Swords, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const CyberpunkRivalPlaceholder = () => (
-   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
+  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
     <defs>
       <linearGradient id="cyberRivalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.5}} />
-        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.5}} />
+        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.3}} />
+        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.3}} />
       </linearGradient>
     </defs>
-    <path d="M50 25 C40 25 30 35 30 45 C30 55 40 65 50 65 C60 65 70 55 70 45 C70 35 60 25 50 25 Z" stroke="hsl(var(--destructive))" strokeWidth="2" fill="url(#cyberRivalGrad)" />
-    <path d="M20 90 C20 70 35 60 50 60 C65 60 80 70 80 90 L20 90 Z" stroke="hsl(var(--destructive))" strokeWidth="2" fill="hsl(var(--destructive) / 0.2)" />
-    {/* Simplified geometric details */}
-    <line x1="42" y1="42" x2="58" y2="58" stroke="hsl(var(--accent))" strokeWidth="1.5" />
-    <line x1="42" y1="58" x2="58" y2="42" stroke="hsl(var(--accent))" strokeWidth="1.5" />
-    <circle cx="50" cy="45" r="2" fill="hsl(var(--background))" />
-     <rect x="45" y="15" width="10" height="5" stroke="hsl(var(--border))" strokeWidth="1" fill="hsl(var(--background))" transform="rotate(15 50 17.5)" />
+    <circle cx="50" cy="40" r="22" stroke="hsl(var(--destructive))" strokeWidth="2" fill="url(#cyberRivalGrad)" />
+    <path d="M35 75 Q50 95 65 75 Q50 85 35 75" stroke="hsl(var(--destructive))" strokeWidth="1.5" fill="hsl(var(--destructive) / 0.1)" />
+    <rect x="45" y="8" width="10" height="8" fill="hsl(var(--border))" opacity="0.5" transform="rotate(10 50 12)"/>
+    <line x1="38" y1="45" x2="48" y2="40" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
+    <line x1="62" y1="45" x2="52" y2="40" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
   </svg>
 );
 
@@ -57,7 +55,7 @@ export default function RivalPage() {
   const handleRivalAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { 
+      if (file.size > 2 * 1024 * 1024) {
         toast({
           title: "Image too large",
           description: "Please select an image smaller than 2MB.",
@@ -81,7 +79,7 @@ export default function RivalPage() {
       reader.readAsDataURL(file);
     }
      if (event.target) {
-      event.target.value = ""; 
+      event.target.value = "";
     }
   };
 
@@ -90,14 +88,14 @@ export default function RivalPage() {
       <div className="space-y-6">
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-destructive/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
-            <div className="avatar-arc-container mb-3 w-[150px] h-[150px]"> {/* Container size matches largest arc */}
-              <div onClick={handleRivalAvatarClick} className="cursor-pointer relative group w-[120px] h-[120px] border-2 border-destructive p-0.5 rounded-full overflow-hidden mx-auto my-auto">
-                {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
-                  <Image 
-                    src={rival.avatarUrl} 
+            <div className="avatar-arc-container mb-3 w-[150px] h-[150px]">
+              <div onClick={handleRivalAvatarClick} className="cursor-pointer relative group w-[120px] h-[120px] border-2 border-destructive p-0.5 rounded-full overflow-hidden"> {/* Removed mx-auto my-auto */}
+                {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? ( // Check specifically for the old placeholder
+                  <Image
+                    src={rival.avatarUrl}
                     alt={`${rival.name}'s Avatar`}
-                    width={120} 
-                    height={120} 
+                    width={120}
+                    height={120}
                     className="object-cover w-full h-full rounded-full"
                     data-ai-hint="fantasy character"
                   />
@@ -110,13 +108,12 @@ export default function RivalPage() {
                   <PlusCircle className="h-10 w-10 text-destructive neon-icon" />
                 </div>
               </div>
-              {/* Animated Arcs for Rival */}
               <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '130px', height: '130px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
               <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: '140px', height: '140px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-40deg)', borderLeftColor: 'transparent', borderTopColor: 'transparent' }}></span>
               <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '150px', height: '150px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(60deg)', borderTopColor: 'transparent',  borderRightColor: 'transparent' }}></span>
             </div>
             <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
-            
+
             <CardTitle className="font-headline text-2xl text-destructive uppercase tracking-wider">{rival.name}</CardTitle>
             <CardDescription className="text-muted-foreground text-xs font-code">{rival.rankName} - {rival.subRank}</CardDescription>
           </CardHeader>
@@ -126,13 +123,13 @@ export default function RivalPage() {
                 <span className="text-foreground uppercase">Rival EXP</span>
                 <span className="text-destructive">{rival.currentExpInSubRank} / {rival.expToNextSubRank}</span>
               </div>
-              <Progress 
-                value={(rival.currentExpInSubRank / rival.expToNextSubRank) * 100} 
-                className="h-2 bg-secondary mx-4" 
-                indicatorClassName="bg-destructive" 
+              <Progress
+                value={(rival.currentExpInSubRank / rival.expToNextSubRank) * 100}
+                className="h-2 bg-secondary mx-4"
+                indicatorClassName="bg-destructive"
               />
             </div>
-            
+
             <Card className="bg-background/50 border-border mt-4 rounded-md">
               <CardHeader className="p-3">
                 <CardTitle className="text-xs font-medium text-center text-muted-foreground uppercase font-headline tracking-wider">Transmission from Rival</CardTitle>
@@ -154,5 +151,3 @@ export default function RivalPage() {
     </AppWrapper>
   );
 }
-
-    

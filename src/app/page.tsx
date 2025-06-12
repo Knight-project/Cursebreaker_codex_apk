@@ -36,7 +36,7 @@ const AddTaskForm = ({ onTaskAdd }: { onTaskAdd: () => void }) => {
     setDifficulty('Moderate');
     setAttribute('None');
     toast({ title: "Success", description: "Task added!" });
-    onTaskAdd(); 
+    onTaskAdd();
   };
 
   return (
@@ -96,7 +96,7 @@ const TaskItem = ({ task }: { task: Task }) => {
       toast({ title: "Task Completed!", description: `+EXP for ${task.name}`});
     }
   };
-  
+
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete "${task.name}"?`)) {
       deleteTask(task.id);
@@ -123,17 +123,15 @@ const TaskItem = ({ task }: { task: Task }) => {
 const CyberpunkAvatarPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-primary transition-colors">
     <defs>
-      <linearGradient id="cyberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style={{stopColor: 'hsl(var(--primary))', stopOpacity:0.5}} />
-        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.5}} />
+      <linearGradient id="cyberGradUser" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style={{stopColor: 'hsl(var(--primary))', stopOpacity:0.3}} />
+        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.3}} />
       </linearGradient>
     </defs>
-    <path d="M50 25 C40 25 30 35 30 45 C30 55 40 65 50 65 C60 65 70 55 70 45 C70 35 60 25 50 25 Z" stroke="hsl(var(--primary))" strokeWidth="2" fill="url(#cyberGrad)" />
-    <path d="M20 90 C20 70 35 60 50 60 C65 60 80 70 80 90 L20 90 Z" stroke="hsl(var(--primary))" strokeWidth="2" fill="hsl(var(--primary) / 0.2)" />
-    {/* Simplified geometric details */}
-    <line x1="40" y1="45" x2="60" y2="45" stroke="hsl(var(--accent))" strokeWidth="1.5" />
-    <circle cx="50" cy="45" r="3" fill="hsl(var(--accent))" />
-    <rect x="45" y="15" width="10" height="5" stroke="hsl(var(--border))" strokeWidth="1" fill="hsl(var(--background))" />
+    <circle cx="50" cy="40" r="20" stroke="hsl(var(--primary))" strokeWidth="2" fill="url(#cyberGradUser)" />
+    <path d="M30 70 Q50 90 70 70 Q50 80 30 70" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="hsl(var(--primary) / 0.1)" />
+    <rect x="46" y="5" width="8" height="10" fill="hsl(var(--border))" opacity="0.5"/>
+    <line x1="40" y1="42" x2="60" y2="42" stroke="hsl(var(--accent))" strokeWidth="1"/>
   </svg>
 );
 
@@ -143,7 +141,7 @@ export default function HomePage() {
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const { toast } = useToast();
   const userImageInputRef = useRef<HTMLInputElement>(null);
-  
+
   useEffect(() => {
     setActiveTab('home');
   }, [setActiveTab]);
@@ -157,7 +155,7 @@ export default function HomePage() {
   const handleUserAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { 
+      if (file.size > 2 * 1024 * 1024) {
         toast({
           title: "Image too large",
           description: "Please select an image smaller than 2MB.",
@@ -181,7 +179,7 @@ export default function HomePage() {
       reader.readAsDataURL(file);
     }
     if (event.target) {
-      event.target.value = ""; 
+      event.target.value = "";
     }
   };
 
@@ -190,14 +188,14 @@ export default function HomePage() {
       <div className="space-y-6">
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-primary/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
-             <div className="avatar-arc-container mb-3 w-[120px] h-[120px]"> {/* Container size matches largest arc */}
-                <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden mx-auto my-auto">
+             <div className="avatar-arc-container mb-3 w-[120px] h-[120px]">
+                <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden"> {/* Removed mx-auto my-auto */}
                     {userProfile.avatarUrl ? (
-                    <Image 
-                        src={userProfile.avatarUrl} 
+                    <Image
+                        src={userProfile.avatarUrl}
                         alt="Your Avatar"
-                        width={100} 
-                        height={100} 
+                        width={100}
+                        height={100}
                         className="object-cover w-full h-full rounded-full"
                         data-ai-hint="user avatar"
                     />
@@ -218,7 +216,7 @@ export default function HomePage() {
 
             <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">{userProfile.rankName} - {userProfile.subRank}</CardTitle>
             <CardDescription className="text-muted-foreground mt-1 text-xs font-code italic">{userProfile.customQuote}</CardDescription>
-            
+
             <Link href="/stats" passHref className="mt-3 w-full sm:w-auto">
               <Button variant="outline" className="w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4">
                 <User className="mr-2 h-4 w-4" />
@@ -256,7 +254,7 @@ export default function HomePage() {
               <AddTaskForm onTaskAdd={() => setIsAddTaskOpen(false)} />
             </DialogContent>
           </Dialog>
-          
+
           <Link href="/graphs" passHref>
             <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-muted-foreground/50 text-muted-foreground hover:bg-muted hover:text-foreground font-headline uppercase text-xs">
               <BarChart2 className="h-6 w-6 mb-1" />
@@ -291,5 +289,3 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
-
-    

@@ -5,43 +5,43 @@
 
 @layer base {
   :root {
-    --background: 220 30% 8%; 
+    --background: 220 30% 8%;
     --foreground: 180 10% 85%;
 
-    --card: hsla(220, 25%, 12%, 0.85); 
+    --card: hsla(220, 25%, 12%, 0.85);
     --card-foreground: 180 10% 85%;
 
     --popover: hsla(220, 25%, 12%, 0.85);
     --popover-foreground: 180 10% 85%;
 
-    --primary: 180 100% 50%; 
+    --primary: 180 100% 50%;
     --primary-foreground: 220 30% 8%;
 
-    --secondary: 220 20% 20%; 
+    --secondary: 220 20% 20%;
     --secondary-foreground: 180 10% 75%;
 
     --muted: 220 15% 30%;
     --muted-foreground: 180 10% 55%;
 
-    --accent: 30 100% 55%; 
+    --accent: 30 100% 55%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 80% 55%; 
+    --destructive: 0 80% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 180 70% 40%; 
-    --input: 220 25% 15%; 
-    --ring: 180 100% 60%; 
+    --border: 180 70% 40%;
+    --input: 220 25% 15%;
+    --ring: 180 100% 60%;
 
     --radius: 0.5rem;
 
-    --neon-glow-primary: 0 0 3px hsl(var(--primary)), 0 0 5px hsl(var(--primary));
-    --neon-glow-accent: 0 0 3px hsl(var(--accent)), 0 0 5px hsl(var(--accent));
+    --neon-glow-primary: 0 0 2px hsl(var(--primary)), 0 0 3px hsl(var(--primary));
+    --neon-glow-accent: 0 0 2px hsl(var(--accent)), 0 0 3px hsl(var(--accent));
     
     --chart-1: 180 100% 50%;
-    --chart-2: 30 100% 55%; 
+    --chart-2: 30 100% 55%;
     --chart-3: 300 100% 60%;
-    --chart-4: 60 100% 50%; 
+    --chart-4: 60 100% 50%;
     --chart-5: 120 100% 50%;
   }
 }
@@ -56,32 +56,32 @@
     background-image:
       linear-gradient(to right, hsla(var(--border), 0.08) 1px, transparent 1px),
       linear-gradient(to bottom, hsla(var(--border), 0.08) 1px, transparent 1px);
-    background-size: 25px 25px; 
+    background-size: 25px 25px;
   }
 }
 
 @keyframes line-scan-vertical {
-  0% { 
-    transform: translateY(0%); 
-    opacity: 0; 
+  0% {
+    transform: translateY(0%);
+    opacity: 0;
   }
-  10%, 80% { 
-    opacity: 0.5; 
+  10%, 80% {
+    opacity: 0.5;
   }
-  100% { 
-    transform: translateY(calc(100vh + 100%)); 
-    opacity: 0; 
+  100% {
+    transform: translateY(calc(100vh + 100%));
+    opacity: 0;
   }
 }
 
 
 .particle {
   position: absolute;
-  background: hsl(var(--primary)); 
-  opacity: 0; 
+  background: hsl(var(--primary));
+  opacity: 0;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  box-shadow: 0 0 3px hsla(var(--primary), 0.8), 0 0 6px hsla(var(--primary), 0.6); 
+  box-shadow: 0 0 2px hsla(var(--primary), 0.7), 0 0 4px hsla(var(--primary), 0.5);
 }
 
 
@@ -126,18 +126,18 @@
 }
 
 @keyframes orbit-rotate {
-  0% { transform: translate(-50%, -50%) rotate(0deg); } 
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
   100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .orbit-arc {
-  position: absolute; 
+  position: absolute;
   border-radius: 50%;
   pointer-events: none;
   border-style: solid;
-  border-width: 1.5px; 
+  border-width: 1.5px;
   border-color: transparent;
-  animation-name: orbit-rotate; 
+  animation-name: orbit-rotate;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
@@ -149,7 +149,7 @@
 }
 .orbit-arc-2 {
   animation-duration: 6s;
-  animation-delay: -1.5s; 
+  animation-delay: -1.5s;
   border-right-color: hsla(var(--primary), 0.9);
 }
 .orbit-arc-3 {
@@ -158,10 +158,10 @@
   border-bottom-color: hsla(var(--primary), 0.9);
 }
 
-/* Arcs for avatars */
 .avatar-arc-container {
   position: relative;
-  display: inline-block; 
+  display: grid; /* Changed from inline-block */
+  place-items: center; /* Added */
 }
 
 .avatar-orbiting-arc {
@@ -169,8 +169,8 @@
   border-radius: 50%;
   pointer-events: none;
   border-style: solid;
-  border-width: 2px; 
-  border-color: transparent; 
+  border-width: 2px;
+  border-color: transparent;
   animation-name: orbit-rotate;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
@@ -179,17 +179,15 @@
 .avatar-orbiting-arc-type1 {
   animation-duration: 7s;
   animation-delay: 0s;
-  border-top-color: hsla(var(--primary), 0.7); 
+  border-top-color: hsla(var(--accent), 0.7); /* Changed to accent */
 }
 .avatar-orbiting-arc-type2 {
   animation-duration: 9s;
   animation-delay: -2s;
-  border-right-color: hsla(var(--accent), 0.6); 
+  border-right-color: hsla(var(--accent), 0.6); /* Confirmed accent */
 }
 .avatar-orbiting-arc-type3 {
   animation-duration: 11s;
   animation-delay: -4s;
-  border-left-color: hsla(var(--border), 0.5); 
+  border-left-color: hsla(var(--accent), 0.5); /* Changed to accent */
 }
-
-    
