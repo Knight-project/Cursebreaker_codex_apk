@@ -27,8 +27,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Import Inter font */}
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        {/* Import Uncial Antiqua for brand */}
-        <link href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&display=swap" rel="stylesheet" />
+        {/* "Uncial Antiqua" import removed */}
       </head>
       <body className="font-body antialiased">
         <AppProvider>

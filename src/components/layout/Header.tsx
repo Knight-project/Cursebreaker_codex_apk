@@ -40,7 +40,7 @@ const Header = () => {
         // If it was a foreign language, switch back to English
         return 0; 
       });
-    }, 15000); // 15 seconds for foreign, 15 for english = 30 second cycle for one pair
+    }, 300000); // 5 minutes for foreign, 5 for english = 10 minute cycle for one pair
 
     return () => clearInterval(intervalId);
   }, [currentLangIndex]);
@@ -67,11 +67,7 @@ const Header = () => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link
           href="/"
-          className={cn(
-            "text-xl font-brand brand-gradient hover:opacity-80 transition-opacity",
-             // Apply Noto Sans for CJK/RU if detected, otherwise Uncial Antiqua
-            (languageCycles[currentLangIndex].lang !== 'en') && "font-sans" // Fallback for non-Latin
-          )}
+          className="text-xl font-brand brand-gradient hover:opacity-80 transition-opacity"
         >
           {displayedAppName}
         </Link>
