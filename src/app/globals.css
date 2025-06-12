@@ -191,7 +191,16 @@
 
 .bottom-nav-glow {
   box-shadow:
-    0 -2px 15px hsla(var(--primary), 0.8),
-    0 -5px 35px hsla(var(--primary), 0.7),
-    0 -10px 60px hsla(var(--primary), 0.6);
+    0 -2px 15px hsl(var(--primary)),
+    0 -5px 35px hsl(var(--primary)),
+    0 -10px 60px hsl(var(--primary));
+}
+
+.brand-gradient {
+  @apply bg-gradient-to-r from-primary to-accent;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  text-shadow: 0px 1px 3px hsla(var(--primary-foreground), 0.15);
 }

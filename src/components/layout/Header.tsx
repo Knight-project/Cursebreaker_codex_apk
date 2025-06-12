@@ -14,11 +14,12 @@ const Header = () => {
 
   const pageTitles: { [key: string]: string } = {
     home: "Home Dashboard",
-    timers: "Focus Timers",
+    timers: "Timers & Graphs", // Changed from "Focus Timers"
     rival: "Your Rival",
     journal: "Daily Journal",
     stats: "Character Stats",
-    settings: "Settings"
+    settings: "Settings",
+    graphs: "Data Logs & Trends" // Added for when on the graphs page
   };
   
   const title = pageTitles[activeTab] || APP_NAME;
@@ -32,7 +33,7 @@ const Header = () => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link
           href="/"
-          className="text-xl font-bold font-headline text-primary hover:text-primary/80 transition-colors"
+          className="text-xl font-bold font-headline brand-gradient hover:opacity-80 transition-opacity"
         >
           {APP_NAME}
         </Link>
@@ -40,7 +41,7 @@ const Header = () => {
           {title}
         </h1>
         <Button variant="ghost" size="icon" onClick={handleSettingsClick} aria-label="Settings">
-          <Settings className="h-6 w-6 text-accent neon-icon" />
+          <Settings className="h-7 w-7 text-accent neon-icon" />
         </Button>
       </div>
     </header>
@@ -48,4 +49,3 @@ const Header = () => {
 };
 
 export default Header;
-
