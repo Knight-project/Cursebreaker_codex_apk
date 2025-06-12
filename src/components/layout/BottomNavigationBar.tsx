@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Home, Timer, Users, SettingsIcon, BookOpen } from 'lucide-react';
+import { Home, Timer, Users } from 'lucide-react'; // Removed unused SettingsIcon, BookOpen
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
@@ -15,18 +15,20 @@ const navItems = [
 ];
 
 const OrbitingIconAnimator = ({ children }: { children: React.ReactNode }) => {
-  const orbitSize = 'calc(100% + 12px)'; // Icon size (h-6/w-6 is 24px) + padding
+  // Icon size is 1.5rem (from h-6/w-6). Adding 12px padding for arcs.
+  // 1.5rem is typically 24px. 24px + 12px = 36px orbit diameter.
+  const orbitSize = 'calc(1.5rem + 12px)';
   const arcCommonStyle = {
     width: orbitSize,
     height: orbitSize,
     top: '50%',
     left: '50%',
-    transform: 'translate(-50%, -50%)', // Center arcs on the icon
+    transform: 'translate(-50%, -50%)',
   };
 
   return (
-    <div className="relative inline-flex items-center justify-center">
-      {children}
+    <div className="relative grid place-items-center w-6 h-6"> {/* Explicit size and grid centering */}
+      {children} {/* Children is the <Icon className="h-6 w-6 ..."/> */}
       <span className="orbit-arc orbit-arc-1" style={{ ...arcCommonStyle }}></span>
       <span className="orbit-arc orbit-arc-2" style={{ ...arcCommonStyle }}></span>
       <span className="orbit-arc orbit-arc-3" style={{ ...arcCommonStyle }}></span>
@@ -51,12 +53,13 @@ const BottomNavigationBar = () => {
           const active = isActive(item.key);
           return (
             <Link href={item.href} key={item.label} passHref legacyBehavior>
-              <a 
+              <a
                 onClick={() => setActiveTab(item.key)}
                 className={cn(
                 "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200",
                 active ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}>
+                {/* This div handles the scaling */}
                 <div className={cn("mb-0.5 transition-transform duration-200", active ? "scale-110" : "scale-90")}>
                   {active ? (
                     <OrbitingIconAnimator>
