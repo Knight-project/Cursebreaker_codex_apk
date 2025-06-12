@@ -1,6 +1,6 @@
 import type { Attribute, RankName } from './types';
 
-export const APP_NAME = "Cursebreaker Codex";
+export const APP_NAME = "Cursebreaker_Codex";
 
 export const RANK_NAMES_LIST: RankName[] = [
   "Aether Disciple",
@@ -43,4 +43,3 @@ export const LOCAL_STORAGE_POMODORO_KEY = 'cursebreakerCodexPomodoro';
 export const LOCAL_STORAGE_INTERVAL_TIMER_KEY = 'cursebreakerCodexIntervalTimer';
 
 export const RIVAL_NAMES_POOL = ["Kairos", "Zevik", "Ayen", "Lyra", "Sorin", "Vexia", "Draven"];
-

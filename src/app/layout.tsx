@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Cursebreaker Codex',
-  description: 'Track your habits and break curses of self-doubt with the Cursebreaker Codex.',
+  title: 'Cursebreaker_Codex',
+  description: 'Track your habits and break curses of self-doubt with the Cursebreaker_Codex.',
 };
 
 export default function RootLayout({
@@ -27,6 +27,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Import Inter font */}
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        {/* Import Uncial Antiqua for brand */}
+        <link href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
         <AppProvider>
@@ -37,4 +39,3 @@ export default function RootLayout({
     </html>
   );
 }
-

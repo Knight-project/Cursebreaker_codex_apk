@@ -46,7 +46,7 @@ const BottomNavigationBar = () => {
   const isActive = (itemKey: string) => itemKey === activeTab || (itemKey === 'home' && pathname === '/');
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border z-50 bottom-nav-glow">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border z-50"> {/* Removed bottom-nav-glow */}
       <div className="container mx-auto px-4 h-16 flex justify-around items-center">
         {navItems.map((item) => {
           const Icon = item.icon;

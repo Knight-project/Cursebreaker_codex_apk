@@ -21,6 +21,7 @@ export default {
         body: ['Inter', 'var(--font-inter)', 'sans-serif'],
         headline: ['monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"'],
         code: ['monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"'],
+        brand: ['"Uncial Antiqua"', 'cursive'], // Added brand font
       },
       colors: {
         border: "hsl(var(--border))",
