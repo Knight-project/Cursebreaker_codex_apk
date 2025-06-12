@@ -5,7 +5,7 @@ import React, { createContext, useContext, ReactNode, useState, useEffect, useCa
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute } from '@/lib/types'; // Updated import
 import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS } from '@/lib/types'; // Added INITIAL_INTERVAL_TIMER_SETTINGS
-import { 
+import {
   RANK_NAMES_LIST,
   MAX_SUB_RANKS,
   BASE_EXP_PER_SUBRANK,
@@ -73,7 +73,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [appSettings, setAppSettings] = useLocalStorage<AppSettings>('habitHorizonSettings', INITIAL_APP_SETTINGS);
   const [pomodoroSettings, setPomodoroSettings] = useLocalStorage<PomodoroSettings>('habitHorizonPomodoroSettings', INITIAL_POMODORO_SETTINGS);
   const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSetting[]>('habitHorizonIntervalTimers', INITIAL_INTERVAL_TIMER_SETTINGS); // Key changed, type updated
-  
+
   const [isInitialized, setIsInitialized] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [activeTab, setActiveTabState] = useState('home');
@@ -82,6 +82,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     if (userProfile.customQuote === undefined ) {
        setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
     }
+    // Offensive word filter for customQuote
+    if (userProfile.customQuote?.toLowerCase() === "fuck") {
+      setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
+    }
     if (!rival.name || !RIVAL_NAMES_POOL.includes(rival.name)) {
       setRival(prev => ({
         ...prev,
@@ -89,8 +93,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       }));
     }
     setIsInitialized(true);
-  }, [rival.name, setRival, userProfile.customQuote, setUserProfile]);
-  
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile.customQuote, rival.name]); // Removed setUserProfile and setRival from deps to avoid loop, check logic if issues arise
+
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
   };
@@ -98,7 +103,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const triggerLevelUpAnimation = () => {
     if(appSettings.enableAnimations) {
       setShowLevelUp(true);
-      setTimeout(() => setShowLevelUp(false), 1500); 
+      setTimeout(() => setShowLevelUp(false), 1500);
     }
   };
 
@@ -128,12 +133,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
             newRankName = RANK_NAMES_LIST[currentRankIndex + 1];
           } else {
             newSubRank = MAX_SUB_RANKS;
-            newCurrentExpInSubRank = newExpToNextSubRank; 
+            newCurrentExpInSubRank = newExpToNextSubRank;
           }
         }
         newExpToNextSubRank = calculateExpForNextSubRank(newRankName, newSubRank);
       }
-      
+
       if (leveledUp && isInitialized && appSettings.enableAnimations) {
          triggerLevelUpAnimation();
       }
@@ -156,7 +161,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       const statKey = attribute.toLowerCase() as keyof typeof prev.stats;
       if (!prev.stats[statKey]) return prev; // Should not happen with proper types
       const currentStat = prev.stats[statKey];
-      
+
       let newExp = currentStat.exp + expGainedStat;
       let newLevel = currentStat.level;
       let newExpToNext = currentStat.expToNextLevel;
@@ -186,7 +191,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const newTask: Task = {
       ...taskData,
       id: Date.now().toString() + Math.random().toString(36).substring(2,9),
-      dateAdded: new Date().toISOString().split('T')[0], 
+      dateAdded: new Date().toISOString().split('T')[0],
       isCompleted: false,
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
@@ -212,7 +217,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         const rankIndex = RANK_NAMES_LIST.indexOf(userProfile.rankName as typeof RANK_NAMES_LIST[number]);
         const difficultyMultiplier = TASK_DIFFICULTY_EXP_MULTIPLIER[task.difficulty];
         const rankMultiplier = 1 + (rankIndex * RANK_EXP_SCALING_FACTOR);
-        
+
         const expFromTask = Math.floor(BASE_TASK_EXP * difficultyMultiplier * rankMultiplier);
         grantExp(expFromTask);
 
@@ -220,20 +225,20 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         let attributeAffectedForStatExpForTask: Attribute | undefined = undefined;
 
         if (task.attribute !== "None" && appSettings.autoAssignStatExp && ATTRIBUTES_LIST.includes(task.attribute as typeof ATTRIBUTES_LIST[number])) {
-          const statExp = Math.floor(expFromTask * 0.5); 
+          const statExp = Math.floor(expFromTask * 0.5);
           grantStatExp(task.attribute as Attribute, statExp);
           statExpGainedForTask = statExp;
           attributeAffectedForStatExpForTask = task.attribute;
         }
-        
-        const updatedTask = { 
-          ...task, 
-          isCompleted: true, 
+
+        const updatedTask = {
+          ...task,
+          isCompleted: true,
           dateCompleted: new Date().toISOString().split('T')[0],
           statExpGained: statExpGainedForTask,
           attributeAffectedForStatExp: attributeAffectedForStatExpForTask
         };
-        completedTaskForHistory = { ...updatedTask }; 
+        completedTaskForHistory = { ...updatedTask };
 
         const newTasks = [...prevTasks];
         newTasks[taskIndex] = updatedTask;
@@ -255,7 +260,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   }, [setTasks, userProfile.rankName, grantExp, grantStatExp, appSettings.autoAssignStatExp, setUserProfile]);
-  
+
 
   const getTodaysTasks = useCallback(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -265,10 +270,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateRivalTaunt = useCallback(async () => {
     if (!isInitialized) return;
     try {
-      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; 
+      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5;
       const input: AdaptiveTauntInput = {
         userTaskCompletionRate: userProfile.dailyTaskCompletionPercentage / 100,
-        rivalTaskCompletionRate: rivalTaskCompletionRate, 
+        rivalTaskCompletionRate: rivalTaskCompletionRate,
         userRank: `${userProfile.rankName} (Sub-Rank ${userProfile.subRank})`,
         rivalRank: `${rival.rankName} (Sub-Rank ${rival.subRank})`,
       };
@@ -313,12 +318,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   if (!isInitialized) {
-    return null; 
+    return null;
   }
 
   return (
-    <AppContext.Provider value={{ 
-      userProfile, setUserProfile, 
+    <AppContext.Provider value={{
+      userProfile, setUserProfile,
       tasks, setTasks,
       rival, setRival,
       appSettings, setAppSettings,
@@ -338,4 +343,3 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export default AppProvider;
-

@@ -33,11 +33,7 @@
     --input: 220 25% 12%;
     --ring: 180 100% 60%; /* Cyan for rings */
 
-    --radius: 0.5rem; /* Slightly rounded corners */
-
-    /* Massively increased glow */
-    --neon-glow-primary: 0 0 40px hsl(var(--primary)), 0 0 80px hsl(var(--primary)), 0 0 120px hsla(var(--primary), 0.95), 0 0 160px hsla(var(--primary), 0.85), 0 0 200px hsla(var(--primary), 0.7);
-    --neon-glow-accent: 0 0 40px hsl(var(--accent)), 0 0 80px hsl(var(--accent)), 0 0 120px hsla(var(--accent), 0.95), 0 0 160px hsla(var(--accent), 0.85), 0 0 200px hsla(var(--accent), 0.7);
+    --radius: 0rem; /* Sharp corners */
     
     --chart-1: 180 100% 50%; /* Cyan */
     --chart-2: 30 100% 55%;  /* Orange */
@@ -67,7 +63,7 @@
     opacity: 0;
   }
   10%, 80% {
-    opacity: 0.9; /* Increased opacity for more presence */
+    opacity: 0.9;
   }
   100% {
     transform: translateY(calc(100vh + 100%));
@@ -78,20 +74,22 @@
 
 .particle {
   position: absolute;
-  background: hsl(var(--accent)); /* Changed to accent color */
+  background: hsl(var(--accent));
   opacity: 0;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  /* Massively increased glow, now using accent color */
-  box-shadow: 0 0 25px hsla(var(--accent), 1), 0 0 50px hsla(var(--accent), 0.95), 0 0 75px hsla(var(--accent), 0.9), 0 0 100px hsla(var(--accent), 0.8);
+  /* Massively increased glow, accent color, full opacity */
+  box-shadow: 0 0 35px hsl(var(--accent)), 0 0 70px hsl(var(--accent)), 0 0 105px hsl(var(--accent)), 0 0 140px hsl(var(--accent));
 }
 
 
 .neon-icon {
-  filter: drop-shadow(0 0 15px hsl(var(--accent))) drop-shadow(0 0 30px hsla(var(--accent), 0.8)) drop-shadow(0 0 45px hsla(var(--accent), 0.6));
+  /* Massively increased drop-shadow glow */
+  filter: drop-shadow(0 0 25px hsl(var(--accent))) drop-shadow(0 0 50px hsl(var(--accent))) drop-shadow(0 0 75px hsl(var(--accent)));
 }
 .neon-icon-primary {
- filter: drop-shadow(0 0 15px hsl(var(--primary))) drop-shadow(0 0 30px hsla(var(--primary), 0.8)) drop-shadow(0 0 45px hsla(var(--primary), 0.6));
+  /* Massively increased drop-shadow glow */
+ filter: drop-shadow(0 0 25px hsl(var(--primary))) drop-shadow(0 0 50px hsl(var(--primary))) drop-shadow(0 0 75px hsl(var(--primary)));
 }
 
 .magical-transition {
@@ -162,8 +160,8 @@
 
 .avatar-arc-container {
   position: relative;
-  display: grid; 
-  place-items: center; 
+  display: grid;
+  place-items: center;
 }
 
 .avatar-orbiting-arc {
@@ -182,23 +180,23 @@
 .avatar-orbiting-arc-type1 {
   animation-duration: 7s;
   animation-delay: 0s;
-  border-top-color: hsl(var(--accent)); 
+  border-top-color: hsl(var(--accent));
 }
 .avatar-orbiting-arc-type2 {
   animation-duration: 9s;
   animation-delay: -2s;
-  border-right-color: hsl(var(--accent)); 
+  border-right-color: hsl(var(--accent));
 }
 .avatar-orbiting-arc-type3 {
   animation-duration: 11s;
   animation-delay: -4s;
-  border-left-color: hsl(var(--accent)); 
+  border-left-color: hsl(var(--accent));
 }
 
 .bottom-nav-glow {
-  /* Combines existing shadow-top like effect with a more pronounced primary glow */
+  /* Massively increased glow */
   box-shadow:
-    0 -1px 2px hsla(var(--border), 0.15), /* Subtle top border shadow */
-    0 -3px 15px -1px hsla(var(--primary), 0.45), /* Main glow, slightly softer */
-    0 -2px 8px -2px hsla(var(--primary), 0.3); /* Inner, softer glow */
+    0 -2px 15px hsla(var(--primary), 0.8),
+    0 -5px 35px hsla(var(--primary), 0.7),
+    0 -10px 60px hsla(var(--primary), 0.6);
 }
