@@ -33,7 +33,7 @@
     --input: 220 25% 12%;
     --ring: 180 100% 60%; /* Cyan for rings */
 
-    --radius: 0rem; /* Sharp corners */
+    --radius: 0.5rem; /* Rounded corners */
     
     --chart-1: 180 100% 50%; /* Cyan */
     --chart-2: 30 100% 55%;  /* Orange */
@@ -78,17 +78,14 @@
   opacity: 0;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  /* Massively increased glow, accent color, full opacity */
   box-shadow: 0 0 35px hsl(var(--accent)), 0 0 70px hsl(var(--accent)), 0 0 105px hsl(var(--accent)), 0 0 140px hsl(var(--accent));
 }
 
 
 .neon-icon {
-  /* Massively increased drop-shadow glow */
   filter: drop-shadow(0 0 25px hsl(var(--accent))) drop-shadow(0 0 50px hsl(var(--accent))) drop-shadow(0 0 75px hsl(var(--accent)));
 }
 .neon-icon-primary {
-  /* Massively increased drop-shadow glow */
  filter: drop-shadow(0 0 25px hsl(var(--primary))) drop-shadow(0 0 50px hsl(var(--primary))) drop-shadow(0 0 75px hsl(var(--primary)));
 }
 
@@ -145,17 +142,17 @@
 .orbit-arc-1 {
   animation-duration: 6s;
   animation-delay: 0s;
-  border-top-color: hsla(var(--primary), 0.9);
+  border-top-color: hsl(var(--accent));
 }
 .orbit-arc-2 {
   animation-duration: 6s;
   animation-delay: -1.5s;
-  border-right-color: hsla(var(--primary), 0.9);
+  border-right-color: hsl(var(--accent));
 }
 .orbit-arc-3 {
   animation-duration: 6s;
   animation-delay: -3s;
-  border-bottom-color: hsla(var(--primary), 0.9);
+  border-bottom-color: hsl(var(--accent));
 }
 
 .avatar-arc-container {
@@ -176,7 +173,6 @@
   animation-iteration-count: infinite;
 }
 
-/* Ensure these use a very solid orange */
 .avatar-orbiting-arc-type1 {
   animation-duration: 7s;
   animation-delay: 0s;
@@ -194,7 +190,6 @@
 }
 
 .bottom-nav-glow {
-  /* Massively increased glow */
   box-shadow:
     0 -2px 15px hsla(var(--primary), 0.8),
     0 -5px 35px hsla(var(--primary), 0.7),
