@@ -1,4 +1,5 @@
 
+
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
 
 export interface Task {
@@ -64,7 +65,8 @@ export interface PomodoroSettings {
   sessionsBeforeLongBreak: number;
 }
 
-export interface IntervalTimerSettings {
+export interface IntervalTimerSetting { // Renamed from IntervalTimerSettings
+  id: string;
   windowStart: string; // HH:mm
   windowEnd: string; // HH:mm
   repeatInterval: number; // minutes
@@ -130,3 +132,6 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
   rivalDifficulty: "Normal",
   autoAssignStatExp: true,
 };
+
+// This will now be an array of IntervalTimerSetting
+export const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSetting[] = [];

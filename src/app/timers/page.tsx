@@ -1,9 +1,10 @@
+
 // src/app/timers/page.tsx
 'use client';
 import AppWrapper from '@/components/layout/AppWrapper';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Settings2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Settings2, PlusCircle, Trash2, Edit3, BellRing, BellOff } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Progress } from '@/components/ui/progress';
@@ -14,12 +15,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter
+  DialogFooter,
+  DialogClose
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import type { IntervalTimerSetting } from '@/lib/types';
+import { Switch } from '@/components/ui/switch';
 
-// Pomodoro Timer Component
+
 const PomodoroTimer = () => {
   const { pomodoroSettings, setPomodoroSettings, grantExp, appSettings } = useApp();
   const { toast } = useToast();
@@ -54,7 +58,7 @@ const PomodoroTimer = () => {
     } else if (isActive && timeLeft === 0) {
       setIsActive(false);
       if (mode === 'focus') {
-        const expGained = appSettings.enableAnimations ? Math.floor(pomodoroSettings.focusDuration / 5) : 0; // Example: 1 EXP per 5 min focus
+        const expGained = appSettings.enableAnimations ? Math.floor(pomodoroSettings.focusDuration / 5) : 0;
         if (expGained > 0) {
           grantExp(expGained);
           toast({ title: "Focus Session Complete!", description: `You earned ${expGained} EXP!` });
@@ -69,7 +73,7 @@ const PomodoroTimer = () => {
         } else {
           setMode('shortBreak');
         }
-      } else { // break ended
+      } else { 
         toast({ title: "Break Over!", description: "Time to focus again." });
         setMode('focus');
       }
@@ -91,12 +95,10 @@ const PomodoroTimer = () => {
   const handleSettingsSave = () => {
     setPomodoroSettings(tempSettings);
     setIsSettingsOpen(false);
-    // Reset timer with new settings if it was running or to reflect changes
     setIsActive(false);
     setTimeLeft(calculateTimeForMode(mode)); 
     toast({ title: "Pomodoro settings updated!" });
   };
-
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -106,7 +108,6 @@ const PomodoroTimer = () => {
 
   const currentDuration = calculateTimeForMode(mode);
   const progressPercentage = currentDuration > 0 ? ((currentDuration - timeLeft) / currentDuration) * 100 : 0;
-
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
@@ -139,7 +140,7 @@ const PomodoroTimer = () => {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>Cancel</Button>
+              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
               <Button onClick={handleSettingsSave}>Save</Button>
             </DialogFooter>
           </DialogContent>
@@ -169,117 +170,191 @@ const PomodoroTimer = () => {
   );
 };
 
+const IntervalTimerForm = ({
+  onSave,
+  initialData,
+  onClose,
+}: {
+  onSave: (data: Omit<IntervalTimerSetting, 'id'> | IntervalTimerSetting) => void;
+  initialData?: IntervalTimerSetting;
+  onClose: () => void;
+}) => {
+  const [formData, setFormData] = useState<Omit<IntervalTimerSetting, 'id'>>(
+    initialData ? 
+    { ...initialData } : 
+    { taskName: '', windowStart: '09:00', windowEnd: '17:00', repeatInterval: 60, isEnabled: true }
+  );
 
-// Interval Timer (Placeholder)
-const IntervalTimer = () => {
-  const { intervalTimerSettings, setIntervalTimerSettings } = useApp();
-  const { toast } = useToast();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [tempSettings, setTempSettings] = useState(intervalTimerSettings);
-
-  const handleSettingsSave = () => {
-    setIntervalTimerSettings(tempSettings);
-    setIsSettingsOpen(false);
-    toast({ title: "Interval Timer settings updated!" });
+  const handleChange = (field: keyof Omit<IntervalTimerSetting, 'id'>, value: string | number | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Interval timer logic (notifications, etc.) would be complex and require browser APIs.
-  // This is a UI placeholder.
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.taskName.trim()) {
+      // Simple validation, can be expanded
+      alert("Task name cannot be empty.");
+      return;
+    }
+    onSave(initialData ? { ...formData, id: initialData.id } : formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="intervalTaskName">Task Name</Label>
+        <Input id="intervalTaskName" value={formData.taskName} onChange={(e) => handleChange('taskName', e.target.value)} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="intervalWindowStart">Window Start (HH:MM)</Label>
+          <Input id="intervalWindowStart" type="time" value={formData.windowStart} onChange={(e) => handleChange('windowStart', e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="intervalWindowEnd">Window End (HH:MM)</Label>
+          <Input id="intervalWindowEnd" type="time" value={formData.windowEnd} onChange={(e) => handleChange('windowEnd', e.target.value)} />
+        </div>
+      </div>
+      <div>
+        <Label htmlFor="intervalRepeat">Repeat Interval (min)</Label>
+        <Input id="intervalRepeat" type="number" value={formData.repeatInterval} onChange={(e) => handleChange('repeatInterval', parseInt(e.target.value) || 60)} />
+      </div>
+      <div className="flex items-center space-x-2">
+        <Switch id="intervalEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleChange('isEnabled', checked)} />
+        <Label htmlFor="intervalEnabled">Enable Timer</Label>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+        <Button type="submit">Save Timer</Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
+
+const IntervalTimersManager = () => {
+  const { intervalTimerSettings, addIntervalTimerSetting, updateIntervalTimerSetting, deleteIntervalTimerSetting } = useApp();
+  const { toast } = useToast();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTimer, setEditingTimer] = useState<IntervalTimerSetting | undefined>(undefined);
+
   useEffect(() => {
-    let timerId: NodeJS.Timeout | null = null;
-    if (intervalTimerSettings.isEnabled) {
-      // Example: log to console when a reminder would fire
-      // A real implementation would use browser notifications if permission granted.
-      const checkTimeAndNotify = () => {
-        const now = new Date();
-        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        
-        if (currentTime >= intervalTimerSettings.windowStart && currentTime <= intervalTimerSettings.windowEnd) {
-          // Simplified: check every minute if it's an interval.
-          // A more robust solution would calculate next notification time.
-          if (now.getMinutes() % intervalTimerSettings.repeatInterval === 0) {
-             console.log(`Interval Reminder: ${intervalTimerSettings.taskName}`);
-             if(document.hasFocus()){ // only toast if window is active to avoid spam
-                toast({ title: "Interval Reminder", description: intervalTimerSettings.taskName });
-             }
+    const timerId = setInterval(() => {
+      const now = new Date();
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+      intervalTimerSettings.forEach(setting => {
+        if (setting.isEnabled) {
+          if (currentTime >= setting.windowStart && currentTime <= setting.windowEnd) {
+            const lastNotifiedKey = `lastNotified_${setting.id}`;
+            const lastNotifiedTime = localStorage.getItem(lastNotifiedKey);
+            const currentMinuteMarker = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+
+            if (lastNotifiedTime !== currentMinuteMarker) {
+               // Check if it's time for a notification based on repeatInterval
+               // This simplified logic checks if current minute is a multiple of interval from window start (minute-wise)
+               // More robust logic would calculate exact next notification time.
+              const startMinutes = parseInt(setting.windowStart.split(':')[0]) * 60 + parseInt(setting.windowStart.split(':')[1]);
+              const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+              if ((currentTotalMinutes - startMinutes) % setting.repeatInterval === 0) {
+                  if (document.hasFocus()) {
+                    toast({ title: "Interval Reminder", description: setting.taskName });
+                  } else {
+                    // Consider browser notifications for background tabs (requires permission)
+                    console.log(`Background Interval Reminder: ${setting.taskName}`);
+                  }
+                  localStorage.setItem(lastNotifiedKey, currentMinuteMarker);
+              }
+            }
           }
         }
-      };
-      
-      checkTimeAndNotify(); // check immediately
-      timerId = setInterval(checkTimeAndNotify, 60000); // check every minute
-    }
-    return () => {
-      if (timerId) clearInterval(timerId);
-    };
+      });
+    }, 60000); // Check every minute
+
+    return () => clearInterval(timerId);
   }, [intervalTimerSettings, toast]);
 
+  const handleSaveTimer = (data: Omit<IntervalTimerSetting, 'id'> | IntervalTimerSetting) => {
+    if ('id' in data) {
+      updateIntervalTimerSetting(data as IntervalTimerSetting);
+      toast({ title: "Interval Timer Updated!" });
+    } else {
+      addIntervalTimerSetting(data as Omit<IntervalTimerSetting, 'id'>);
+      toast({ title: "Interval Timer Added!" });
+    }
+    setIsFormOpen(false);
+    setEditingTimer(undefined);
+  };
+
+  const handleToggleEnable = (timer: IntervalTimerSetting) => {
+    updateIntervalTimerSetting({ ...timer, isEnabled: !timer.isEnabled });
+    toast({ title: timer.isEnabled ? "Timer Disabled" : "Timer Enabled", description: timer.taskName });
+  };
+
+  const handleDeleteTimer = (timerId: string) => {
+    if (window.confirm("Are you sure you want to delete this interval timer?")) {
+      deleteIntervalTimerSetting(timerId);
+      toast({ title: "Interval Timer Deleted", variant: "destructive" });
+    }
+  };
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-headline text-xl text-primary">Interval Timer</CardTitle>
-        <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <CardTitle className="font-headline text-xl text-primary">Interval Timers</CardTitle>
+        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTimer(undefined); }}>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="icon"><Settings2 className="h-5 w-5" /></Button>
+            <Button variant="outline" size="sm" onClick={() => { setEditingTimer(undefined); setIsFormOpen(true); }}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Timer
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Interval Timer Settings</DialogTitle>
+              <DialogTitle>{editingTimer ? "Edit" : "Add New"} Interval Timer</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-               <div>
-                <Label htmlFor="intervalEnabled">Enable Timer</Label>
-                 <Button 
-                    variant={tempSettings.isEnabled ? "default" : "outline"}
-                    onClick={() => setTempSettings(s => ({...s, isEnabled: !s.isEnabled}))}
-                    className="w-full mt-1"
-                  >
-                  {tempSettings.isEnabled ? "Enabled" : "Disabled"}
-                </Button>
-              </div>
-              <div>
-                <Label htmlFor="intervalTaskName">Task Name</Label>
-                <Input id="intervalTaskName" value={tempSettings.taskName} onChange={(e) => setTempSettings(s => ({...s, taskName: e.target.value}))} />
-              </div>
-              <div>
-                <Label htmlFor="intervalWindowStart">Window Start (HH:MM)</Label>
-                <Input id="intervalWindowStart" type="time" value={tempSettings.windowStart} onChange={(e) => setTempSettings(s => ({...s, windowStart: e.target.value}))} />
-              </div>
-               <div>
-                <Label htmlFor="intervalWindowEnd">Window End (HH:MM)</Label>
-                <Input id="intervalWindowEnd" type="time" value={tempSettings.windowEnd} onChange={(e) => setTempSettings(s => ({...s, windowEnd: e.target.value}))} />
-              </div>
-              <div>
-                <Label htmlFor="intervalRepeat">Repeat Interval (min)</Label>
-                <Input id="intervalRepeat" type="number" value={tempSettings.repeatInterval} onChange={(e) => setTempSettings(s => ({...s, repeatInterval: parseInt(e.target.value) || 60}))} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>Cancel</Button>
-              <Button onClick={handleSettingsSave}>Save</Button>
-            </DialogFooter>
+            <IntervalTimerForm 
+              onSave={handleSaveTimer} 
+              initialData={editingTimer} 
+              onClose={() => { setIsFormOpen(false); setEditingTimer(undefined); }}
+            />
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent className="space-y-4 py-6">
-        <p className="text-muted-foreground">
-          Status: <span className={intervalTimerSettings.isEnabled ? "text-green-400" : "text-red-400"}>{intervalTimerSettings.isEnabled ? 'Active' : 'Inactive'}</span>
-        </p>
-        {intervalTimerSettings.isEnabled && (
-          <>
-            <p>Task: <span className="font-medium text-foreground">{intervalTimerSettings.taskName}</span></p>
-            <p>Reminds every <span className="font-medium text-accent">{intervalTimerSettings.repeatInterval} minutes</span></p>
-            <p>During: <span className="font-medium text-accent">{intervalTimerSettings.windowStart} - {intervalTimerSettings.windowEnd}</span></p>
-          </>
+        {intervalTimerSettings.length === 0 && (
+          <p className="text-muted-foreground text-center">No interval timers configured. Add one to get started!</p>
         )}
-        {!intervalTimerSettings.isEnabled && (
-           <p className="text-muted-foreground">Enable the timer in settings to get reminders for micro-tasks.</p>
-        )}
+        {intervalTimerSettings.map(timer => (
+          <Card key={timer.id} className="bg-background/50 border">
+            <CardHeader className="pb-2 pt-4">
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-lg font-medium text-foreground">{timer.taskName}</CardTitle>
+                <Switch 
+                  checked={timer.isEnabled} 
+                  onCheckedChange={() => handleToggleEnable(timer)}
+                  aria-label={`Toggle timer ${timer.taskName}`}
+                />
+              </div>
+              <CardDescription className="text-xs">
+                {timer.isEnabled ? <BellRing className="inline h-3 w-3 mr-1 text-green-500"/> : <BellOff className="inline h-3 w-3 mr-1 text-red-500"/>}
+                Repeats every {timer.repeatInterval} min from {timer.windowStart} to {timer.windowEnd}
+              </CardDescription>
+            </CardHeader>
+            <CardFooter className="flex justify-end space-x-2 pb-3 pt-2">
+               <Button variant="ghost" size="icon" onClick={() => { setEditingTimer(timer); setIsFormOpen(true); }}>
+                <Edit3 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => handleDeleteTimer(timer.id)} className="text-destructive hover:text-destructive">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
       </CardContent>
     </Card>
   );
 };
+
 
 export default function TimersPage() {
   const { setActiveTab } = useApp();
@@ -291,7 +366,7 @@ export default function TimersPage() {
     <AppWrapper>
       <div className="space-y-8">
         <PomodoroTimer />
-        <IntervalTimer />
+        <IntervalTimersManager />
       </div>
     </AppWrapper>
   );

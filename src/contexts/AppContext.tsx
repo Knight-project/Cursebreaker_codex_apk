@@ -3,8 +3,8 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSettings, Attribute } from '@/lib/types';
-import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS } from '@/lib/types';
+import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute } from '@/lib/types'; // Updated import
+import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS } from '@/lib/types'; // Added INITIAL_INTERVAL_TIMER_SETTINGS
 import { 
   RANK_NAMES_LIST,
   MAX_SUB_RANKS,
@@ -29,8 +29,11 @@ interface AppContextType {
   setAppSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   pomodoroSettings: PomodoroSettings;
   setPomodoroSettings: React.Dispatch<React.SetStateAction<PomodoroSettings>>;
-  intervalTimerSettings: IntervalTimerSettings;
-  setIntervalTimerSettings: React.Dispatch<React.SetStateAction<IntervalTimerSettings>>;
+  intervalTimerSettings: IntervalTimerSetting[]; // Updated type
+  setIntervalTimerSettings: React.Dispatch<React.SetStateAction<IntervalTimerSetting[]>>; // Updated type
+  addIntervalTimerSetting: (setting: Omit<IntervalTimerSetting, 'id'>) => void;
+  updateIntervalTimerSetting: (setting: IntervalTimerSetting) => void;
+  deleteIntervalTimerSetting: (settingId: string) => void;
   addTask: (task: Omit<Task, 'id' | 'dateAdded' | 'isCompleted'>) => void;
   updateTask: (updatedTask: Task) => void;
   deleteTask: (taskId: string) => void;
@@ -61,13 +64,7 @@ const INITIAL_POMODORO_SETTINGS: PomodoroSettings = {
   sessionsBeforeLongBreak: 4,
 };
 
-const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSettings = {
-  windowStart: "09:00",
-  windowEnd: "17:00",
-  repeatInterval: 60,
-  taskName: "Micro-task break",
-  isEnabled: false,
-};
+// INITIAL_INTERVAL_TIMER_SETTINGS is now imported from types.ts
 
 const AppProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('habitHorizonUserProfile', INITIAL_USER_PROFILE);
@@ -75,7 +72,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [rival, setRival] = useLocalStorage<Rival>('habitHorizonRival', INITIAL_RIVAL);
   const [appSettings, setAppSettings] = useLocalStorage<AppSettings>('habitHorizonSettings', INITIAL_APP_SETTINGS);
   const [pomodoroSettings, setPomodoroSettings] = useLocalStorage<PomodoroSettings>('habitHorizonPomodoroSettings', INITIAL_POMODORO_SETTINGS);
-  const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSettings>('habitHorizonIntervalTimerSettings', INITIAL_INTERVAL_TIMER_SETTINGS);
+  const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSetting[]>('habitHorizonIntervalTimers', INITIAL_INTERVAL_TIMER_SETTINGS); // Key changed, type updated
   
   const [isInitialized, setIsInitialized] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -154,10 +151,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   const grantStatExp = useCallback((attribute: Attribute, expGainedStat: number) => {
-    if (attribute === "None") return; // Should not happen if called correctly
-
+    // The check for attribute === "None" is already implicitly handled by type system for `stats` keys
     setUserProfile(prev => {
       const statKey = attribute.toLowerCase() as keyof typeof prev.stats;
+      if (!prev.stats[statKey]) return prev; // Should not happen with proper types
       const currentStat = prev.stats[statKey];
       
       let newExp = currentStat.exp + expGainedStat;
@@ -236,7 +233,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           statExpGained: statExpGainedForTask,
           attributeAffectedForStatExp: attributeAffectedForStatExpForTask
         };
-        completedTaskForHistory = { ...updatedTask }; // Store a copy for history
+        completedTaskForHistory = { ...updatedTask }; 
 
         const newTasks = [...prevTasks];
         newTasks[taskIndex] = updatedTask;
@@ -247,7 +244,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     if (completedTaskForHistory) {
       setUserProfile(prev => {
-        // Avoid duplicates in history by checking ID, update if exists, else add
         const historyIndex = prev.taskHistory.findIndex(ht => ht.id === completedTaskForHistory!.id);
         let newTaskHistory = [...prev.taskHistory];
         if (historyIndex > -1) {
@@ -299,6 +295,22 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   }, [tasks, setUserProfile, isInitialized]);
 
+  const addIntervalTimerSetting = (settingData: Omit<IntervalTimerSetting, 'id'>) => {
+    const newSetting: IntervalTimerSetting = {
+      ...settingData,
+      id: Date.now().toString() + Math.random().toString(36).substring(2,9),
+    };
+    setIntervalTimerSettings(prev => [...prev, newSetting]);
+  };
+
+  const updateIntervalTimerSetting = (updatedSetting: IntervalTimerSetting) => {
+    setIntervalTimerSettings(prev => prev.map(s => s.id === updatedSetting.id ? updatedSetting : s));
+  };
+
+  const deleteIntervalTimerSetting = (settingId: string) => {
+    setIntervalTimerSettings(prev => prev.filter(s => s.id !== settingId));
+  };
+
 
   if (!isInitialized) {
     return null; 
@@ -312,6 +324,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       appSettings, setAppSettings,
       pomodoroSettings, setPomodoroSettings,
       intervalTimerSettings, setIntervalTimerSettings,
+      addIntervalTimerSetting, updateIntervalTimerSetting, deleteIntervalTimerSetting,
       addTask, updateTask, deleteTask, completeTask,
       getTodaysTasks,
       updateRivalTaunt,
@@ -325,3 +338,4 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export default AppProvider;
+
