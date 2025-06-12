@@ -105,7 +105,7 @@ const TaskItem = ({ task }: { task: Task }) => {
   };
 
   return (
-    <div className={`p-3 rounded-md border flex items-center justify-between transition-all duration-300 ${task.isCompleted ? 'bg-secondary/30 border-green-500/50' : 'bg-card hover:bg-card/90 border-border'}`}>
+    <div className={`p-3 border flex items-center justify-between transition-all duration-300 ${task.isCompleted ? 'bg-secondary/30 border-green-500/50' : 'bg-card hover:bg-card/90 border-border'}`}>
       <div>
         <p className={`font-medium font-body ${task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
         <p className="text-xs text-muted-foreground">{task.difficulty} - {task.attribute}</p>
@@ -119,6 +119,18 @@ const TaskItem = ({ task }: { task: Task }) => {
     </div>
   );
 };
+
+const CyberpunkAvatarPlaceholder = () => (
+  <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full text-muted-foreground group-hover:text-primary transition-colors">
+    <path d="M50 15L20 30V70L50 85L80 70V30L50 15Z" stroke="currentColor" strokeWidth="3"/>
+    <path d="M50 15V45" stroke="currentColor" strokeWidth="2"/>
+    <path d="M20 30L50 45" stroke="currentColor" strokeWidth="2"/>
+    <path d="M80 30L50 45" stroke="currentColor" strokeWidth="2"/>
+    <path d="M35 50H65" stroke="currentColor" strokeWidth="3" />
+    <path d="M50 60V85" stroke="currentColor" strokeWidth="2" />
+    <circle cx="50" cy="45" r="5" fill="currentColor" className="opacity-50 group-hover:opacity-100"/>
+  </svg>
+);
 
 
 export default function HomePage() {
@@ -173,98 +185,98 @@ export default function HomePage() {
       <div className="space-y-6">
         {/* User Profile Summary Card */}
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-primary/30">
-          <CardHeader className="items-center text-center flex flex-col">
-             <div onClick={handleUserAvatarClick} className="cursor-pointer mb-3 relative group">
+          <CardHeader className="items-center text-center flex flex-col p-4">
+             <div onClick={handleUserAvatarClick} className="cursor-pointer mb-3 relative group w-[100px] h-[100px] border-2 border-primary p-1">
                 {userProfile.avatarUrl ? (
                   <Image 
                     src={userProfile.avatarUrl} 
                     alt="Your Avatar"
                     width={100} 
                     height={100} 
-                    className="rounded-full border-4 border-primary shadow-lg object-cover"
+                    className="object-cover w-full h-full"
                     data-ai-hint="user avatar"
                   />
                 ) : (
-                  <div className="w-[100px] h-[100px] rounded-full border-4 border-primary shadow-lg bg-card flex items-center justify-center overflow-hidden">
-                    <User className="h-12 w-12 text-muted-foreground" />
+                  <div className="w-full h-full bg-card flex items-center justify-center overflow-hidden">
+                    <CyberpunkAvatarPlaceholder />
                   </div>
                 )}
-                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <PlusCircle className="h-8 w-8 text-white" />
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <PlusCircle className="h-8 w-8 text-primary neon-icon-primary" />
                 </div>
               </div>
               <input type="file" ref={userImageInputRef} onChange={handleUserAvatarChange} accept="image/*" className="hidden" />
 
-            <CardTitle className="font-headline text-2xl text-primary">{userProfile.rankName} - Sub-Rank {userProfile.subRank}</CardTitle>
-            <CardDescription className="text-muted-foreground mt-1">{userProfile.customQuote}</CardDescription>
+            <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">{userProfile.rankName} - {userProfile.subRank}</CardTitle>
+            <CardDescription className="text-muted-foreground mt-1 text-xs font-code italic">{userProfile.customQuote}</CardDescription>
             
-            <Link href="/stats" passHref className="mt-4 w-full sm:w-auto">
-              <Button variant="secondary" className="w-full sm:w-auto bg-accent hover:bg-accent/80 text-accent-foreground">
-                <User className="mr-2 h-5 w-5" />
-                View Stats Card
+            <Link href="/stats" passHref className="mt-3 w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4">
+                <User className="mr-2 h-4 w-4" />
+                Status Report
               </Button>
             </Link>
           </CardHeader>
-          <CardContent className="space-y-3 pt-4">
+          <CardContent className="space-y-3 pt-2 pb-4 px-4">
             <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-foreground">EXP</span>
-                <span className="text-accent">{userProfile.currentExpInSubRank} / {userProfile.expToNextSubRank}</span>
+              <div className="flex justify-between text-xs mb-1 font-code">
+                <span className="text-foreground uppercase">EXP</span>
+                <span className="text-primary">{userProfile.currentExpInSubRank} / {userProfile.expToNextSubRank}</span>
               </div>
-              <Progress value={(userProfile.currentExpInSubRank / userProfile.expToNextSubRank) * 100} className="h-3 bg-secondary" indicatorClassName="bg-primary" />
+              <Progress value={(userProfile.currentExpInSubRank / userProfile.expToNextSubRank) * 100} className="h-2 bg-secondary" indicatorClassName="bg-primary" />
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-foreground">Current Streak: <span className="text-accent font-bold">{userProfile.currentStreak} days</span></span>
-              <span className="text-foreground">Today's Completion: <span className="text-accent font-bold">{userProfile.dailyTaskCompletionPercentage}%</span></span>
+            <div className="flex justify-between text-xs font-code">
+              <span className="text-foreground uppercase">Streak: <span className="text-primary font-bold">{userProfile.currentStreak}</span></span>
+              <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{userProfile.dailyTaskCompletionPercentage}%</span></span>
             </div>
           </CardContent>
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center border-accent text-accent hover:bg-accent hover:text-accent-foreground">
-                <PlusCircle className="h-8 w-8 mb-1 neon-icon" />
-                <span className="text-sm">Add Task</span>
+              <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-accent text-accent hover:bg-accent hover:text-accent-foreground font-headline uppercase text-xs">
+                <PlusCircle className="h-6 w-6 mb-1 neon-icon" />
+                <span>New Task</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] bg-card border-border">
               <DialogHeader>
-                <DialogTitle className="font-headline text-primary">Add New Daily Task</DialogTitle>
+                <DialogTitle className="font-headline text-primary uppercase">Log New Directive</DialogTitle>
               </DialogHeader>
               <AddTaskForm onTaskAdd={() => setIsAddTaskOpen(false)} />
             </DialogContent>
           </Dialog>
           
           <Link href="/graphs" passHref>
-            <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center border-muted-foreground text-muted-foreground hover:bg-muted hover:text-foreground">
-              <BarChart2 className="h-8 w-8 mb-1" />
-              <span className="text-sm">Graphs</span>
+            <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-muted-foreground/50 text-muted-foreground hover:bg-muted hover:text-foreground font-headline uppercase text-xs">
+              <BarChart2 className="h-6 w-6 mb-1" />
+              <span>Data Logs</span>
             </Button>
           </Link>
           <Link href="/journal" passHref>
-            <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center border-muted-foreground text-muted-foreground hover:bg-muted hover:text-foreground">
-              <BookOpen className="h-8 w-8 mb-1" />
-              <span className="text-sm">Journal</span>
+            <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-muted-foreground/50 text-muted-foreground hover:bg-muted hover:text-foreground font-headline uppercase text-xs">
+              <BookOpen className="h-6 w-6 mb-1" />
+              <span>Chronicles</span>
             </Button>
           </Link>
         </div>
 
         {/* Task List */}
         <Card className="bg-card/80 backdrop-blur-sm shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline text-xl text-primary">Daily Tasks</CardTitle>
+          <CardHeader className="p-4">
+            <CardTitle className="font-headline text-lg text-primary uppercase">Daily Directives</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             {todaysTasks.length > 0 ? (
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                 {todaysTasks.map(task => (
                   <TaskItem key={task.id} task={task} />
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">No tasks for today. Add some to begin your ascent!</p>
+              <p className="text-muted-foreground text-center py-4 font-code text-xs">No directives logged for this cycle. Initiate new tasks to proceed.</p>
             )}
           </CardContent>
         </Card>

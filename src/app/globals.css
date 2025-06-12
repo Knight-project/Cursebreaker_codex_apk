@@ -4,49 +4,46 @@
 
 @layer base {
   :root {
-    --background: 220 9% 17%; /* #282B30 */
-    --foreground: 210 17% 98%; /* #F8F9FA */
+    --background: 220 30% 8%; /* Very dark, slightly bluish black */
+    --foreground: 180 10% 85%; /* Light cyan-grey for text */
 
-    --card: 210 10% 23%; /* #343A40 */
-    --card-foreground: 210 17% 98%; /* #F8F9FA */
+    --card: 220 25% 12%; /* Slightly lighter than background, for card bodies */
+    --card-foreground: 180 10% 85%;
 
-    --popover: 210 10% 23%; /* #343A40 */
-    --popover-foreground: 210 17% 98%; /* #F8F9FA */
+    --popover: 220 25% 12%;
+    --popover-foreground: 180 10% 85%;
 
-    --primary: 275 56% 69%; /* #A06CD5 */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --primary: 180 100% 50%; /* Bright cyan */
+    --primary-foreground: 220 30% 8%; /* Dark, for text on primary elements */
 
-    --secondary: 210 8% 31%; /* #495057 */
-    --secondary-foreground: 210 17% 98%; /* #F8F9FA */
+    --secondary: 220 20% 20%; /* Darker grey-blue */
+    --secondary-foreground: 180 10% 75%;
 
-    --muted: 210 8% 45%; /* #6C757D */
-    --muted-foreground: 210 14% 84%; /* #CED4DA */
+    --muted: 220 15% 30%;
+    --muted-foreground: 180 10% 55%;
 
-    --accent: 206 100% 70%; /* #63B5FF */
-    --accent-foreground: 206 84% 22%; /* #073C66 */
+    --accent: 30 100% 55%; /* Bright orange */
+    --accent-foreground: 0 0% 100%; /* White for text on accent */
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 80% 55%; /* Bright red */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 210 8% 31%; /* #495057 */
-    --input: 210 8% 31%; /* #495057 */
-    --ring: 206 100% 70%; /* #63B5FF */
+    --border: 180 70% 40%; /* Dimmer cyan, for borders */
+    --input: 220 25% 15%; /* Input background */
+    --ring: 180 100% 60%; /* Brighter cyan for focus rings */
 
-    --radius: 0.5rem;
+    --radius: 0rem; /* Sharp corners */
 
     /* Custom variables for neon effect */
-    --neon-glow-primary: 0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary)), 0 0 15px hsl(var(--primary));
-    --neon-glow-accent: 0 0 5px hsl(var(--accent)), 0 0 10px hsl(var(--accent)), 0 0 15px hsl(var(--accent));
+    --neon-glow-primary: 0 0 3px hsl(var(--primary)), 0 0 6px hsl(var(--primary)), 0 0 9px hsl(var(--primary));
+    --neon-glow-accent: 0 0 3px hsl(var(--accent)), 0 0 6px hsl(var(--accent)), 0 0 9px hsl(var(--accent));
     
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --chart-1: 180 100% 50%; /* Primary Cyan */
+    --chart-2: 30 100% 55%;  /* Accent Orange */
+    --chart-3: 300 100% 60%; /* Magenta/Pink */
+    --chart-4: 60 100% 50%;  /* Yellow */
+    --chart-5: 120 100% 50%; /* Bright Green */
   }
-
-  /* Force dark theme by default by applying dark variables to :root */
-  /* The .dark class is not strictly necessary if dark is the only theme */
 }
 
 @layer base {
@@ -56,33 +53,37 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-inter), sans-serif;
+    background-image:
+      linear-gradient(to right, hsla(var(--border), 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, hsla(var(--border), 0.08) 1px, transparent 1px);
+    background-size: 25px 25px; /* Adjust grid size */
   }
 }
 
 /* Particle animation */
 @keyframes float {
-  0% { transform: translateY(0px) translateX(0px); opacity: 0; }
-  25% { opacity: 0.7; }
-  50% { transform: translateY(-20px) translateX(10px); opacity: 1; }
-  75% { opacity: 0.7; }
-  100% { transform: translateY(0px) translateX(0px); opacity: 0; }
+  0% { transform: translateY(0px) translateX(0px) rotate(0deg); opacity: 0; }
+  25% { opacity: 0.5; }
+  50% { transform: translateY(-25px) translateX(15px) rotate(180deg); opacity: 0.8; }
+  75% { opacity: 0.5; }
+  100% { transform: translateY(0px) translateX(0px) rotate(360deg); opacity: 0; }
 }
 
 .particle {
   position: absolute;
-  border-radius: 50%;
-  background: hsl(var(--accent));
-  animation: float 6s ease-in-out infinite;
-  filter: blur(1px);
-  box-shadow: var(--neon-glow-accent);
+  border-radius: 2px; /* More angular particles */
+  background: hsl(var(--primary)); /* Use primary color for particles */
+  animation: float 8s ease-in-out infinite;
+  filter: blur(0.5px);
+  box-shadow: var(--neon-glow-primary);
 }
 
 /* Neon effect for icons */
 .neon-icon {
-  filter: drop-shadow(0 0 3px hsl(var(--accent))) drop-shadow(0 0 6px hsl(var(--accent)));
+  filter: drop-shadow(0 0 2px hsl(var(--accent))) drop-shadow(0 0 4px hsl(var(--accent)));
 }
 .neon-icon-primary {
- filter: drop-shadow(0 0 3px hsl(var(--primary))) drop-shadow(0 0 6px hsl(var(--primary)));
+ filter: drop-shadow(0 0 2px hsl(var(--primary))) drop-shadow(0 0 4px hsl(var(--primary)));
 }
 
 /* Magical transition placeholder */
@@ -95,23 +96,27 @@
 }
 
 @keyframes screenFlashAnimation {
-  0% { opacity: 0; background-color: hsla(var(--primary), 0.5); }
-  50% { opacity: 1; background-color: hsla(var(--primary), 0.8); }
-  100% { opacity: 0; background-color: hsla(var(--primary), 0.5); }
+  0% { opacity: 0; background-color: hsla(var(--primary), 0.3); }
+  50% { opacity: 0.7; background-color: hsla(var(--primary), 0.6); }
+  100% { opacity: 0; background-color: hsla(var(--primary), 0.3); }
 }
 
-/* Custom scrollbar (optional, for a more themed feel) */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: hsl(var(--background));
+  border-left: 1px solid hsl(var(--border));
+  border-top: 1px solid hsl(var(--border));
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--accent));
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary));
 }
-
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--accent));
+}
+::-webkit-scrollbar-corner {
+  background: hsl(var(--background));
+}

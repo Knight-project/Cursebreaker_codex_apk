@@ -18,8 +18,8 @@ export default {
     extend: {
       fontFamily: {
         body: ['Inter', 'var(--font-inter)', 'sans-serif'],
-        headline: ['Inter', 'var(--font-inter)', 'sans-serif'],
-        code: ['monospace'],
+        headline: ['monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"'],
+        code: ['monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -65,8 +65,8 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 0px)", // Ensuring md and sm are also sharp if radius is 0
+        sm: "calc(var(--radius) - 0px)",
       },
       keyframes: {
         "accordion-down": {
