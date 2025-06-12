@@ -1,6 +1,6 @@
 import type { Attribute, RankName } from './types';
 
-export const APP_NAME = "Habit Horizon";
+export const APP_NAME = "Cursebreaker Codex";
 
 export const RANK_NAMES_LIST: RankName[] = [
   "Aether Disciple",
@@ -35,11 +35,12 @@ export const ATTRIBUTES: Attribute[] = ["Strength", "Intelligence", "Endurance",
 export const STREAK_THRESHOLD_PERCENTAGE = 70;
 
 // Local storage keys
-export const LOCAL_STORAGE_USER_PROFILE_KEY = 'habitHorizonUserProfile';
-export const LOCAL_STORAGE_RIVAL_KEY = 'habitHorizonRival';
-export const LOCAL_STORAGE_TASKS_KEY = 'habitHorizonTasks';
-export const LOCAL_STORAGE_SETTINGS_KEY = 'habitHorizonSettings';
-export const LOCAL_STORAGE_POMODORO_KEY = 'habitHorizonPomodoro';
-export const LOCAL_STORAGE_INTERVAL_TIMER_KEY = 'habitHorizonIntervalTimer';
+export const LOCAL_STORAGE_USER_PROFILE_KEY = 'cursebreakerCodexUserProfile';
+export const LOCAL_STORAGE_RIVAL_KEY = 'cursebreakerCodexRival';
+export const LOCAL_STORAGE_TASKS_KEY = 'cursebreakerCodexTasks';
+export const LOCAL_STORAGE_SETTINGS_KEY = 'cursebreakerCodexSettings';
+export const LOCAL_STORAGE_POMODORO_KEY = 'cursebreakerCodexPomodoro';
+export const LOCAL_STORAGE_INTERVAL_TIMER_KEY = 'cursebreakerCodexIntervalTimer';
 
 export const RIVAL_NAMES_POOL = ["Kairos", "Zevik", "Ayen", "Lyra", "Sorin", "Vexia", "Draven"];
+

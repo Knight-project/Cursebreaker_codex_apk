@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Habit Horizon',
-  description: 'Track your habits and ascend to new realms of self-improvement.',
+  title: 'Cursebreaker Codex',
+  description: 'Track your habits and break curses of self-doubt with the Cursebreaker Codex.',
 };
 
 export default function RootLayout({
@@ -37,3 +37,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -1,4 +1,4 @@
-# Firebase Studio
+# Cursebreaker Codex
 
 This is a NextJS starter in Firebase Studio.
 

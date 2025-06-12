@@ -67,24 +67,20 @@ const INITIAL_POMODORO_SETTINGS: PomodoroSettings = {
 // INITIAL_INTERVAL_TIMER_SETTINGS is now imported from types.ts
 
 const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('habitHorizonUserProfile', INITIAL_USER_PROFILE);
-  const [tasks, setTasks] = useLocalStorage<Task[]>('habitHorizonTasks', []);
-  const [rival, setRival] = useLocalStorage<Rival>('habitHorizonRival', INITIAL_RIVAL);
-  const [appSettings, setAppSettings] = useLocalStorage<AppSettings>('habitHorizonSettings', INITIAL_APP_SETTINGS);
-  const [pomodoroSettings, setPomodoroSettings] = useLocalStorage<PomodoroSettings>('habitHorizonPomodoroSettings', INITIAL_POMODORO_SETTINGS);
-  const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSetting[]>('habitHorizonIntervalTimers', INITIAL_INTERVAL_TIMER_SETTINGS); // Key changed, type updated
+  const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('cursebreakerCodexUserProfile', INITIAL_USER_PROFILE);
+  const [tasks, setTasks] = useLocalStorage<Task[]>('cursebreakerCodexTasks', []);
+  const [rival, setRival] = useLocalStorage<Rival>('cursebreakerCodexRival', INITIAL_RIVAL);
+  const [appSettings, setAppSettings] = useLocalStorage<AppSettings>('cursebreakerCodexSettings', INITIAL_APP_SETTINGS);
+  const [pomodoroSettings, setPomodoroSettings] = useLocalStorage<PomodoroSettings>('cursebreakerCodexPomodoroSettings', INITIAL_POMODORO_SETTINGS);
+  const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSetting[]>('cursebreakerCodexIntervalTimers', INITIAL_INTERVAL_TIMER_SETTINGS); // Key changed, type updated
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [activeTab, setActiveTabState] = useState('home');
 
   useEffect(() => {
-    if (userProfile.customQuote === undefined ) {
+    if (userProfile.customQuote === undefined || userProfile.customQuote.toLowerCase() === "fuck" ) {
        setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
-    }
-    // Offensive word filter for customQuote
-    if (userProfile.customQuote?.toLowerCase() === "fuck") {
-      setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
     }
     if (!rival.name || !RIVAL_NAMES_POOL.includes(rival.name)) {
       setRival(prev => ({
@@ -94,7 +90,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile.customQuote, rival.name]); // Removed setUserProfile and setRival from deps to avoid loop, check logic if issues arise
+  }, [userProfile.customQuote, rival.name]);
 
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
@@ -343,3 +339,4 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export default AppProvider;
+
