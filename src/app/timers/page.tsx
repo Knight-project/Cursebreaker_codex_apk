@@ -124,19 +124,19 @@ const PomodoroTimer = () => {
             <div className="space-y-4 py-4">
               <div>
                 <Label htmlFor="focusDuration">Focus Duration (min)</Label>
-                <Input id="focusDuration" type="number" value={tempSettings.focusDuration} onChange={(e) => setTempSettings(s => ({...s, focusDuration: parseInt(e.target.value) || 25}))} />
+                <Input id="focusDuration" type="number" value={tempSettings.focusDuration} onChange={(e) => setTempSettings(s => ({...s, focusDuration: Math.max(1, parseInt(e.target.value) || 25)}))} min="1" />
               </div>
               <div>
                 <Label htmlFor="shortBreakDuration">Short Break (min)</Label>
-                <Input id="shortBreakDuration" type="number" value={tempSettings.shortBreakDuration} onChange={(e) => setTempSettings(s => ({...s, shortBreakDuration: parseInt(e.target.value) || 5}))} />
+                <Input id="shortBreakDuration" type="number" value={tempSettings.shortBreakDuration} onChange={(e) => setTempSettings(s => ({...s, shortBreakDuration: Math.max(1, parseInt(e.target.value) || 5)}))} min="1" />
               </div>
               <div>
                 <Label htmlFor="longBreakDuration">Long Break (min)</Label>
-                <Input id="longBreakDuration" type="number" value={tempSettings.longBreakDuration} onChange={(e) => setTempSettings(s => ({...s, longBreakDuration: parseInt(e.target.value) || 15}))} />
+                <Input id="longBreakDuration" type="number" value={tempSettings.longBreakDuration} onChange={(e) => setTempSettings(s => ({...s, longBreakDuration: Math.max(1, parseInt(e.target.value) || 15)}))} min="1" />
               </div>
               <div>
                 <Label htmlFor="sessionsBeforeLongBreak">Sessions before Long Break</Label>
-                <Input id="sessionsBeforeLongBreak" type="number" value={tempSettings.sessionsBeforeLongBreak} onChange={(e) => setTempSettings(s => ({...s, sessionsBeforeLongBreak: parseInt(e.target.value) || 4}))} />
+                <Input id="sessionsBeforeLongBreak" type="number" value={tempSettings.sessionsBeforeLongBreak} onChange={(e) => setTempSettings(s => ({...s, sessionsBeforeLongBreak: Math.max(1, parseInt(e.target.value) || 4)}))} min="1" />
               </div>
             </div>
             <DialogFooter>
@@ -179,6 +179,7 @@ const IntervalTimerForm = ({
   initialData?: IntervalTimerSetting;
   onClose: () => void;
 }) => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState<Omit<IntervalTimerSetting, 'id'>>(
     initialData ? 
     { ...initialData } : 
@@ -186,16 +187,39 @@ const IntervalTimerForm = ({
   );
 
   const handleChange = (field: keyof Omit<IntervalTimerSetting, 'id'>, value: string | number | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'repeatInterval') {
+      setFormData(prev => ({ ...prev, [field]: Math.max(1, Number(value) || 1) }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.taskName.trim()) {
-      // Simple validation, can be expanded
-      alert("Task name cannot be empty.");
+      toast({ title: "Invalid Input", description: "Task name cannot be empty.", variant: "destructive" });
       return;
     }
+    
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (!timeRegex.test(formData.windowStart) || !timeRegex.test(formData.windowEnd)) {
+      toast({ title: "Invalid Time Format", description: "Please enter valid start and end times in HH:MM format.", variant: "destructive" });
+      return;
+    }
+
+    const startTotalMinutes = parseInt(formData.windowStart.split(':')[0]) * 60 + parseInt(formData.windowStart.split(':')[1]);
+    const endTotalMinutes = parseInt(formData.windowEnd.split(':')[0]) * 60 + parseInt(formData.windowEnd.split(':')[1]);
+
+    if (startTotalMinutes >= endTotalMinutes) {
+        toast({ title: "Invalid Time Window", description: "Window start time must be before end time.", variant: "destructive"});
+        return;
+    }
+
+    if (formData.repeatInterval < 1) {
+      toast({ title: "Invalid Interval", description: "Repeat interval must be at least 1 minute.", variant: "destructive" });
+      return;
+    }
+    
     onSave(initialData ? { ...formData, id: initialData.id } : formData);
   };
 
@@ -217,7 +241,7 @@ const IntervalTimerForm = ({
       </div>
       <div>
         <Label htmlFor="intervalRepeat">Repeat Interval (min)</Label>
-        <Input id="intervalRepeat" type="number" value={formData.repeatInterval} onChange={(e) => handleChange('repeatInterval', parseInt(e.target.value) || 60)} />
+        <Input id="intervalRepeat" type="number" value={formData.repeatInterval} onChange={(e) => handleChange('repeatInterval', parseInt(e.target.value))} min="1" />
       </div>
       <div className="flex items-center space-x-2">
         <Switch id="intervalEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleChange('isEnabled', checked)} />
@@ -241,35 +265,45 @@ const IntervalTimersManager = () => {
   useEffect(() => {
     const timerId = setInterval(() => {
       const now = new Date();
-      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
       intervalTimerSettings.forEach(setting => {
-        if (setting.isEnabled) {
-          if (currentTime >= setting.windowStart && currentTime <= setting.windowEnd) {
-            const lastNotifiedKey = `lastNotified_${setting.id}`;
-            const lastNotifiedTime = localStorage.getItem(lastNotifiedKey);
-            const currentMinuteMarker = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+        if (!setting.isEnabled) return;
 
-            if (lastNotifiedTime !== currentMinuteMarker) {
-               // Check if it's time for a notification based on repeatInterval
-               // This simplified logic checks if current minute is a multiple of interval from window start (minute-wise)
-               // More robust logic would calculate exact next notification time.
-              const startMinutes = parseInt(setting.windowStart.split(':')[0]) * 60 + parseInt(setting.windowStart.split(':')[1]);
-              const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-              if ((currentTotalMinutes - startMinutes) % setting.repeatInterval === 0) {
-                  if (document.hasFocus()) {
-                    toast({ title: "Interval Reminder", description: setting.taskName });
-                  } else {
-                    // Consider browser notifications for background tabs (requires permission)
-                    console.log(`Background Interval Reminder: ${setting.taskName}`);
-                  }
-                  localStorage.setItem(lastNotifiedKey, currentMinuteMarker);
-              }
+        const startParts = setting.windowStart.split(':').map(Number);
+        const endParts = setting.windowEnd.split(':').map(Number);
+
+        if (startParts.length !== 2 || endParts.length !== 2 || startParts.some(isNaN) || endParts.some(isNaN)) {
+          // console.error(`Invalid time format for timer '${setting.taskName}'. Skipping.`);
+          return; 
+        }
+
+        const startTotalMinutes = startParts[0] * 60 + startParts[1];
+        const endTotalMinutes = endParts[0] * 60 + endParts[1];
+        
+        if (isNaN(startTotalMinutes) || isNaN(endTotalMinutes) || startTotalMinutes >= endTotalMinutes) {
+          // console.error(`Invalid time window for timer '${setting.taskName}'. Skipping.`);
+          return;
+        }
+        
+        if (currentTotalMinutes >= startTotalMinutes && currentTotalMinutes <= endTotalMinutes) {
+          const lastNotifiedKey = `lastNotified_${setting.id}`;
+          const lastNotifiedTime = localStorage.getItem(lastNotifiedKey);
+          const currentMinuteMarker = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+
+          if (lastNotifiedTime !== currentMinuteMarker) {
+            if ((currentTotalMinutes - startTotalMinutes) % setting.repeatInterval === 0) {
+                if (document.hasFocus()) {
+                  toast({ title: "Interval Reminder", description: setting.taskName });
+                } else {
+                  console.log(`Background Interval Reminder: ${setting.taskName} (Notification would show if tab was active or system notifications enabled)`);
+                }
+                localStorage.setItem(lastNotifiedKey, currentMinuteMarker);
             }
           }
         }
       });
-    }, 60000); // Check every minute
+    }, 60000); 
 
     return () => clearInterval(timerId);
   }, [intervalTimerSettings, toast]);
@@ -371,3 +405,4 @@ export default function TimersPage() {
     </AppWrapper>
   );
 }
+
