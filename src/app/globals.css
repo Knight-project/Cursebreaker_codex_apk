@@ -34,9 +34,9 @@
 
     --radius: 0rem; /* Sharp corners */
 
-    /* Custom variables for neon effect */
-    --neon-glow-primary: 0 0 3px hsl(var(--primary)), 0 0 6px hsl(var(--primary)), 0 0 9px hsl(var(--primary));
-    --neon-glow-accent: 0 0 3px hsl(var(--accent)), 0 0 6px hsl(var(--accent)), 0 0 9px hsl(var(--accent));
+    /* Custom variables for neon effect - toned down */
+    --neon-glow-primary: 0 0 2px hsl(var(--primary)), 0 0 4px hsl(var(--primary));
+    --neon-glow-accent: 0 0 2px hsl(var(--accent)), 0 0 4px hsl(var(--accent));
     
     --chart-1: 180 100% 50%; /* Primary Cyan */
     --chart-2: 30 100% 55%;  /* Accent Orange */
@@ -60,30 +60,38 @@
   }
 }
 
-/* Particle animation */
-@keyframes float {
-  0% { transform: translateY(0px) translateX(0px) rotate(0deg); opacity: 0; }
-  25% { opacity: 0.5; }
-  50% { transform: translateY(-25px) translateX(15px) rotate(180deg); opacity: 0.8; }
-  75% { opacity: 0.5; }
-  100% { transform: translateY(0px) translateX(0px) rotate(360deg); opacity: 0; }
+/* New animation for scanning lines */
+@keyframes line-scan {
+  0% { 
+    transform: translateX(0%); 
+    opacity: 0; 
+  }
+  10%, 80% { 
+    opacity: 0.3; /* Adjusted opacity for subtlety */
+  }
+  100% { 
+    transform: translateX(calc(100vw + 100%)); /* Moves from left starting position across the viewport and its own width */
+    opacity: 0; 
+  }
 }
 
 .particle {
   position: absolute;
-  border-radius: 2px; /* More angular particles */
-  background: hsl(var(--primary)); /* Use primary color for particles */
-  animation: float 8s ease-in-out infinite;
-  filter: blur(0.5px);
-  box-shadow: var(--neon-glow-primary);
+  background: hsl(var(--primary)); /* Line color */
+  opacity: 0; /* Initial opacity, animation handles fade-in/out */
+  animation-name: line-scan;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  box-shadow: 0 0 1px hsla(var(--primary), 0.7), 0 0 2px hsla(var(--primary), 0.5); /* Subtle glow for lines */
 }
+
 
 /* Neon effect for icons */
 .neon-icon {
-  filter: drop-shadow(0 0 2px hsl(var(--accent))) drop-shadow(0 0 4px hsl(var(--accent)));
+  filter: drop-shadow(var(--neon-glow-accent));
 }
 .neon-icon-primary {
- filter: drop-shadow(0 0 2px hsl(var(--primary))) drop-shadow(0 0 4px hsl(var(--primary)));
+ filter: drop-shadow(var(--neon-glow-primary));
 }
 
 /* Magical transition placeholder */

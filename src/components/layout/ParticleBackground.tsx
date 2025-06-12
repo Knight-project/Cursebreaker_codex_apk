@@ -6,21 +6,24 @@ const ParticleBackground = () => {
   const [particles, setParticles] = useState<Array<{ id: number; style: React.CSSProperties }>>([]);
 
   useEffect(() => {
-    const numParticles = 20; // Adjust for density
+    const numParticles = 8; // Reduced number of lines
     const newParticles = Array.from({ length: numParticles }).map((_, i) => {
-      const size = Math.random() * 3 + 1; // Particle size 1px to 4px
-      const animationDuration = Math.random() * 5 + 5; // 5s to 10s
-      const animationDelay = Math.random() * 5; // Delay up to 5s
+      const lineWidthVw = Math.random() * 30 + 20; // Line width from 20vw to 50vw
+      const lineHeightPx = Math.random() * 1 + 1; // Line height 1px to 2px
+      
+      const animationDuration = Math.random() * 10 + 15; // Animation duration 15s to 25s
+      const animationDelay = Math.random() * 20; // Delay up to 20s
+      
       return {
         id: i,
         style: {
-          width: `${size}px`,
-          height: `${size}px`,
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
+          width: `${lineWidthVw}vw`,
+          height: `${lineHeightPx}px`,
+          left: `-${lineWidthVw}vw`, // Start off-screen to the left
+          top: `${Math.random() * 100}%`, // Random vertical position
           animationDuration: `${animationDuration}s`,
           animationDelay: `${animationDelay}s`,
-          opacity: 0, // Start hidden, animation handles fade in
+          // Common properties like animation-name, timing-function, iteration-count, background, opacity are in .particle class
         } as React.CSSProperties,
       };
     });
