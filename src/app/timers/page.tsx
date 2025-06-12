@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import type { IntervalTimerSetting } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 const PomodoroTimer = () => {
@@ -170,25 +171,45 @@ const PomodoroTimer = () => {
   );
 };
 
+type IntervalFormData = Omit<IntervalTimerSetting, 'id' | 'startTime'>;
+
 const IntervalTimerForm = ({
   onSave,
   initialData,
   onClose,
 }: {
-  onSave: (data: Omit<IntervalTimerSetting, 'id'> | IntervalTimerSetting) => void;
+  onSave: (data: Omit<IntervalTimerSetting, 'id'>) => void;
   initialData?: IntervalTimerSetting;
   onClose: () => void;
 }) => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState<Omit<IntervalTimerSetting, 'id'>>(
+  const [formData, setFormData] = useState<IntervalFormData>(
     initialData ? 
-    { ...initialData } : 
-    { taskName: '', windowStart: '09:00', windowEnd: '17:00', repeatInterval: 60, isEnabled: true }
+    { 
+      taskName: initialData.taskName,
+      timerMode: initialData.timerMode,
+      windowStart: initialData.windowStart || '09:00',
+      windowEnd: initialData.windowEnd || '17:00',
+      durationHours: initialData.durationHours || 1,
+      durationMinutes: initialData.durationMinutes || 0,
+      repeatInterval: initialData.repeatInterval,
+      isEnabled: initialData.isEnabled,
+    } : 
+    { 
+      taskName: '', 
+      timerMode: 'windowed', 
+      windowStart: '09:00', 
+      windowEnd: '17:00', 
+      durationHours: 1, 
+      durationMinutes: 0,
+      repeatInterval: 60, 
+      isEnabled: true 
+    }
   );
 
-  const handleChange = (field: keyof Omit<IntervalTimerSetting, 'id'>, value: string | number | boolean) => {
-    if (field === 'repeatInterval') {
-      setFormData(prev => ({ ...prev, [field]: Math.max(1, Number(value) || 1) }));
+  const handleChange = (field: keyof IntervalFormData, value: string | number | boolean | 'windowed' | 'duration') => {
+     if (field === 'repeatInterval' || field === 'durationHours' || field === 'durationMinutes') {
+      setFormData(prev => ({ ...prev, [field]: Math.max(0, Number(value) || 0) }));
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
     }
@@ -200,54 +221,107 @@ const IntervalTimerForm = ({
       toast({ title: "Invalid Input", description: "Task name cannot be empty.", variant: "destructive" });
       return;
     }
+
+    const saveData: Omit<IntervalTimerSetting, 'id'> = {
+        taskName: formData.taskName,
+        timerMode: formData.timerMode,
+        repeatInterval: Math.max(1, formData.repeatInterval), // Ensure repeat interval is at least 1
+        isEnabled: formData.isEnabled,
+        startTime: initialData?.startTime // Preserve startTime if editing
+    };
+
+    if (formData.timerMode === 'windowed') {
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+        if (!timeRegex.test(formData.windowStart!) || !timeRegex.test(formData.windowEnd!)) {
+            toast({ title: "Invalid Time Format", description: "Please enter valid start and end times in HH:MM format for windowed mode.", variant: "destructive" });
+            return;
+        }
+        const startTotalMinutes = parseInt(formData.windowStart!.split(':')[0]) * 60 + parseInt(formData.windowStart!.split(':')[1]);
+        const endTotalMinutes = parseInt(formData.windowEnd!.split(':')[0]) * 60 + parseInt(formData.windowEnd!.split(':')[1]);
+
+        if (startTotalMinutes >= endTotalMinutes) {
+            toast({ title: "Invalid Time Window", description: "Window start time must be before end time.", variant: "destructive"});
+            return;
+        }
+        saveData.windowStart = formData.windowStart;
+        saveData.windowEnd = formData.windowEnd;
+        saveData.durationHours = undefined;
+        saveData.durationMinutes = undefined;
+    } else { // duration mode
+        if ((formData.durationHours || 0) === 0 && (formData.durationMinutes || 0) === 0) {
+            toast({ title: "Invalid Duration", description: "Duration must be greater than 0 minutes.", variant: "destructive" });
+            return;
+        }
+        saveData.durationHours = formData.durationHours;
+        saveData.durationMinutes = formData.durationMinutes;
+        saveData.windowStart = undefined;
+        saveData.windowEnd = undefined;
+    }
     
-    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-    if (!timeRegex.test(formData.windowStart) || !timeRegex.test(formData.windowEnd)) {
-      toast({ title: "Invalid Time Format", description: "Please enter valid start and end times in HH:MM format.", variant: "destructive" });
-      return;
-    }
-
-    const startTotalMinutes = parseInt(formData.windowStart.split(':')[0]) * 60 + parseInt(formData.windowStart.split(':')[1]);
-    const endTotalMinutes = parseInt(formData.windowEnd.split(':')[0]) * 60 + parseInt(formData.windowEnd.split(':')[1]);
-
-    if (startTotalMinutes >= endTotalMinutes) {
-        toast({ title: "Invalid Time Window", description: "Window start time must be before end time.", variant: "destructive"});
-        return;
-    }
-
-    if (formData.repeatInterval < 1) {
-      toast({ title: "Invalid Interval", description: "Repeat interval must be at least 1 minute.", variant: "destructive" });
-      return;
-    }
-    
-    onSave(initialData ? { ...formData, id: initialData.id } : formData);
+    onSave(saveData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6 py-2">
       <div>
         <Label htmlFor="intervalTaskName">Task Name</Label>
-        <Input id="intervalTaskName" value={formData.taskName} onChange={(e) => handleChange('taskName', e.target.value)} />
+        <Input id="intervalTaskName" value={formData.taskName} onChange={(e) => handleChange('taskName', e.target.value)} className="mt-1"/>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="intervalWindowStart">Window Start (HH:MM)</Label>
-          <Input id="intervalWindowStart" type="time" value={formData.windowStart} onChange={(e) => handleChange('windowStart', e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="intervalWindowEnd">Window End (HH:MM)</Label>
-          <Input id="intervalWindowEnd" type="time" value={formData.windowEnd} onChange={(e) => handleChange('windowEnd', e.target.value)} />
-        </div>
+
+      <div>
+        <Label>Timer Mode</Label>
+        <RadioGroup
+            value={formData.timerMode}
+            onValueChange={(value) => handleChange('timerMode', value as 'windowed' | 'duration')}
+            className="mt-1 flex space-x-4"
+        >
+            <div className="flex items-center space-x-2">
+                <RadioGroupItem value="windowed" id="modeWindowed" />
+                <Label htmlFor="modeWindowed">Windowed</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+                <RadioGroupItem value="duration" id="modeDuration" />
+                <Label htmlFor="modeDuration">Duration</Label>
+            </div>
+        </RadioGroup>
       </div>
+
+      {formData.timerMode === 'windowed' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="intervalWindowStart">Window Start (HH:MM)</Label>
+            <Input id="intervalWindowStart" type="time" value={formData.windowStart} onChange={(e) => handleChange('windowStart', e.target.value)} className="mt-1"/>
+          </div>
+          <div>
+            <Label htmlFor="intervalWindowEnd">Window End (HH:MM)</Label>
+            <Input id="intervalWindowEnd" type="time" value={formData.windowEnd} onChange={(e) => handleChange('windowEnd', e.target.value)} className="mt-1"/>
+          </div>
+        </div>
+      )}
+
+      {formData.timerMode === 'duration' && (
+         <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="intervalDurationHours">Duration Hours</Label>
+            <Input id="intervalDurationHours" type="number" value={formData.durationHours} onChange={(e) => handleChange('durationHours', parseInt(e.target.value))} min="0" className="mt-1"/>
+          </div>
+          <div>
+            <Label htmlFor="intervalDurationMinutes">Duration Minutes</Label>
+            <Input id="intervalDurationMinutes" type="number" value={formData.durationMinutes} onChange={(e) => handleChange('durationMinutes', parseInt(e.target.value))} min="0" className="mt-1"/>
+          </div>
+        </div>
+      )}
+      
       <div>
         <Label htmlFor="intervalRepeat">Repeat Interval (min)</Label>
-        <Input id="intervalRepeat" type="number" value={formData.repeatInterval} onChange={(e) => handleChange('repeatInterval', parseInt(e.target.value))} min="1" />
+        <Input id="intervalRepeat" type="number" value={formData.repeatInterval} onChange={(e) => handleChange('repeatInterval', parseInt(e.target.value))} min="1" className="mt-1"/>
       </div>
-      <div className="flex items-center space-x-2">
+
+      <div className="flex items-center space-x-2 pt-2">
         <Switch id="intervalEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleChange('isEnabled', checked)} />
         <Label htmlFor="intervalEnabled">Enable Timer</Label>
       </div>
-      <DialogFooter>
+      <DialogFooter className="pt-4">
         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         <Button type="submit">Save Timer</Button>
       </DialogFooter>
@@ -257,26 +331,32 @@ const IntervalTimerForm = ({
 
 const formatTimeLeft = (totalSeconds: number | null): string => {
   if (totalSeconds === null || totalSeconds < 0) return '--:--';
-  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
+  
+  if (hours > 0) {
+    return `${String(hours)}h ${String(minutes).padStart(2, '0')}m`;
+  }
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
+
 
 const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
   timer: IntervalTimerSetting;
   onDelete: (id: string) => void;
   onEdit: (timer: IntervalTimerSetting) => void;
-  onToggleEnable: (timer: IntervalTimerSetting) => void;
+  onToggleEnable: (timer: IntervalTimerSetting, newEnabledState: boolean) => void;
 }) => {
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [isWithinWindow, setIsWithinWindow] = useState(false);
+  const [timeLeftForNotification, setTimeLeftForNotification] = useState<number | null>(null);
+  const [timeLeftForDuration, setTimeLeftForDuration] = useState<number | null>(null);
   const [statusMessage, setStatusMessage] = useState("Calculating...");
 
   useEffect(() => {
     if (!timer.isEnabled) {
       setStatusMessage("Timer disabled.");
-      setTimeLeft(null);
-      setIsWithinWindow(false);
+      setTimeLeftForNotification(null);
+      setTimeLeftForDuration(null);
       return;
     }
 
@@ -284,93 +364,124 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
       const now = new Date();
       const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-      const startParts = timer.windowStart.split(':').map(Number);
-      const endParts = timer.windowEnd.split(':').map(Number);
+      if (timer.timerMode === 'windowed') {
+        const startParts = timer.windowStart?.split(':').map(Number);
+        const endParts = timer.windowEnd?.split(':').map(Number);
 
-      if (startParts.length !== 2 || endParts.length !== 2 || startParts.some(isNaN) || endParts.some(isNaN)) {
-        setStatusMessage("Invalid time format.");
-        setTimeLeft(null); setIsWithinWindow(false); return;
-      }
-
-      const windowStartTotalMinutes = startParts[0] * 60 + startParts[1];
-      const windowEndTotalMinutes = endParts[0] * 60 + endParts[1];
-      
-      if (isNaN(windowStartTotalMinutes) || isNaN(windowEndTotalMinutes) || windowStartTotalMinutes >= windowEndTotalMinutes) {
-        setStatusMessage("Invalid time window.");
-        setTimeLeft(null); setIsWithinWindow(false); return;
-      }
-
-      const _isWithinWindow = currentTotalMinutes >= windowStartTotalMinutes && currentTotalMinutes <= windowEndTotalMinutes;
-      setIsWithinWindow(_isWithinWindow);
-
-      if (_isWithinWindow) {
-        const lastNotifiedTimestampString = localStorage.getItem(`lastNotified_${timer.id}_timestamp`);
-        let baseTimeForNextInterval: Date;
-
-        if (lastNotifiedTimestampString) {
-          baseTimeForNextInterval = new Date(parseInt(lastNotifiedTimestampString));
-        } else {
-          // If never notified, or for the first interval of the day
-          baseTimeForNextInterval = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startParts[0], startParts[1]);
-           // Adjust baseTime to the *start* of the current or next interval slot if needed
-          while(baseTimeForNextInterval.getTime() + timer.repeatInterval * 60000 < now.getTime() && (baseTimeForNextInterval.getHours()*60 + baseTimeForNextInterval.getMinutes()) < windowEndTotalMinutes) {
-            baseTimeForNextInterval.setTime(baseTimeForNextInterval.getTime() + timer.repeatInterval * 60000);
-          }
-          // If the loop pushed baseTimeForNextInterval past windowEndTotalMinutes or it was already past, handle it
-          if ((baseTimeForNextInterval.getHours()*60 + baseTimeForNextInterval.getMinutes()) >= windowEndTotalMinutes && now.getTime() > baseTimeForNextInterval.getTime()) {
-             setStatusMessage("Window ended for today.");
-             setTimeLeft(null);
-             return;
-          }
+        if (!startParts || startParts.length !== 2 || !endParts || endParts.length !== 2 || startParts.some(isNaN) || endParts.some(isNaN)) {
+          setStatusMessage("Invalid time format for window.");
+          setTimeLeftForNotification(null); return;
         }
+        const windowStartTotalMinutes = startParts[0] * 60 + startParts[1];
+        const windowEndTotalMinutes = endParts[0] * 60 + endParts[1];
         
-        let nextNotificationTime = new Date(baseTimeForNextInterval.getTime());
-        if (now.getTime() > nextNotificationTime.getTime()) { // If current time is past the base, calculate next actual slot
-             nextNotificationTime.setTime(baseTimeForNextInterval.getTime() + timer.repeatInterval * 60000);
+        if (windowStartTotalMinutes >= windowEndTotalMinutes) {
+          setStatusMessage("Invalid time window.");
+          setTimeLeftForNotification(null); return;
         }
 
+        const isWithinWindow = currentTotalMinutes >= windowStartTotalMinutes && currentTotalMinutes < windowEndTotalMinutes;
 
-        // Ensure nextNotificationTime is not before windowStart for today, and not after windowEnd
-         const nextNotificationTotalMinutes = nextNotificationTime.getHours() * 60 + nextNotificationTime.getMinutes();
-        if (nextNotificationTotalMinutes < windowStartTotalMinutes && nextNotificationTime.toDateString() === now.toDateString()){
-            // This case means last notification was from a previous day, or an error. Reset to window start.
-            nextNotificationTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startParts[0], startParts[1]);
-        }
+        if (isWithinWindow) {
+          const lastNotifiedTimestampString = localStorage.getItem(`lastNotified_${timer.id}_timestamp`);
+          let baseTimeForNextInterval = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startParts[0], startParts[1]);
+          
+          if (lastNotifiedTimestampString) {
+            const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestampString));
+             // Ensure base time is not stuck in the past from a previous notification cycle on the same day
+            if (lastNotifiedDate.getTime() >= baseTimeForNextInterval.getTime() && lastNotifiedDate.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate(), endParts[0], endParts[1]).getTime() ) {
+                 baseTimeForNextInterval = lastNotifiedDate;
+            }
+          }
 
-
-        if (nextNotificationTotalMinutes > windowEndTotalMinutes && nextNotificationTime.toDateString() === now.toDateString()) {
+          let nextNotificationTime = new Date(baseTimeForNextInterval.getTime());
+          while (nextNotificationTime.getTime() <= now.getTime() || (nextNotificationTime.getHours()*60 + nextNotificationTime.getMinutes()) < windowStartTotalMinutes) {
+            nextNotificationTime.setTime(nextNotificationTime.getTime() + timer.repeatInterval * 60000);
+          }
+          
+          const nextNotificationTotalMinutes = nextNotificationTime.getHours() * 60 + nextNotificationTime.getMinutes();
+          if (nextNotificationTotalMinutes >= windowEndTotalMinutes && nextNotificationTime.toDateString() === now.toDateString()) {
             setStatusMessage("Window ended for today.");
-            setTimeLeft(null);
-            return;
-        }
-        
-        const secondsUntilNext = Math.round((nextNotificationTime.getTime() - now.getTime()) / 1000);
-        
-        if (secondsUntilNext >= 0) {
-          setTimeLeft(secondsUntilNext);
+            setTimeLeftForNotification(null); return;
+          }
+
+          const secondsUntilNext = Math.max(0, Math.round((nextNotificationTime.getTime() - now.getTime()) / 1000));
+          setTimeLeftForNotification(secondsUntilNext);
           setStatusMessage(`Next reminder in: ${formatTimeLeft(secondsUntilNext)}`);
         } else {
-           // This means a reminder is due or just passed, manager will handle toast
-           // For display, show "Reminder due" or prepare for next after manager updates localStorage
-           setTimeLeft(0); 
-           setStatusMessage("Reminder due!");
+          setTimeLeftForNotification(null);
+          if (currentTotalMinutes < windowStartTotalMinutes) {
+            setStatusMessage(`Inactive. Window starts at ${timer.windowStart}.`);
+          } else {
+            setStatusMessage("Window ended for today.");
+          }
+        }
+      } else { // duration mode
+        if (!timer.startTime) {
+          setStatusMessage("Timer enabled, awaiting start...");
+          setTimeLeftForNotification(null);
+          setTimeLeftForDuration(null);
+          return;
         }
 
-      } else { // Not within window
-        setTimeLeft(null);
-        if (currentTotalMinutes < windowStartTotalMinutes) {
-          setStatusMessage(`Timer inactive. Starts at ${timer.windowStart}.`);
+        const startDate = new Date(timer.startTime);
+        const totalDurationSeconds = (timer.durationHours || 0) * 3600 + (timer.durationMinutes || 0) * 60;
+        const endDate = new Date(startDate.getTime() + totalDurationSeconds * 1000);
+
+        if (now.getTime() >= endDate.getTime()) {
+          setStatusMessage("Duration complete.");
+          setTimeLeftForNotification(null);
+          setTimeLeftForDuration(0);
+          // Manager will disable it
+          return;
+        }
+
+        const secondsUntilDurationEnd = Math.max(0, Math.round((endDate.getTime() - now.getTime()) / 1000));
+        setTimeLeftForDuration(secondsUntilDurationEnd);
+
+        const lastNotifiedTimestampString = localStorage.getItem(`lastNotified_${timer.id}_timestamp`);
+        let baseTimeForNotification = startDate;
+        if (lastNotifiedTimestampString) {
+            const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestampString));
+            if(lastNotifiedDate.getTime() >= startDate.getTime() && lastNotifiedDate.getTime() < endDate.getTime()){
+                 baseTimeForNotification = lastNotifiedDate;
+            }
+        }
+        
+        let nextNotificationTime = new Date(baseTimeForNotification.getTime());
+         while(nextNotificationTime.getTime() <= now.getTime()){
+            nextNotificationTime.setTime(nextNotificationTime.getTime() + timer.repeatInterval * 60000);
+         }
+
+        if (nextNotificationTime.getTime() >= endDate.getTime()) {
+           setTimeLeftForNotification(null); // No more notifications within this duration
+           setStatusMessage(`Duration ending in: ${formatTimeLeft(secondsUntilDurationEnd)}`);
         } else {
-          setStatusMessage("Timer window ended for today.");
+          const secondsUntilNextNotification = Math.max(0, Math.round((nextNotificationTime.getTime() - now.getTime()) / 1000));
+          setTimeLeftForNotification(secondsUntilNextNotification);
+          setStatusMessage(`Next: ${formatTimeLeft(secondsUntilNextNotification)}. Total left: ${formatTimeLeft(secondsUntilDurationEnd)}`);
         }
       }
     };
 
-    calculateAndUpdateState();
-    const intervalId = setInterval(calculateAndUpdateState, 1000); 
-
+    calculateAndUpdateState(); // Initial call
+    const intervalId = setInterval(calculateAndUpdateState, 1000);
     return () => clearInterval(intervalId);
-  }, [timer, timer.isEnabled, timer.windowStart, timer.windowEnd, timer.repeatInterval]);
+  }, [timer]);
+
+
+  const getDescription = () => {
+    const enabledIcon = timer.isEnabled ? <BellRing className="inline h-3 w-3 mr-1 text-green-500" /> : <BellOff className="inline h-3 w-3 mr-1 text-red-500" />;
+    if (timer.timerMode === 'windowed') {
+      return <>{enabledIcon} Repeats every {timer.repeatInterval} min from {timer.windowStart} to {timer.windowEnd}</>;
+    } else {
+      const durationParts = [];
+      if (timer.durationHours && timer.durationHours > 0) durationParts.push(`${timer.durationHours}h`);
+      if (timer.durationMinutes && timer.durationMinutes > 0) durationParts.push(`${timer.durationMinutes}m`);
+      const durationStr = durationParts.join(' ') || 'N/A';
+      return <>{enabledIcon} Runs for {durationStr}, repeats every {timer.repeatInterval} min.</>;
+    }
+  };
 
 
   return (
@@ -380,17 +491,16 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
           <CardTitle className="text-lg font-medium text-foreground">{timer.taskName}</CardTitle>
           <Switch
             checked={timer.isEnabled}
-            onCheckedChange={() => onToggleEnable(timer)}
+            onCheckedChange={(checked) => onToggleEnable(timer, checked)}
             aria-label={`Toggle timer ${timer.taskName}`}
           />
         </div>
-        <CardDescription className="text-xs">
-          {timer.isEnabled ? <BellRing className="inline h-3 w-3 mr-1 text-green-500" /> : <BellOff className="inline h-3 w-3 mr-1 text-red-500" />}
-          Repeats every {timer.repeatInterval} min from {timer.windowStart} to {timer.windowEnd}
+        <CardDescription className="text-xs h-6 flex items-center"> {/* Added h-6 and flex items-center for consistent height */}
+          {getDescription()}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-2 pb-3 min-h-[20px]"> {/* Added min-height */}
-        <p className={`text-sm ${timeLeft !== null && timeLeft >= 0 && isWithinWindow && timer.isEnabled ? 'text-accent' : 'text-muted-foreground'}`}>
+      <CardContent className="pt-2 pb-3 min-h-[20px]">
+        <p className={`text-sm ${ (timeLeftForNotification !== null && timeLeftForNotification >= 0 && timer.isEnabled) || (timeLeftForDuration !==null && timeLeftForDuration > 0 && timer.isEnabled && timer.timerMode==='duration') ? 'text-accent' : 'text-muted-foreground'}`}>
           {statusMessage}
         </p>
       </CardContent>
@@ -421,82 +531,130 @@ const IntervalTimersManager = () => {
       intervalTimerSettings.forEach(setting => {
         if (!setting.isEnabled) return;
 
-        const startParts = setting.windowStart.split(':').map(Number);
-        const endParts = setting.windowEnd.split(':').map(Number);
+        let shouldNotify = false;
+        const lastNotifiedTimestampKey = `lastNotified_${setting.id}_timestamp`;
+        const lastNotifiedMinuteMarkerKey = `lastNotified_${setting.id}_minuteMarker`;
+        const lastNotifiedTimestamp = localStorage.getItem(lastNotifiedTimestampKey);
+        const currentMinuteMarker = `${now.getHours()}:${now.getMinutes()}`;
 
-        if (startParts.length !== 2 || endParts.length !== 2 || startParts.some(isNaN) || endParts.some(isNaN)) {
-          return; 
-        }
+        if (setting.timerMode === 'windowed') {
+            const startParts = setting.windowStart?.split(':').map(Number);
+            const endParts = setting.windowEnd?.split(':').map(Number);
 
-        const windowStartTotalMinutes = startParts[0] * 60 + startParts[1];
-        const windowEndTotalMinutes = endParts[0] * 60 + endParts[1];
-        
-        if (isNaN(windowStartTotalMinutes) || isNaN(windowEndTotalMinutes) || windowStartTotalMinutes >= windowEndTotalMinutes) {
-          return;
-        }
-        
-        if (currentTotalMinutes >= windowStartTotalMinutes && currentTotalMinutes <= windowEndTotalMinutes) {
-          const lastNotifiedTimestampKey = `lastNotified_${setting.id}_timestamp`;
-          const lastNotifiedTimestamp = localStorage.getItem(lastNotifiedTimestampKey);
-          
-          let shouldNotify = false;
-          if (!lastNotifiedTimestamp) { // First time, or cleared
-            // Check if current time is at or after the first interval point within the window for today
-             const firstIntervalPoint = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startParts[0], startParts[1]);
-             if(now.getTime() >= firstIntervalPoint.getTime()){
-                shouldNotify = (currentTotalMinutes - windowStartTotalMinutes) % setting.repeatInterval === 0;
-             }
-          } else {
-            const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestamp));
-            const minutesSinceLastNotification = (now.getTime() - lastNotifiedDate.getTime()) / (1000 * 60);
-            if (minutesSinceLastNotification >= setting.repeatInterval) {
-                 // Ensure we are not notifying for past intervals if tab was closed, only for current or very recent ones.
-                 // This check ensures we are roughly on an interval boundary from window start.
-                if ((currentTotalMinutes - windowStartTotalMinutes) % setting.repeatInterval < 1) { // Check if current minute is an interval point
-                    shouldNotify = true;
+            if (!startParts || startParts.length !== 2 || !endParts || endParts.length !== 2 || startParts.some(isNaN) || endParts.some(isNaN)) return;
+            
+            const windowStartTotalMinutes = startParts[0] * 60 + startParts[1];
+            const windowEndTotalMinutes = endParts[0] * 60 + endParts[1];
+
+            if (windowStartTotalMinutes >= windowEndTotalMinutes || currentTotalMinutes < windowStartTotalMinutes || currentTotalMinutes >= windowEndTotalMinutes) return;
+
+            let baseTimeForNotificationCheck = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startParts[0], startParts[1]);
+             if (lastNotifiedTimestamp) {
+                 const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestamp));
+                 if (lastNotifiedDate.getTime() >= baseTimeForNotificationCheck.getTime() && (lastNotifiedDate.getHours()*60 + lastNotifiedDate.getMinutes()) < windowEndTotalMinutes) {
+                    baseTimeForNotificationCheck = lastNotifiedDate;
+                 }
+            }
+            
+            let nextPotentialNotificationTime = new Date(baseTimeForNotificationCheck.getTime());
+            // Ensure nextPotential is at or after current time within window
+            while(nextPotentialNotificationTime.getTime() <= now.getTime()){
+                 nextPotentialNotificationTime.setTime(nextPotentialNotificationTime.getTime() + setting.repeatInterval * 60000);
+            }
+            // Check if this calculated next time is the current minute
+            if(nextPotentialNotificationTime.getHours() === now.getHours() && nextPotentialNotificationTime.getMinutes() === now.getMinutes()){
+                 shouldNotify = true;
+            }
+
+
+        } else { // duration mode
+            if (!setting.startTime || !setting.durationHours && !setting.durationMinutes) return;
+
+            const startDate = new Date(setting.startTime);
+            const totalDurationSeconds = (setting.durationHours || 0) * 3600 + (setting.durationMinutes || 0) * 60;
+            const endDate = new Date(startDate.getTime() + totalDurationSeconds * 1000);
+
+            if (now.getTime() >= endDate.getTime()) {
+                // Duration ended, disable timer
+                updateIntervalTimerSetting({ ...setting, isEnabled: false, startTime: undefined });
+                toast({ title: "Timer Finished", description: `${setting.taskName} duration has completed.` });
+                localStorage.removeItem(lastNotifiedTimestampKey); // Clean up local storage
+                localStorage.removeItem(lastNotifiedMinuteMarkerKey);
+                return;
+            }
+            
+            let baseTimeForNotificationCheck = startDate;
+            if(lastNotifiedTimestamp){
+                const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestamp));
+                if(lastNotifiedDate.getTime() >= startDate.getTime() && lastNotifiedDate.getTime() < endDate.getTime()){
+                    baseTimeForNotificationCheck = lastNotifiedDate;
                 }
             }
-          }
 
-          if (shouldNotify) {
-            // Double check not to notify again in same minute if this runs too fast
-            const lastNotifiedMinuteMarkerKey = `lastNotified_${setting.id}_minuteMarker`;
-            const lastNotifiedMinuteMarker = localStorage.getItem(lastNotifiedMinuteMarkerKey);
-            const currentMinuteMarker = `${now.getHours()}:${now.getMinutes()}`;
-
-            if (lastNotifiedMinuteMarker !== currentMinuteMarker) {
-                toast({ title: "Interval Reminder", description: setting.taskName });
-                localStorage.setItem(lastNotifiedTimestampKey, now.getTime().toString());
-                localStorage.setItem(lastNotifiedMinuteMarkerKey, currentMinuteMarker);
+            let nextPotentialNotificationTime = new Date(baseTimeForNotificationCheck.getTime());
+             while(nextPotentialNotificationTime.getTime() <= now.getTime()){
+                 nextPotentialNotificationTime.setTime(nextPotentialNotificationTime.getTime() + setting.repeatInterval * 60000);
             }
+
+            if(nextPotentialNotificationTime.getTime() < endDate.getTime() && nextPotentialNotificationTime.getHours() === now.getHours() && nextPotentialNotificationTime.getMinutes() === now.getMinutes()){
+                shouldNotify = true;
+            }
+        }
+
+        if (shouldNotify) {
+          const lastNotifiedMinuteMarker = localStorage.getItem(lastNotifiedMinuteMarkerKey);
+          if (lastNotifiedMinuteMarker !== currentMinuteMarker) {
+              toast({ title: "Interval Reminder", description: setting.taskName });
+              localStorage.setItem(lastNotifiedTimestampKey, now.getTime().toString());
+              localStorage.setItem(lastNotifiedMinuteMarkerKey, currentMinuteMarker);
           }
         }
       });
-    }, 60000); // Check every minute for notifications
+    }, 60000); // Check every minute
 
     return () => clearInterval(timerId);
-  }, [intervalTimerSettings, toast]);
+  }, [intervalTimerSettings, toast, updateIntervalTimerSetting]);
 
-  const handleSaveTimer = (data: Omit<IntervalTimerSetting, 'id'> | IntervalTimerSetting) => {
-    if ('id' in data) {
-      updateIntervalTimerSetting(data as IntervalTimerSetting);
+  const handleSaveTimer = (data: Omit<IntervalTimerSetting, 'id'>) => {
+     const saveData = { ...data };
+     if (saveData.timerMode === 'duration' && saveData.isEnabled && !saveData.startTime && !editingTimer?.startTime){ // If new duration timer is enabled, set start time
+        saveData.startTime = new Date().toISOString();
+     } else if (saveData.timerMode === 'windowed'){
+        saveData.startTime = undefined; // Clear startTime for windowed mode
+     }
+
+
+    if (editingTimer) {
+      updateIntervalTimerSetting({ ...saveData, id: editingTimer.id } as IntervalTimerSetting);
       toast({ title: "Interval Timer Updated!" });
     } else {
-      addIntervalTimerSetting(data as Omit<IntervalTimerSetting, 'id'>);
+      addIntervalTimerSetting(saveData);
       toast({ title: "Interval Timer Added!" });
     }
     setIsFormOpen(false);
     setEditingTimer(undefined);
   };
 
-  const handleToggleEnable = (timer: IntervalTimerSetting) => {
-    updateIntervalTimerSetting({ ...timer, isEnabled: !timer.isEnabled });
-    toast({ title: timer.isEnabled ? "Timer Disabled" : "Timer Enabled", description: timer.taskName });
+  const handleToggleEnable = (timer: IntervalTimerSetting, newEnabledState: boolean) => {
+    const updatedTimer = { ...timer, isEnabled: newEnabledState };
+    if (timer.timerMode === 'duration') {
+      if (newEnabledState && !timer.startTime) { // Enabling a duration timer
+        updatedTimer.startTime = new Date().toISOString();
+      } else if (!newEnabledState) { // Disabling any timer (duration or windowed)
+        updatedTimer.startTime = undefined; // Clear startTime if disabling a duration timer
+        localStorage.removeItem(`lastNotified_${timer.id}_timestamp`); // Clean up for this timer
+        localStorage.removeItem(`lastNotified_${timer.id}_minuteMarker`);
+      }
+    }
+    updateIntervalTimerSetting(updatedTimer);
+    toast({ title: newEnabledState ? "Timer Enabled" : "Timer Disabled", description: timer.taskName });
   };
 
   const handleDeleteTimer = (timerId: string) => {
     if (window.confirm("Are you sure you want to delete this interval timer?")) {
       deleteIntervalTimerSetting(timerId);
+      localStorage.removeItem(`lastNotified_${timerId}_timestamp`); // Clean up local storage
+      localStorage.removeItem(`lastNotified_${timerId}_minuteMarker`);
       toast({ title: "Interval Timer Deleted", variant: "destructive" });
     }
   };
@@ -558,4 +716,3 @@ export default function TimersPage() {
     </AppWrapper>
   );
 }
-

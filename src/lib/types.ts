@@ -1,5 +1,4 @@
 
-
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
 
 export interface Task {
@@ -65,13 +64,22 @@ export interface PomodoroSettings {
   sessionsBeforeLongBreak: number;
 }
 
-export interface IntervalTimerSetting { // Renamed from IntervalTimerSettings
+export interface IntervalTimerSetting {
   id: string;
-  windowStart: string; // HH:mm
-  windowEnd: string; // HH:mm
-  repeatInterval: number; // minutes
   taskName: string;
   isEnabled: boolean;
+  timerMode: 'windowed' | 'duration';
+
+  // Windowed mode specific (optional)
+  windowStart?: string; // HH:mm
+  windowEnd?: string; // HH:mm
+
+  // Duration mode specific (optional)
+  durationHours?: number;
+  durationMinutes?: number;
+  startTime?: string; // ISO string, when the current duration period started
+
+  repeatInterval: number; // minutes (common to both)
 }
 
 export const RANK_NAMES = [
@@ -133,5 +141,4 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
   autoAssignStatExp: true,
 };
 
-// This will now be an array of IntervalTimerSetting
 export const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSetting[] = [];
