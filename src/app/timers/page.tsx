@@ -503,7 +503,7 @@ const IntervalTimersManager = () => {
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-baseline justify-between">
         <CardTitle className="font-headline text-xl text-primary">Interval Timers</CardTitle>
         <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTimer(undefined); }}>
           <DialogTrigger asChild>
