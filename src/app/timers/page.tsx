@@ -508,7 +508,8 @@ const IntervalTimersManager = () => {
         <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTimer(undefined); }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" onClick={() => { setEditingTimer(undefined); setIsFormOpen(true); }}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Timer
+              <PlusCircle className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Timer</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
