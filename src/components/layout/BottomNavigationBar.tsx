@@ -1,3 +1,4 @@
+
 // src/components/layout/BottomNavigationBar.tsx
 'use client';
 
@@ -45,7 +46,7 @@ const BottomNavigationBar = () => {
   const isActive = (itemKey: string) => itemKey === activeTab || (itemKey === 'home' && pathname === '/');
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border shadow-top z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border z-50 bottom-nav-glow">
       <div className="container mx-auto px-4 h-16 flex justify-around items-center">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -58,7 +59,7 @@ const BottomNavigationBar = () => {
                 "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200",
                 active ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}>
-                <div className={cn("mb-0.5 transition-transform duration-200", active ? "scale-110" : "scale-90")}>
+                <div className={cn("mb-0.5 transition-transform duration-200 flex items-center justify-center h-8", active ? "scale-110" : "scale-90")}>
                   {active ? (
                     <OrbitingIconAnimator>
                       <Icon className={cn("h-6 w-6 text-primary neon-icon-primary")} />
@@ -67,7 +68,8 @@ const BottomNavigationBar = () => {
                     <Icon className={cn("h-6 w-6 text-muted-foreground group-hover:text-foreground")} />
                   )}
                 </div>
-                <span className={cn("font-medium transition-opacity duration-200", active ? "font-bold opacity-100" : "opacity-80")}>{item.label}</span>
+                {/* Text label removed below */}
+                {/* <span className={cn("font-medium transition-opacity duration-200", active ? "font-bold opacity-100" : "opacity-80")}>{item.label}</span> */}
               </a>
             </Link>
           );
