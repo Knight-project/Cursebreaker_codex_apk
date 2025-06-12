@@ -179,15 +179,16 @@
 .avatar-orbiting-arc-type1 {
   animation-duration: 7s;
   animation-delay: 0s;
-  border-top-color: hsla(var(--accent), 0.7); /* Changed to accent */
+  border-top-color: hsla(var(--accent), 0.9);
 }
 .avatar-orbiting-arc-type2 {
   animation-duration: 9s;
   animation-delay: -2s;
-  border-right-color: hsla(var(--accent), 0.6); /* Confirmed accent */
+  border-right-color: hsla(var(--accent), 0.9);
 }
 .avatar-orbiting-arc-type3 {
   animation-duration: 11s;
   animation-delay: -4s;
-  border-left-color: hsla(var(--accent), 0.5); /* Changed to accent */
+  border-left-color: hsla(var(--accent), 0.9);
 }
+
