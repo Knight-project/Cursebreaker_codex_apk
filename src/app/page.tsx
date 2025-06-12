@@ -36,7 +36,7 @@ const AddTaskForm = ({ onTaskAdd }: { onTaskAdd: () => void }) => {
     setDifficulty('Moderate');
     setAttribute('None');
     toast({ title: "Success", description: "Task added!" });
-    onTaskAdd(); // Close dialog
+    onTaskAdd(); 
   };
 
   return (
@@ -105,7 +105,7 @@ const TaskItem = ({ task }: { task: Task }) => {
   };
 
   return (
-    <div className={`p-3 border flex items-center justify-between transition-all duration-300 ${task.isCompleted ? 'bg-secondary/30 border-green-500/50' : 'bg-card hover:bg-card/90 border-border'}`}>
+    <div className={`p-3 border flex items-center justify-between transition-all duration-300 rounded-md ${task.isCompleted ? 'bg-secondary/30 border-green-500/50' : 'bg-card hover:bg-card/90 border-border'}`}>
       <div>
         <p className={`font-medium font-body ${task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
         <p className="text-xs text-muted-foreground">{task.difficulty} - {task.attribute}</p>
@@ -121,14 +121,14 @@ const TaskItem = ({ task }: { task: Task }) => {
 };
 
 const CyberpunkAvatarPlaceholder = () => (
-  <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full text-muted-foreground group-hover:text-primary transition-colors">
-    <path d="M50 15L20 30V70L50 85L80 70V30L50 15Z" stroke="currentColor" strokeWidth="3"/>
-    <path d="M50 15V45" stroke="currentColor" strokeWidth="2"/>
-    <path d="M20 30L50 45" stroke="currentColor" strokeWidth="2"/>
-    <path d="M80 30L50 45" stroke="currentColor" strokeWidth="2"/>
-    <path d="M35 50H65" stroke="currentColor" strokeWidth="3" />
-    <path d="M50 60V85" stroke="currentColor" strokeWidth="2" />
-    <circle cx="50" cy="45" r="5" fill="currentColor" className="opacity-50 group-hover:opacity-100"/>
+  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-primary transition-colors">
+    <circle cx="50" cy="35" r="15" stroke="currentColor" strokeWidth="3"/>
+    <path d="M25 70C25 55 35 50 50 50C65 50 75 55 75 70Z" stroke="currentColor" strokeWidth="3" fill="currentColor" fillOpacity="0.2"/>
+    <line x1="50" y1="50" x2="50" y2="60" stroke="currentColor" strokeWidth="2"/>
+    <path d="M40 80H60" stroke="currentColor" strokeWidth="2" />
+     {/* Simple data lines */}
+    <line x1="30" y1="25" x2="70" y2="25" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2"/>
+    <line x1="20" y1="40" x2="80" y2="40" stroke="currentColor" strokeWidth="1" strokeDasharray="3 1"/>
   </svg>
 );
 
@@ -152,7 +152,7 @@ export default function HomePage() {
   const handleUserAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 2 * 1024 * 1024) { 
         toast({
           title: "Image too large",
           description: "Please select an image smaller than 2MB.",
@@ -176,35 +176,38 @@ export default function HomePage() {
       reader.readAsDataURL(file);
     }
     if (event.target) {
-      event.target.value = ""; // Reset file input
+      event.target.value = ""; 
     }
   };
 
   return (
     <AppWrapper>
       <div className="space-y-6">
-        {/* User Profile Summary Card */}
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-primary/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
-             <div onClick={handleUserAvatarClick} className="cursor-pointer mb-3 relative group w-[100px] h-[100px] border-2 border-primary p-1">
-                {userProfile.avatarUrl ? (
-                  <Image 
-                    src={userProfile.avatarUrl} 
-                    alt="Your Avatar"
-                    width={100} 
-                    height={100} 
-                    className="object-cover w-full h-full"
-                    data-ai-hint="user avatar"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-card flex items-center justify-center overflow-hidden">
-                    <CyberpunkAvatarPlaceholder />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <PlusCircle className="h-8 w-8 text-primary neon-icon-primary" />
+             <div className="avatar-arc-container mb-3 w-[110px] h-[110px]">
+                <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden mx-auto my-auto">
+                    {userProfile.avatarUrl ? (
+                    <Image 
+                        src={userProfile.avatarUrl} 
+                        alt="Your Avatar"
+                        width={100} 
+                        height={100} 
+                        className="object-cover w-full h-full rounded-full"
+                        data-ai-hint="user avatar"
+                    />
+                    ) : (
+                    <div className="w-full h-full bg-card flex items-center justify-center overflow-hidden rounded-full">
+                        <CyberpunkAvatarPlaceholder />
+                    </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                    <PlusCircle className="h-8 w-8 text-primary neon-icon-primary" />
+                    </div>
                 </div>
-              </div>
+                <span className="avatar-static-arc avatar-static-arc-1" style={{ width: '110px', height: '110px', borderColor: 'hsla(var(--primary), 0.6)', transform: 'translate(-50%, -50%) rotate(20deg)', borderTopColor: 'transparent', borderLeftColor: 'transparent' }}></span>
+                <span className="avatar-static-arc avatar-static-arc-2" style={{ width: '120px', height: '120px', borderColor: 'hsla(var(--accent), 0.5)', transform: 'translate(-50%, -50%) rotate(-35deg)', borderBottomColor: 'transparent', borderRightColor: 'transparent'  }}></span>
+             </div>
               <input type="file" ref={userImageInputRef} onChange={handleUserAvatarChange} accept="image/*" className="hidden" />
 
             <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">{userProfile.rankName} - {userProfile.subRank}</CardTitle>
@@ -232,7 +235,6 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
             <DialogTrigger asChild>
@@ -263,7 +265,6 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Task List */}
         <Card className="bg-card/80 backdrop-blur-sm shadow-lg">
           <CardHeader className="p-4">
             <CardTitle className="font-headline text-lg text-primary uppercase">Daily Directives</CardTitle>

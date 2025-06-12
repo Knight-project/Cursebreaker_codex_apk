@@ -11,15 +11,13 @@ import Image from 'next/image';
 import { Swords, PlusCircle } from 'lucide-react'; 
 import { useToast } from '@/hooks/use-toast';
 
-const CyberpunkAvatarPlaceholder = () => (
-  <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full text-muted-foreground group-hover:text-destructive transition-colors">
-    <path d="M50 15L20 30V70L50 85L80 70V30L50 15Z" stroke="currentColor" strokeWidth="3"/>
-    <path d="M50 15V45" stroke="currentColor" strokeWidth="2"/>
-    <path d="M20 30L50 45" stroke="currentColor" strokeWidth="2"/>
-    <path d="M80 30L50 45" stroke="currentColor" strokeWidth="2"/>
-    <path d="M35 50H65" stroke="currentColor" strokeWidth="3" />
-    <path d="M50 60V85" stroke="currentColor" strokeWidth="2" />
-    <circle cx="50" cy="45" r="5" fill="currentColor" className="opacity-50 group-hover:opacity-100"/>
+const CyberpunkRivalPlaceholder = () => (
+  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
+    <circle cx="50" cy="35" r="15" stroke="currentColor" strokeWidth="3" fill="hsl(var(--destructive) / 0.2)" />
+    <path d="M30 75C30 60 40 55 50 55C60 55 70 60 70 75Z" stroke="currentColor" strokeWidth="3" fill="currentColor" fillOpacity="0.3"/>
+    <line x1="50" y1="55" x2="50" y2="65" stroke="currentColor" strokeWidth="2"/>
+    <rect x="40" y="20" width="20" height="5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.4" />
+    <path d="M45 80H55" stroke="currentColor" strokeWidth="2" />
   </svg>
 );
 
@@ -51,7 +49,7 @@ export default function RivalPage() {
   const handleRivalAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 2 * 1024 * 1024) { 
         toast({
           title: "Image too large",
           description: "Please select an image smaller than 2MB.",
@@ -75,7 +73,7 @@ export default function RivalPage() {
       reader.readAsDataURL(file);
     }
      if (event.target) {
-      event.target.value = ""; // Reset file input
+      event.target.value = ""; 
     }
   };
 
@@ -84,24 +82,30 @@ export default function RivalPage() {
       <div className="space-y-6">
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-destructive/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
-            <div onClick={handleRivalAvatarClick} className="cursor-pointer mb-3 relative group w-[120px] h-[120px] border-2 border-destructive p-1">
-              {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
-                <Image 
-                  src={rival.avatarUrl} 
-                  alt={`${rival.name}'s Avatar`}
-                  width={120} 
-                  height={120} 
-                  className="object-cover w-full h-full"
-                  data-ai-hint="fantasy character"
-                />
-              ) : (
-                <div className="w-full h-full bg-card flex items-center justify-center overflow-hidden">
-                   <CyberpunkAvatarPlaceholder />
+            <div className="avatar-arc-container mb-3 w-[130px] h-[130px]"> {/* Adjusted for 120px avatar + arcs */}
+              <div onClick={handleRivalAvatarClick} className="cursor-pointer relative group w-[120px] h-[120px] border-2 border-destructive p-0.5 rounded-full overflow-hidden mx-auto my-auto">
+                {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
+                  <Image 
+                    src={rival.avatarUrl} 
+                    alt={`${rival.name}'s Avatar`}
+                    width={120} 
+                    height={120} 
+                    className="object-cover w-full h-full rounded-full"
+                    data-ai-hint="fantasy character"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-card flex items-center justify-center overflow-hidden rounded-full">
+                     <CyberpunkRivalPlaceholder />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                  <PlusCircle className="h-10 w-10 text-destructive neon-icon" />
                 </div>
-              )}
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <PlusCircle className="h-10 w-10 text-destructive neon-icon" />
               </div>
+              {/* Static Arcs for Rival */}
+              <span className="avatar-static-arc avatar-static-arc-1" style={{ width: '130px', height: '130px', borderColor: 'hsla(var(--destructive), 0.6)', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
+              <span className="avatar-static-arc avatar-static-arc-2" style={{ width: '140px', height: '140px', borderColor: 'hsla(var(--accent), 0.5)', transform: 'translate(-50%, -50%) rotate(-40deg)', borderLeftColor: 'transparent', borderTopColor: 'transparent' }}></span>
+              <span className="avatar-static-arc avatar-static-arc-3" style={{ width: '150px', height: '150px', borderColor: 'hsla(var(--border), 0.3)', transform: 'translate(-50%, -50%) rotate(60deg)', borderTopColor: 'transparent',  borderRightColor: 'transparent' }}></span>
             </div>
             <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
             
@@ -121,7 +125,7 @@ export default function RivalPage() {
               />
             </div>
             
-            <Card className="bg-background/50 border-border mt-4">
+            <Card className="bg-background/50 border-border mt-4 rounded-md">
               <CardHeader className="p-3">
                 <CardTitle className="text-xs font-medium text-center text-muted-foreground uppercase font-headline tracking-wider">Transmission from Rival</CardTitle>
               </CardHeader>

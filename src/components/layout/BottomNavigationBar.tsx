@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Home, Timer, Users } from 'lucide-react'; // Removed unused SettingsIcon, BookOpen
+import { Home, Timer, Users } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
@@ -15,25 +15,24 @@ const navItems = [
 ];
 
 const OrbitingIconAnimator = ({ children }: { children: React.ReactNode }) => {
-  // Icon size is 1.5rem (from h-6/w-6). Adding 12px padding for arcs.
-  // 1.5rem is typically 24px. 24px + 12px = 36px orbit diameter.
-  const orbitSize = 'calc(1.5rem + 12px)';
-  const arcCommonStyle = {
+  const orbitSize = 'calc(1.5rem + 14px)'; // Icon (24px) + 14px padding = 38px diameter
+  const commonArcStyles: React.CSSProperties = {
     width: orbitSize,
     height: orbitSize,
+    position: 'absolute',
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
+    // borderRadius, borderStyle, borderWidth, borderColor are in .orbit-arc class
+    // Specific animation and border colors are in .orbit-arc-X classes
   };
 
   return (
-    <div className="relative grid place-items-center w-6 h-6"> {/* Explicit size and grid centering */}
-      {children} {/* Children is the <Icon className="h-6 w-6 ..."/> */}
-      <span className="orbit-arc orbit-arc-1" style={{ ...arcCommonStyle }}></span>
-      <span className="orbit-arc orbit-arc-2" style={{ ...arcCommonStyle }}></span>
-      <span className="orbit-arc orbit-arc-3" style={{ ...arcCommonStyle }}></span>
-      {/* Optional 4th arc for more symmetry if desired */}
-      {/* <span className="orbit-arc orbit-arc-4" style={{ ...arcCommonStyle }}></span> */}
+    <div className="relative grid place-items-center w-6 h-6"> {/* Parent is relative, sized like icon */}
+      {children} {/* The Icon itself */}
+      <span className="orbit-arc orbit-arc-1" style={commonArcStyles}></span>
+      <span className="orbit-arc orbit-arc-2" style={commonArcStyles}></span>
+      <span className="orbit-arc orbit-arc-3" style={commonArcStyles}></span>
     </div>
   );
 };
@@ -59,7 +58,6 @@ const BottomNavigationBar = () => {
                 "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200",
                 active ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}>
-                {/* This div handles the scaling */}
                 <div className={cn("mb-0.5 transition-transform duration-200", active ? "scale-110" : "scale-90")}>
                   {active ? (
                     <OrbitingIconAnimator>
