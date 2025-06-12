@@ -52,25 +52,23 @@ const BottomNavigationBar = () => {
           const Icon = item.icon;
           const active = isActive(item.key);
           return (
-            <Link href={item.href} key={item.label} passHref legacyBehavior>
-              <a
-                onClick={() => setActiveTab(item.key)}
-                className={cn(
-                "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200",
-                active ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              )}>
-                <div className={cn("mb-0.5 transition-transform duration-200 flex items-center justify-center h-8", active ? "scale-110" : "scale-90")}>
-                  {active ? (
-                    <OrbitingIconAnimator>
-                      <Icon className={cn("h-6 w-6 text-primary neon-icon-primary")} />
-                    </OrbitingIconAnimator>
-                  ) : (
-                    <Icon className={cn("h-6 w-6 text-muted-foreground group-hover:text-foreground")} />
-                  )}
-                </div>
-                {/* Text label removed below */}
-                {/* <span className={cn("font-medium transition-opacity duration-200", active ? "font-bold opacity-100" : "opacity-80")}>{item.label}</span> */}
-              </a>
+            <Link
+              href={item.href}
+              key={item.label}
+              onClick={() => setActiveTab(item.key)}
+              className={cn(
+              "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200",
+              active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}>
+              <div className={cn("mb-0.5 transition-transform duration-200 flex items-center justify-center h-8", active ? "scale-110" : "scale-90")}>
+                {active ? (
+                  <OrbitingIconAnimator>
+                    <Icon className={cn("h-6 w-6 text-primary neon-icon-primary")} />
+                  </OrbitingIconAnimator>
+                ) : (
+                  <Icon className={cn("h-6 w-6 text-muted-foreground group-hover:text-foreground")} />
+                )}
+              </div>
             </Link>
           );
         })}
