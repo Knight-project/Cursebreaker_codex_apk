@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSettings } from '@/lib/types';
+import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSettings, Attribute } from '@/lib/types';
 import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS } from '@/lib/types';
 import { 
   RANK_NAMES_LIST,
@@ -41,7 +41,7 @@ interface AppContextType {
   showLevelUp: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  grantExp: (expGained: number) => void; // Added grantExp to interface
+  grantExp: (expGained: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -70,7 +70,7 @@ const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSettings = {
 };
 
 const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [userProfile, setUserProfile] = useLocalStorage<UserProfile>(INITIAL_USER_PROFILE.customQuote ? 'habitHorizonUserProfile' : 'tempUserProfileKey', INITIAL_USER_PROFILE);
+  const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('habitHorizonUserProfile', INITIAL_USER_PROFILE);
   const [tasks, setTasks] = useLocalStorage<Task[]>('habitHorizonTasks', []);
   const [rival, setRival] = useLocalStorage<Rival>('habitHorizonRival', INITIAL_RIVAL);
   const [appSettings, setAppSettings] = useLocalStorage<AppSettings>('habitHorizonSettings', INITIAL_APP_SETTINGS);
@@ -82,7 +82,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [activeTab, setActiveTabState] = useState('home');
 
   useEffect(() => {
-    // Ensure rival has a name on first load
+    if (userProfile.customQuote === undefined ) {
+       setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
+    }
     if (!rival.name || !RIVAL_NAMES_POOL.includes(rival.name)) {
       setRival(prev => ({
         ...prev,
@@ -90,7 +92,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       }));
     }
     setIsInitialized(true);
-  }, [rival.name, setRival]);
+  }, [rival.name, setRival, userProfile.customQuote, setUserProfile]);
   
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
@@ -99,7 +101,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const triggerLevelUpAnimation = () => {
     if(appSettings.enableAnimations) {
       setShowLevelUp(true);
-      setTimeout(() => setShowLevelUp(false), 1500); // Duration of animation + buffer
+      setTimeout(() => setShowLevelUp(false), 1500); 
     }
   };
 
@@ -128,18 +130,15 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           if (currentRankIndex < RANK_NAMES_LIST.length - 1) {
             newRankName = RANK_NAMES_LIST[currentRankIndex + 1];
           } else {
-            // Max rank reached, cap subrank
             newSubRank = MAX_SUB_RANKS;
-            newCurrentExpInSubRank = newExpToNextSubRank; // Fill the bar
+            newCurrentExpInSubRank = newExpToNextSubRank; 
           }
         }
         newExpToNextSubRank = calculateExpForNextSubRank(newRankName, newSubRank);
       }
       
-      if (leveledUp) {
-         // Trigger animation outside of setState if possible, or use an effect
-         // For now, directly call. This might need refinement if it causes issues.
-         if(isInitialized && appSettings.enableAnimations) triggerLevelUpAnimation();
+      if (leveledUp && isInitialized && appSettings.enableAnimations) {
+         triggerLevelUpAnimation();
       }
 
       return {
@@ -154,21 +153,21 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [setUserProfile, isInitialized, appSettings.enableAnimations]);
 
 
-  const grantStatExp = useCallback((attribute: typeof ATTRIBUTES_LIST[number], expGained: number) => {
+  const grantStatExp = useCallback((attribute: Attribute, expGainedStat: number) => {
+    if (attribute === "None") return; // Should not happen if called correctly
+
     setUserProfile(prev => {
       const statKey = attribute.toLowerCase() as keyof typeof prev.stats;
       const currentStat = prev.stats[statKey];
-      // The check `if (!currentStat) return prev;` is removed as `attribute` type already ensures it's a valid key of `prev.stats`
-      // because `ATTRIBUTES_LIST` (which `attribute` must be part of) does not include "None".
-
-      let newExp = currentStat.exp + expGained;
+      
+      let newExp = currentStat.exp + expGainedStat;
       let newLevel = currentStat.level;
       let newExpToNext = currentStat.expToNextLevel;
 
       while (newExp >= newExpToNext) {
         newExp -= newExpToNext;
         newLevel++;
-        newExpToNext = Math.floor(100 * Math.pow(1.2, newLevel -1)); // Example scaling for stat levels
+        newExpToNext = Math.floor(100 * Math.pow(1.2, newLevel -1));
       }
 
       return {
@@ -189,8 +188,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const addTask = (taskData: Omit<Task, 'id' | 'dateAdded' | 'isCompleted'>) => {
     const newTask: Task = {
       ...taskData,
-      id: Date.now().toString() + Math.random().toString(36).substring(2,9), // more unique id
-      dateAdded: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+      id: Date.now().toString() + Math.random().toString(36).substring(2,9),
+      dateAdded: new Date().toISOString().split('T')[0], 
       isCompleted: false,
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
@@ -205,8 +204,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const completeTask = useCallback((taskId: string) => {
+    let completedTaskForHistory: Task | null = null;
+
     setTasks(prevTasks => {
-      const task = prevTasks.find(t => t.id === taskId);
+      const taskIndex = prevTasks.findIndex(t => t.id === taskId);
+      if (taskIndex === -1) return prevTasks;
+
+      const task = prevTasks[taskIndex];
       if (task && !task.isCompleted) {
         const rankIndex = RANK_NAMES_LIST.indexOf(userProfile.rankName as typeof RANK_NAMES_LIST[number]);
         const difficultyMultiplier = TASK_DIFFICULTY_EXP_MULTIPLIER[task.difficulty];
@@ -215,27 +219,57 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         const expFromTask = Math.floor(BASE_TASK_EXP * difficultyMultiplier * rankMultiplier);
         grantExp(expFromTask);
 
-        if (task.attribute !== "None" && ATTRIBUTES_LIST.includes(task.attribute as typeof ATTRIBUTES_LIST[number])) {
-          const statExp = Math.floor(expFromTask * 0.5); // Example: 50% of task EXP goes to stat
-          grantStatExp(task.attribute as typeof ATTRIBUTES_LIST[number], statExp);
+        let statExpGainedForTask: number | undefined = undefined;
+        let attributeAffectedForStatExpForTask: Attribute | undefined = undefined;
+
+        if (task.attribute !== "None" && appSettings.autoAssignStatExp && ATTRIBUTES_LIST.includes(task.attribute as typeof ATTRIBUTES_LIST[number])) {
+          const statExp = Math.floor(expFromTask * 0.5); 
+          grantStatExp(task.attribute as Attribute, statExp);
+          statExpGainedForTask = statExp;
+          attributeAffectedForStatExpForTask = task.attribute;
         }
         
-        return prevTasks.map(t => t.id === taskId ? { ...t, isCompleted: true, dateCompleted: new Date().toISOString().split('T')[0] } : t);
+        const updatedTask = { 
+          ...task, 
+          isCompleted: true, 
+          dateCompleted: new Date().toISOString().split('T')[0],
+          statExpGained: statExpGainedForTask,
+          attributeAffectedForStatExp: attributeAffectedForStatExpForTask
+        };
+        completedTaskForHistory = { ...updatedTask }; // Store a copy for history
+
+        const newTasks = [...prevTasks];
+        newTasks[taskIndex] = updatedTask;
+        return newTasks;
       }
       return prevTasks;
     });
-  }, [setTasks, userProfile.rankName, grantExp, grantStatExp]);
+
+    if (completedTaskForHistory) {
+      setUserProfile(prev => {
+        // Avoid duplicates in history by checking ID, update if exists, else add
+        const historyIndex = prev.taskHistory.findIndex(ht => ht.id === completedTaskForHistory!.id);
+        let newTaskHistory = [...prev.taskHistory];
+        if (historyIndex > -1) {
+          newTaskHistory[historyIndex] = completedTaskForHistory!;
+        } else {
+          newTaskHistory.push(completedTaskForHistory!);
+        }
+        return { ...prev, taskHistory: newTaskHistory };
+      });
+    }
+  }, [setTasks, userProfile.rankName, grantExp, grantStatExp, appSettings.autoAssignStatExp, setUserProfile]);
   
 
   const getTodaysTasks = useCallback(() => {
     const today = new Date().toISOString().split('T')[0];
-    return tasks.filter(task => task.dateAdded === today || !task.isCompleted); // Show today's or uncompleted past tasks
+    return tasks.filter(task => task.dateAdded === today || !task.isCompleted);
   }, [tasks]);
 
   const updateRivalTaunt = useCallback(async () => {
     if (!isInitialized) return;
     try {
-      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; // Simulate rival completion 50-90%
+      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; 
       const input: AdaptiveTauntInput = {
         userTaskCompletionRate: userProfile.dailyTaskCompletionPercentage / 100,
         rivalTaskCompletionRate: rivalTaskCompletionRate, 
@@ -250,28 +284,24 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized]);
 
-  // Effect for daily updates (streaks, rival EXP, etc. - simplified for now)
   useEffect(() => {
     if (!isInitialized) return;
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const todaysTasks = tasks.filter(t => t.dateAdded === todayStr);
-    const completedToday = todaysTasks.filter(t => t.isCompleted).length;
-    const completionPercentage = todaysTasks.length > 0 ? (completedToday / todaysTasks.length) * 100 : 0;
+    const tasksAddedToday = tasks.filter(t => t.dateAdded === todayStr);
+    const completedToday = tasksAddedToday.filter(t => t.isCompleted).length;
+    const completionPercentage = tasksAddedToday.length > 0 ? (completedToday / tasksAddedToday.length) * 100 : 0;
 
     setUserProfile(prev => ({
       ...prev,
       dailyTaskCompletionPercentage: parseFloat(completionPercentage.toFixed(1)),
     }));
 
-    // Rival taunt update attempt on load or when user profile changes significantly
-    // updateRivalTaunt(); // This might be too frequent, consider specific triggers
-
   }, [tasks, setUserProfile, isInitialized]);
 
 
   if (!isInitialized) {
-    return null; // Or a loading spinner
+    return null; 
   }
 
   return (
@@ -287,7 +317,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       updateRivalTaunt,
       triggerLevelUpAnimation, showLevelUp,
       activeTab, setActiveTab,
-      grantExp // Expose grantExp
+      grantExp
     }}>
       {children}
     </AppContext.Provider>

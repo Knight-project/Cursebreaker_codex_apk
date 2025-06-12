@@ -5,22 +5,23 @@
 import AppWrapper from '@/components/layout/AppWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect } from 'react';
-import { BarChart, TrendingUp, LineChart as LineChartIcon } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { LineChart as LineChartIcon, TrendingUp } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
-import { CartesianGrid, XAxis, Line, LineChart, Bar as RechartsBar, ResponsiveContainer } from 'recharts'; // Renamed Bar to RechartsBar
-import { ATTRIBUTES_LIST } from '@/lib/types';
+import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
+import { ATTRIBUTES_LIST, type Attribute } from '@/lib/types';
+import { format, subDays, eachDayOfInterval } from 'date-fns';
 
-const chartConfig = {
+const chartConfigBase = {
   completion: {
     label: "Task Completion %",
     color: "hsl(var(--accent))",
   },
-  strength: { label: "Strength", color: "hsl(var(--chart-1))" },
-  intelligence: { label: "Intelligence", color: "hsl(var(--chart-2))" },
-  endurance: { label: "Endurance", color: "hsl(var(--chart-3))" },
-  creativity: { label: "Creativity", color: "hsl(var(--chart-4))" },
-  charisma: { label: "Charisma", color: "hsl(var(--chart-5))" },
+  strength: { label: "Strength EXP", color: "hsl(var(--chart-1))" },
+  intelligence: { label: "Intelligence EXP", color: "hsl(var(--chart-2))" },
+  endurance: { label: "Endurance EXP", color: "hsl(var(--chart-3))" },
+  creativity: { label: "Creativity EXP", color: "hsl(var(--chart-4))" },
+  charisma: { label: "Charisma EXP", color: "hsl(var(--chart-5))" },
 } satisfies import("@/components/ui/chart").ChartConfig;
 
 
@@ -31,34 +32,75 @@ export default function GraphsPage() {
     setActiveTab('graphs');
   }, [setActiveTab]);
 
-  // Dummy data for daily task completion - last 14 days
-  const dailyCompletionData = Array.from({ length: 14 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (13 - i));
-    return {
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      completion: Math.floor(Math.random() * 60) + 40, // Random % between 40-100
-    };
-  });
-
-  // Dummy data for stat growth over time (e.g., last 7 entries or levels)
-  const statGrowthData = ATTRIBUTES_LIST.filter(attr => attr !== "None").map(attr => ({
-    name: attr,
-    // Create 5 data points for each attribute for demonstration
-    data: Array.from({length: 5}, (_, i) => ({
-      time: `T${i+1}`, // Representing time points or levels
-      value: (userProfile.stats[attr.toLowerCase() as keyof typeof userProfile.stats]?.level || 1) + Math.floor(Math.random() * (i + 1) * 2) // Simplified growth
-    }))
-  }));
-  // Example for Recharts: combine data for multi-line chart if needed, or separate charts
-  const combinedStatData = Array.from({length: 5}, (_, i) => {
-    let entry: any = { time: `T${i+1}` };
-    ATTRIBUTES_LIST.filter(attr => attr !== "None").forEach(attr => {
-      entry[attr.toLowerCase()] = (userProfile.stats[attr.toLowerCase()as keyof typeof userProfile.stats]?.level || 1) + Math.floor(Math.random() * (i+1) * 2);
+  const dailyCompletionData = useMemo(() => {
+    const last14Days = eachDayOfInterval({
+      start: subDays(new Date(), 13),
+      end: new Date(),
     });
-    return entry;
-  });
 
+    return last14Days.map(day => {
+      const dayString = format(day, 'yyyy-MM-dd');
+      const tasksAddedOnDay = tasks.filter(t => t.dateAdded === dayString);
+      const tasksCompletedFromAdded = tasksAddedOnDay.filter(t => t.isCompleted);
+      
+      let completionRate = 0;
+      if (tasksAddedOnDay.length > 0) {
+        completionRate = (tasksCompletedFromAdded.length / tasksAddedOnDay.length) * 100;
+      } else {
+        // If no tasks were added on a specific day in the past 14 days,
+        // check if any tasks were *completed* on this day from previous additions.
+        // This is a fallback, could be 0 or based on active tasks completed that day.
+        // For simplicity, if no tasks added, rate is 0 for "tasks added on day X".
+        completionRate = 0; 
+      }
+      
+      return {
+        date: format(day, 'MMM d'), // Format for XAxis display
+        completion: parseFloat(completionRate.toFixed(1)),
+      };
+    });
+  }, [tasks]);
+
+  const attributeGrowthData = useMemo(() => {
+    const last14Days = eachDayOfInterval({
+      start: subDays(new Date(), 13),
+      end: new Date(),
+    });
+
+    const cumulativeStatsByDay: { [date: string]: { [key in Attribute]?: number } } = {};
+    const runningTotals: { [key in Attribute]?: number } = {};
+    ATTRIBUTES_LIST.forEach(attr => {
+      if (attr !== "None") runningTotals[attr] = 0;
+    });
+
+    last14Days.forEach(day => {
+      const dayString = format(day, 'yyyy-MM-dd');
+      cumulativeStatsByDay[dayString] = { ...runningTotals }; // Snapshot before adding today's
+
+      userProfile.taskHistory.forEach(task => {
+        if (task.dateCompleted === dayString && task.attributeAffectedForStatExp && task.statExpGained) {
+          if (task.attributeAffectedForStatExp !== "None") {
+             runningTotals[task.attributeAffectedForStatExp] = (runningTotals[task.attributeAffectedForStatExp] || 0) + task.statExpGained;
+          }
+        }
+      });
+       cumulativeStatsByDay[dayString] = { ...runningTotals }; // Snapshot after adding today's
+    });
+    
+    return last14Days.map(day => {
+      const dayString = format(day, 'yyyy-MM-dd');
+      const entry: any = { date: format(day, 'MMM d') };
+      ATTRIBUTES_LIST.forEach(attr => {
+        if (attr !== "None") {
+          entry[attr.toLowerCase()] = cumulativeStatsByDay[dayString]?.[attr] || 0;
+        }
+      });
+      return entry;
+    });
+
+  }, [userProfile.taskHistory]);
+  
+  const chartConfig = chartConfigBase;
 
   return (
     <AppWrapper>
@@ -68,44 +110,64 @@ export default function GraphsPage() {
             <CardTitle className="font-headline text-2xl text-primary flex items-center">
               <LineChartIcon className="mr-2 h-6 w-6" /> Daily Task Completion
             </CardTitle>
-            <CardDescription>Your task completion percentage over the past 14 days.</CardDescription>
+            <CardDescription>Percentage of tasks added on a given day that were completed (over the past 14 days).</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailyCompletionData} margin={{ top: 5, right: 20, left: -25, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))"/>
-                  <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0,6)}/>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="completion" stroke="var(--color-completion)" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            {dailyCompletionData.length > 0 ? (
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dailyCompletionData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))"/>
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, 100]} tickFormatter={(value) => `${value}%`}/>
+                    <ChartTooltip 
+                      content={<ChartTooltipContent formatter={(value, name) => [`${value}%`, name]}/>} 
+                    />
+                    <Line type="monotone" dataKey="completion" stroke="var(--color-completion)" strokeWidth={3} dot={{ r: 4, fill: "var(--color-completion)", strokeWidth:1, stroke:"hsl(var(--background))" }} activeDot={{r:6}} name="Completion Rate"/>
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">Not enough task data to display completion trends.</p>
+            )}
           </CardContent>
         </Card>
 
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
           <CardHeader>
             <CardTitle className="font-headline text-2xl text-accent flex items-center">
-              <TrendingUp className="mr-2 h-6 w-6" /> Attribute Growth
+              <TrendingUp className="mr-2 h-6 w-6" /> Cumulative Attribute EXP Growth
             </CardTitle>
-            <CardDescription>Progression of your attributes over time.</CardDescription>
+            <CardDescription>Cumulative EXP gained for each attribute from completed tasks (over the past 14 days).</CardDescription>
           </CardHeader>
           <CardContent>
-             <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={combinedStatData} margin={{ top: 5, right: 20, left: -25, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    {ATTRIBUTES_LIST.filter(attr => attr !== "None").map(attr => (
-                       <Line key={attr} type="monotone" dataKey={attr.toLowerCase()} stroke={`var(--color-${attr.toLowerCase()})`} strokeWidth={2} dot={true} name={attr} />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-            </ChartContainer>
-            <p className="text-sm text-muted-foreground mt-4 text-center">Note: Stat growth data is illustrative.</p>
+            {attributeGrowthData.length > 0 ? (
+               <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={attributeGrowthData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                      <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      {ATTRIBUTES_LIST.filter(attr => attr !== "None").map(attr => (
+                         <Line 
+                            key={attr} 
+                            type="monotone" 
+                            dataKey={attr.toLowerCase()} 
+                            stroke={`var(--color-${attr.toLowerCase()})`} 
+                            strokeWidth={2} 
+                            dot={{ r: 3, strokeWidth:1 }} 
+                            activeDot={{r:5}}
+                            name={chartConfig[attr.toLowerCase() as keyof typeof chartConfig]?.label || attr} 
+                          />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">Not enough task history data to display attribute growth.</p>
+            )}
           </CardContent>
         </Card>
       </div>

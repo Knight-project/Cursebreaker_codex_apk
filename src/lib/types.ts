@@ -9,6 +9,8 @@ export interface Task {
   isCompleted: boolean;
   dateAdded: string; // ISO string
   dateCompleted?: string; // ISO string
+  statExpGained?: number; // EXP gained for the specific attribute
+  attributeAffectedForStatExp?: Attribute; // Which attribute got the stat EXP
 }
 
 export interface UserStat {
@@ -33,7 +35,7 @@ export interface UserProfile {
   currentStreak: number;
   dailyTaskCompletionPercentage: number; // 0-100
   customQuote: string;
-  taskHistory: Task[]; // Potentially move to a separate store for large histories
+  taskHistory: Task[]; // Stores completed tasks with details like statExpGained
   journalEntries: { [date: string]: string }; // date is YYYY-MM-DD
   avatarUrl?: string;
 }
@@ -110,17 +112,17 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   customQuote: "The journey of a thousand miles begins with a single step.",
   taskHistory: [],
   journalEntries: {},
-  avatarUrl: '', // Default to empty or a placeholder like `https://placehold.co/100x100.png`
+  avatarUrl: '',
 };
 
 export const INITIAL_RIVAL: Rival = {
-  name: "Kairos", // Default, can be randomized
+  name: "Kairos",
   rankName: RANK_NAMES[0],
   subRank: 1,
   totalExp: 0,
   expToNextSubRank: 100,
   currentExpInSubRank: 0,
-  avatarUrl: `https://placehold.co/120x120.png`, // Consistent size
+  avatarUrl: `https://placehold.co/120x120.png`,
 };
 
 export const INITIAL_APP_SETTINGS: AppSettings = {
