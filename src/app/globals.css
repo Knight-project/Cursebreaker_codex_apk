@@ -7,10 +7,10 @@
     --background: 220 30% 8%; /* Very dark, slightly bluish black */
     --foreground: 180 10% 85%; /* Light cyan-grey for text */
 
-    --card: 220 25% 12%; /* Slightly lighter than background, for card bodies */
+    --card: hsla(220, 25%, 12%, 0.85); /* Slightly lighter than background, with opacity */
     --card-foreground: 180 10% 85%;
 
-    --popover: 220 25% 12%;
+    --popover: hsla(220, 25%, 12%, 0.85); /* With opacity */
     --popover-foreground: 180 10% 85%;
 
     --primary: 180 100% 50%; /* Bright cyan */
@@ -32,11 +32,11 @@
     --input: 220 25% 15%; /* Input background */
     --ring: 180 100% 60%; /* Brighter cyan for focus rings */
 
-    --radius: 0rem; /* Sharp corners */
+    --radius: 0.5rem; /* Slightly rounded corners */
 
-    /* Custom variables for neon effect - toned down */
-    --neon-glow-primary: 0 0 2px hsl(var(--primary)), 0 0 4px hsl(var(--primary));
-    --neon-glow-accent: 0 0 2px hsl(var(--accent)), 0 0 4px hsl(var(--accent));
+    /* Custom variables for neon effect - toned down but slightly more than previous */
+    --neon-glow-primary: 0 0 3px hsl(var(--primary)), 0 0 5px hsl(var(--primary));
+    --neon-glow-accent: 0 0 3px hsl(var(--accent)), 0 0 5px hsl(var(--accent));
     
     --chart-1: 180 100% 50%; /* Primary Cyan */
     --chart-2: 30 100% 55%;  /* Accent Orange */
@@ -60,29 +60,44 @@
   }
 }
 
-/* New animation for scanning lines */
+/* Animation for horizontal scanning lines */
 @keyframes line-scan {
   0% { 
     transform: translateX(0%); 
     opacity: 0; 
   }
   10%, 80% { 
-    opacity: 0.3; /* Adjusted opacity for subtlety */
+    opacity: 0.4; /* Adjusted opacity for subtlety */
   }
   100% { 
-    transform: translateX(calc(100vw + 100%)); /* Moves from left starting position across the viewport and its own width */
+    transform: translateX(calc(100vw + 100%)); 
     opacity: 0; 
   }
 }
+
+/* Animation for vertical scanning lines */
+@keyframes line-scan-vertical {
+  0% { 
+    transform: translateY(0%); 
+    opacity: 0; 
+  }
+  10%, 80% { 
+    opacity: 0.4; /* Adjusted opacity for subtlety */
+  }
+  100% { 
+    transform: translateY(calc(100vh + 100%)); 
+    opacity: 0; 
+  }
+}
+
 
 .particle {
   position: absolute;
   background: hsl(var(--primary)); /* Line color */
   opacity: 0; /* Initial opacity, animation handles fade-in/out */
-  animation-name: line-scan;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  box-shadow: 0 0 1px hsla(var(--primary), 0.7), 0 0 2px hsla(var(--primary), 0.5); /* Subtle glow for lines */
+  box-shadow: 0 0 2px hsla(var(--primary), 0.7), 0 0 4px hsla(var(--primary), 0.5); /* Subtle glow for lines */
 }
 
 
@@ -127,4 +142,38 @@
 }
 ::-webkit-scrollbar-corner {
   background: hsl(var(--background));
+}
+
+/* Orbiting arcs animation */
+@keyframes orbit-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.orbit-arc {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  border-style: solid;
+  border-width: 1.5px; /* Thinner border for subtlety */
+  border-color: transparent;
+  /* Base animation applied to all arcs */
+}
+
+.orbit-arc-1 {
+  animation: orbit-rotate 6s linear infinite;
+  border-top-color: hsla(var(--primary), 0.8);
+}
+.orbit-arc-2 {
+  animation: orbit-rotate 6s linear infinite -1.5s; /* Offset animation delay */
+  border-right-color: hsla(var(--primary), 0.8);
+}
+.orbit-arc-3 {
+  animation: orbit-rotate 6s linear infinite -3s;
+  border-bottom-color: hsla(var(--primary), 0.8);
+}
+.orbit-arc-4 {
+   /* Optional 4th arc if needed, or keep 3 for more "broken" look */
+  animation: orbit-rotate 6s linear infinite -4.5s;
+  border-left-color: hsla(var(--primary), 0.8);
 }

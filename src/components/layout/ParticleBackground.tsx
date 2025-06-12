@@ -6,25 +6,43 @@ const ParticleBackground = () => {
   const [particles, setParticles] = useState<Array<{ id: number; style: React.CSSProperties }>>([]);
 
   useEffect(() => {
-    const numParticles = 8; // Reduced number of lines
+    const numParticles = 10; // Keep it reasonable for performance
     const newParticles = Array.from({ length: numParticles }).map((_, i) => {
-      const lineWidthVw = Math.random() * 30 + 20; // Line width from 20vw to 50vw
-      const lineHeightPx = Math.random() * 1 + 1; // Line height 1px to 2px
-      
       const animationDuration = Math.random() * 10 + 15; // Animation duration 15s to 25s
       const animationDelay = Math.random() * 20; // Delay up to 20s
       
-      return {
-        id: i,
-        style: {
+      const isVertical = Math.random() > 0.4; // Introduce some vertical lines
+      let style: React.CSSProperties;
+
+      if (isVertical) {
+        const lineWidthPx = Math.random() * 1 + 1; // 1px to 2px thick
+        const lineHeightVh = Math.random() * 40 + 20; // 20vh to 60vh tall
+        style = {
+          width: `${lineWidthPx}px`,
+          height: `${lineHeightVh}vh`,
+          left: `${Math.random() * 100}vw`, // Random horizontal position
+          top: `-${lineHeightVh}vh`, // Start off-screen to the top
+          animationName: 'line-scan-vertical',
+          animationDuration: `${animationDuration}s`,
+          animationDelay: `${animationDelay}s`,
+        };
+      } else { // Horizontal
+        const lineWidthVw = Math.random() * 40 + 20; // 20vw to 60vw wide
+        const lineHeightPx = Math.random() * 1 + 1; // 1px to 2px thick
+        style = {
           width: `${lineWidthVw}vw`,
           height: `${lineHeightPx}px`,
           left: `-${lineWidthVw}vw`, // Start off-screen to the left
-          top: `${Math.random() * 100}%`, // Random vertical position
+          top: `${Math.random() * 100}vh`, // Random vertical position
+          animationName: 'line-scan',
           animationDuration: `${animationDuration}s`,
           animationDelay: `${animationDelay}s`,
-          // Common properties like animation-name, timing-function, iteration-count, background, opacity are in .particle class
-        } as React.CSSProperties,
+        };
+      }
+      
+      return {
+        id: i,
+        style: style,
       };
     });
     setParticles(newParticles);
