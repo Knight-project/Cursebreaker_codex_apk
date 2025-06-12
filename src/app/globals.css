@@ -36,8 +36,8 @@
     --radius: 0.5rem; /* Slightly rounded corners */
 
     /* Significantly increased glow */
-    --neon-glow-primary: 0 0 20px hsl(var(--primary)), 0 0 40px hsl(var(--primary)), 0 0 60px hsla(var(--primary), 0.85), 0 0 80px hsla(var(--primary), 0.7);
-    --neon-glow-accent: 0 0 20px hsl(var(--accent)), 0 0 40px hsl(var(--accent)), 0 0 60px hsla(var(--accent), 0.85), 0 0 80px hsla(var(--accent), 0.7);
+    --neon-glow-primary: 0 0 30px hsl(var(--primary)), 0 0 60px hsl(var(--primary)), 0 0 90px hsla(var(--primary), 0.9), 0 0 120px hsla(var(--primary), 0.75);
+    --neon-glow-accent: 0 0 30px hsl(var(--accent)), 0 0 60px hsl(var(--accent)), 0 0 90px hsla(var(--accent), 0.9), 0 0 120px hsla(var(--accent), 0.75);
     
     --chart-1: 180 100% 50%; /* Cyan */
     --chart-2: 30 100% 55%;  /* Orange */
@@ -67,7 +67,7 @@
     opacity: 0;
   }
   10%, 80% {
-    opacity: 0.6;
+    opacity: 0.7; /* Increased opacity for more presence */
   }
   100% {
     transform: translateY(calc(100vh + 100%));
@@ -83,15 +83,15 @@
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   /* Significantly increased glow, now using accent color */
-  box-shadow: 0 0 15px hsla(var(--accent), 1), 0 0 30px hsla(var(--accent), 0.9), 0 0 45px hsla(var(--accent), 0.7), 0 0 60px hsla(var(--accent), 0.5);
+  box-shadow: 0 0 20px hsla(var(--accent), 1), 0 0 40px hsla(var(--accent), 0.9), 0 0 60px hsla(var(--accent), 0.8), 0 0 80px hsla(var(--accent), 0.6);
 }
 
 
 .neon-icon {
-  filter: drop-shadow(var(--neon-glow-accent));
+  filter: drop-shadow(0 0 10px hsl(var(--accent))) drop-shadow(0 0 20px hsla(var(--accent), 0.7)) drop-shadow(0 0 30px hsla(var(--accent), 0.5));
 }
 .neon-icon-primary {
- filter: drop-shadow(var(--neon-glow-primary));
+ filter: drop-shadow(0 0 10px hsl(var(--primary))) drop-shadow(0 0 20px hsla(var(--primary), 0.7)) drop-shadow(0 0 30px hsla(var(--primary), 0.5));
 }
 
 .magical-transition {
@@ -199,6 +199,7 @@
   /* Combines existing shadow-top like effect with a more pronounced primary glow */
   box-shadow:
     0 -1px 2px hsla(var(--border), 0.15), /* Subtle top border shadow */
-    0 -3px 10px -1px hsla(var(--primary), 0.3), /* Main glow, slightly softer */
-    0 -2px 5px -2px hsla(var(--primary), 0.2); /* Inner, softer glow */
+    0 -3px 15px -1px hsla(var(--primary), 0.45), /* Main glow, slightly softer */
+    0 -2px 8px -2px hsla(var(--primary), 0.3); /* Inner, softer glow */
 }
+
