@@ -1,3 +1,4 @@
+
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
 
 export interface Task {
@@ -34,6 +35,7 @@ export interface UserProfile {
   customQuote: string;
   taskHistory: Task[]; // Potentially move to a separate store for large histories
   journalEntries: { [date: string]: string }; // date is YYYY-MM-DD
+  avatarUrl?: string;
 }
 
 export interface Rival {
@@ -43,7 +45,7 @@ export interface Rival {
   totalExp: number;
   expToNextSubRank: number;
   currentExpInSubRank: number;
-  avatarUrl?: string; // Placeholder for now
+  avatarUrl?: string;
   lastTaunt?: string;
 }
 
@@ -108,6 +110,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   customQuote: "The journey of a thousand miles begins with a single step.",
   taskHistory: [],
   journalEntries: {},
+  avatarUrl: '', // Default to empty or a placeholder like `https://placehold.co/100x100.png`
 };
 
 export const INITIAL_RIVAL: Rival = {
@@ -117,7 +120,7 @@ export const INITIAL_RIVAL: Rival = {
   totalExp: 0,
   expToNextSubRank: 100,
   currentExpInSubRank: 0,
-  avatarUrl: `https://placehold.co/100x100.png`,
+  avatarUrl: `https://placehold.co/120x120.png`, // Consistent size
 };
 
 export const INITIAL_APP_SETTINGS: AppSettings = {

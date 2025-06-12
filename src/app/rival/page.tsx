@@ -6,22 +6,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, type ChangeEvent } from 'react';
 import Image from 'next/image';
-import { Swords } from 'lucide-react'; // Icon for taunt button
+import { Swords, User, PlusCircle } from 'lucide-react'; // Icon for taunt button, User for placeholder, PlusCircle for upload overlay
+import { useToast } from '@/hooks/use-toast';
 
 export default function RivalPage() {
-  const { rival, updateRivalTaunt, setActiveTab } = useApp();
+  const { rival, updateRivalTaunt, setActiveTab, setRival } = useApp();
   const [isLoadingTaunt, setIsLoadingTaunt] = useState(false);
+  const rivalImageInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     setActiveTab('rival');
-    // Initial taunt fetch if none exists
     if (!rival.lastTaunt) {
       handleGetTaunt();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setActiveTab]); // Removed rival.lastTaunt to prevent loop with updateRivalTaunt
+  }, [setActiveTab]);
 
   const handleGetTaunt = async () => {
     setIsLoadingTaunt(true);
@@ -29,41 +31,71 @@ export default function RivalPage() {
     setIsLoadingTaunt(false);
   };
 
+  const handleRivalAvatarClick = () => {
+    rivalImageInputRef.current?.click();
+  };
+
+  const handleRivalAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          title: "Image too large",
+          description: "Please select an image smaller than 2MB.",
+          variant: "destructive",
+        });
+        if(event.target) event.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRival(prev => ({ ...prev, avatarUrl: reader.result as string }));
+        toast({ title: "Rival Avatar Updated!" });
+      };
+      reader.onerror = () => {
+        toast({
+          title: "Error reading file",
+          description: "Could not process the selected image.",
+          variant: "destructive",
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+     if (event.target) {
+      event.target.value = ""; // Reset file input
+    }
+  };
+
   return (
     <AppWrapper>
       <div className="space-y-6">
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-destructive/30">
-          <CardHeader className="items-center text-center">
-            {rival.avatarUrl ? (
-              <Image 
-                src={rival.avatarUrl} 
-                alt={`${rival.name}'s Avatar`}
-                width={120} 
-                height={120} 
-                className="rounded-full border-4 border-destructive shadow-lg mb-4"
-                data-ai-hint="fantasy character"
-              />
-            ) : (
-              <div className="w-[120px] h-[120px] rounded-full border-4 border-destructive shadow-lg mb-4 bg-card flex items-center justify-center overflow-hidden">
-                <svg
-                  width="72"
-                  height="72"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="text-muted-foreground"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-label="Placeholder Rival Avatar"
-                >
-                  <path
-                    d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                  />
-                </svg>
+          <CardHeader className="items-center text-center flex flex-col">
+            <div onClick={handleRivalAvatarClick} className="cursor-pointer mb-4 relative group">
+              {rival.avatarUrl ? (
+                <Image 
+                  src={rival.avatarUrl} 
+                  alt={`${rival.name}'s Avatar`}
+                  width={120} 
+                  height={120} 
+                  className="rounded-full border-4 border-destructive shadow-lg object-cover"
+                  data-ai-hint="fantasy character"
+                />
+              ) : (
+                <div className="w-[120px] h-[120px] rounded-full border-4 border-destructive shadow-lg bg-card flex items-center justify-center overflow-hidden">
+                   <User className="h-16 w-16 text-muted-foreground" />
+                </div>
+              )}
+              <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <PlusCircle className="h-10 w-10 text-white" />
               </div>
-            )}
+            </div>
+            <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
+            
             <CardTitle className="font-headline text-3xl text-destructive">{rival.name}</CardTitle>
             <CardDescription className="text-muted-foreground">{rival.rankName} - Sub-Rank {rival.subRank}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 text-center">
+          <CardContent className="space-y-4 text-center pt-4">
             <div>
               <div className="flex justify-between text-sm mb-1 px-4">
                 <span className="text-foreground">Rival EXP</span>
@@ -93,16 +125,6 @@ export default function RivalPage() {
 
           </CardContent>
         </Card>
-        
-        {/* Placeholder for more rival details if needed in future */}
-        {/* <Card className="bg-card/80 backdrop-blur-sm shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline text-xl text-primary">Rival's Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">More detailed rival statistics and history will appear here.</p>
-          </CardContent>
-        </Card> */}
       </div>
     </AppWrapper>
   );

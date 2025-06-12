@@ -1,3 +1,4 @@
+
 'use client';
 import AppWrapper from '@/components/layout/AppWrapper';
 import { Button } from '@/components/ui/button';
@@ -5,14 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
 import { PlusCircle, BarChart2, User, BookOpen } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, type ChangeEvent } from 'react';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Task, Attribute } from '@/lib/types';
 import { ATTRIBUTES_LIST } from '@/lib/types';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -96,7 +98,6 @@ const TaskItem = ({ task }: { task: Task }) => {
   };
   
   const handleDelete = () => {
-    // Basic confirmation for now
     if (window.confirm(`Are you sure you want to delete "${task.name}"?`)) {
       deleteTask(task.id);
       toast({ title: "Task Deleted", description: `${task.name} removed.` });
@@ -121,10 +122,10 @@ const TaskItem = ({ task }: { task: Task }) => {
 
 
 export default function HomePage() {
-  const { userProfile, tasks, getTodaysTasks, setUserProfile, activeTab, setActiveTab } = useApp();
+  const { userProfile, tasks, getTodaysTasks, setUserProfile, setActiveTab } = useApp();
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const [customQuoteInput, setCustomQuoteInput] = useState(userProfile.customQuote);
   const { toast } = useToast();
+  const userImageInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     setActiveTab('home');
@@ -132,31 +133,79 @@ export default function HomePage() {
 
   const todaysTasks = getTodaysTasks();
 
-  const handleQuoteSave = () => {
-    setUserProfile(prev => ({ ...prev, customQuote: customQuoteInput }));
-    toast({ title: "Quote Updated!", description: "Your new wisdom shines." });
+  const handleUserAvatarClick = () => {
+    userImageInputRef.current?.click();
   };
 
+  const handleUserAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          title: "Image too large",
+          description: "Please select an image smaller than 2MB.",
+          variant: "destructive",
+        });
+        if(event.target) event.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUserProfile(prev => ({ ...prev, avatarUrl: reader.result as string }));
+        toast({ title: "Avatar Updated!" });
+      };
+      reader.onerror = () => {
+        toast({
+          title: "Error reading file",
+          description: "Could not process the selected image.",
+          variant: "destructive",
+        });
+      }
+      reader.readAsDataURL(file);
+    }
+    if (event.target) {
+      event.target.value = ""; // Reset file input
+    }
+  };
 
   return (
     <AppWrapper>
       <div className="space-y-6">
         {/* User Profile Summary Card */}
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-primary/30">
-          <CardHeader>
+          <CardHeader className="items-center text-center flex flex-col">
+             <div onClick={handleUserAvatarClick} className="cursor-pointer mb-3 relative group">
+                {userProfile.avatarUrl ? (
+                  <Image 
+                    src={userProfile.avatarUrl} 
+                    alt="Your Avatar"
+                    width={100} 
+                    height={100} 
+                    className="rounded-full border-4 border-primary shadow-lg object-cover"
+                    data-ai-hint="user avatar"
+                  />
+                ) : (
+                  <div className="w-[100px] h-[100px] rounded-full border-4 border-primary shadow-lg bg-card flex items-center justify-center overflow-hidden">
+                    <User className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <PlusCircle className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <input type="file" ref={userImageInputRef} onChange={handleUserAvatarChange} accept="image/*" className="hidden" />
+
             <CardTitle className="font-headline text-2xl text-primary">{userProfile.rankName} - Sub-Rank {userProfile.subRank}</CardTitle>
-            <CardDescription className="text-muted-foreground">{userProfile.customQuote}</CardDescription>
-             <div className="flex items-center gap-2 mt-2">
-              <Input 
-                value={customQuoteInput} 
-                onChange={(e) => setCustomQuoteInput(e.target.value)}
-                placeholder="Your motivational quote"
-                className="text-sm flex-grow bg-input/30 focus:bg-input"
-              />
-              <Button size="sm" onClick={handleQuoteSave}>Save Quote</Button>
-            </div>
+            <CardDescription className="text-muted-foreground mt-1">{userProfile.customQuote}</CardDescription>
+            
+            <Link href="/stats" passHref className="mt-4 w-full sm:w-auto">
+              <Button variant="secondary" className="w-full sm:w-auto bg-accent hover:bg-accent/80 text-accent-foreground">
+                <User className="mr-2 h-5 w-5" />
+                View Stats Card
+              </Button>
+            </Link>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 pt-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-foreground">EXP</span>
@@ -172,7 +221,7 @@ export default function HomePage() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center border-accent text-accent hover:bg-accent hover:text-accent-foreground">
@@ -188,12 +237,6 @@ export default function HomePage() {
             </DialogContent>
           </Dialog>
           
-          <Link href="/stats" passHref>
-            <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-              <User className="h-8 w-8 mb-1 neon-icon-primary" />
-              <span className="text-sm">Stats Card</span>
-            </Button>
-          </Link>
           <Link href="/graphs" passHref>
             <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center border-muted-foreground text-muted-foreground hover:bg-muted hover:text-foreground">
               <BarChart2 className="h-8 w-8 mb-1" />
