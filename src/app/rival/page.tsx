@@ -89,8 +89,8 @@ export default function RivalPage() {
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-destructive/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
             <div className="avatar-arc-container mb-3 w-[150px] h-[150px]">
-              <div onClick={handleRivalAvatarClick} className="cursor-pointer relative group w-[120px] h-[120px] border-2 border-destructive p-0.5 rounded-full overflow-hidden"> {/* Removed mx-auto my-auto */}
-                {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? ( // Check specifically for the old placeholder
+              <div onClick={handleRivalAvatarClick} className="cursor-pointer relative group w-[120px] h-[120px] border-2 border-destructive p-0.5 rounded-full overflow-hidden">
+                {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
                   <Image
                     src={rival.avatarUrl}
                     alt={`${rival.name}'s Avatar`}
@@ -108,9 +108,9 @@ export default function RivalPage() {
                   <PlusCircle className="h-10 w-10 text-destructive neon-icon" />
                 </div>
               </div>
-              <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '130px', height: '130px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
-              <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: '140px', height: '140px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-40deg)', borderLeftColor: 'transparent', borderTopColor: 'transparent' }}></span>
-              <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '150px', height: '150px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(60deg)', borderTopColor: 'transparent',  borderRightColor: 'transparent' }}></span>
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '128px', height: '128px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: '138px', height: '138px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-40deg)', borderLeftColor: 'transparent', borderTopColor: 'transparent' }}></span>
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '148px', height: '148px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(60deg)', borderTopColor: 'transparent',  borderRightColor: 'transparent' }}></span>
             </div>
             <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
 

@@ -189,7 +189,7 @@ export default function HomePage() {
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-primary/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
              <div className="avatar-arc-container mb-3 w-[120px] h-[120px]">
-                <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden"> {/* Removed mx-auto my-auto */}
+                <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden">
                     {userProfile.avatarUrl ? (
                     <Image
                         src={userProfile.avatarUrl}
@@ -208,9 +208,9 @@ export default function HomePage() {
                     <PlusCircle className="h-8 w-8 text-primary neon-icon-primary" />
                     </div>
                 </div>
-                <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '110px', height: '110px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(20deg)', borderLeftColor: 'transparent', borderBottomColor: 'transparent' }}></span>
-                <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: '120px', height: '120px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-35deg)', borderTopColor: 'transparent', borderBottomColor: 'transparent'  }}></span>
-                <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '100px', height: '100px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(50deg)', borderTopColor: 'transparent', borderRightColor: 'transparent' }}></span>
+                <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '106px', height: '106px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(20deg)', borderLeftColor: 'transparent', borderBottomColor: 'transparent' }}></span>
+                <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: '112px', height: '112px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-35deg)', borderTopColor: 'transparent', borderBottomColor: 'transparent'  }}></span>
+                <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '118px', height: '118px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(50deg)', borderTopColor: 'transparent', borderRightColor: 'transparent' }}></span>
              </div>
               <input type="file" ref={userImageInputRef} onChange={handleUserAvatarChange} accept="image/*" className="hidden" />
 
