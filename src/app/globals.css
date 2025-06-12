@@ -5,44 +5,44 @@
 
 @layer base {
   :root {
-    --background: 220 30% 8%;
-    --foreground: 180 10% 85%;
+    --background: 220 30% 5%; /* Very dark blue-black */
+    --foreground: 180 10% 85%; /* Light cyan-grey */
 
-    --card: hsla(220, 25%, 12%, 0.85);
+    --card: hsla(220, 25%, 10%, 0.85); /* Darker, semi-transparent */
     --card-foreground: 180 10% 85%;
 
-    --popover: hsla(220, 25%, 12%, 0.85);
+    --popover: hsla(220, 25%, 10%, 0.85); /* Darker, semi-transparent */
     --popover-foreground: 180 10% 85%;
 
-    --primary: 180 100% 50%;
-    --primary-foreground: 220 30% 8%;
+    --primary: 180 100% 50%; /* Bright Cyan */
+    --primary-foreground: 220 30% 8%; /* Dark for on-cyan text */
 
-    --secondary: 220 20% 20%;
+    --secondary: 220 20% 15%; /* Darker blue-grey */
     --secondary-foreground: 180 10% 75%;
 
-    --muted: 220 15% 30%;
+    --muted: 220 15% 25%;
     --muted-foreground: 180 10% 55%;
 
-    --accent: 30 100% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 30 100% 55%; /* Bright Orange */
+    --accent-foreground: 0 0% 0%; /* Black for on-orange text */
 
-    --destructive: 0 80% 55%;
+    --destructive: 0 70% 50%; /* Red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 180 70% 40%;
-    --input: 220 25% 15%;
-    --ring: 180 100% 60%;
+    --border: 180 70% 30%; /* Darker Cyan for borders */
+    --input: 220 25% 12%;
+    --ring: 180 100% 60%; /* Cyan for rings */
 
-    --radius: 0.5rem;
+    --radius: 0.5rem; /* Slightly rounded corners */
 
-    --neon-glow-primary: 0 0 2px hsl(var(--primary)), 0 0 3px hsl(var(--primary));
-    --neon-glow-accent: 0 0 2px hsl(var(--accent)), 0 0 3px hsl(var(--accent));
+    --neon-glow-primary: 0 0 1px hsl(var(--primary)), 0 0 2px hsl(var(--primary));
+    --neon-glow-accent: 0 0 1px hsl(var(--accent)), 0 0 2px hsl(var(--accent));
     
-    --chart-1: 180 100% 50%;
-    --chart-2: 30 100% 55%;
-    --chart-3: 300 100% 60%;
-    --chart-4: 60 100% 50%;
-    --chart-5: 120 100% 50%;
+    --chart-1: 180 100% 50%; /* Cyan */
+    --chart-2: 30 100% 55%;  /* Orange */
+    --chart-3: 300 100% 60%; /* Magenta/Purple */
+    --chart-4: 60 100% 50%;  /* Yellow */
+    --chart-5: 120 100% 50%; /* Green */
   }
 }
 
@@ -81,7 +81,7 @@
   opacity: 0;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  box-shadow: 0 0 2px hsla(var(--primary), 0.7), 0 0 4px hsla(var(--primary), 0.5);
+  box-shadow: 0 0 1px hsla(var(--primary), 0.5), 0 0 2px hsla(var(--primary), 0.3); /* Subtle glow for particles */
 }
 
 
@@ -160,8 +160,8 @@
 
 .avatar-arc-container {
   position: relative;
-  display: grid; /* Changed from inline-block */
-  place-items: center; /* Added */
+  display: grid; 
+  place-items: center; 
 }
 
 .avatar-orbiting-arc {
@@ -179,16 +179,15 @@
 .avatar-orbiting-arc-type1 {
   animation-duration: 7s;
   animation-delay: 0s;
-  border-top-color: hsla(var(--accent), 0.9);
+  border-top-color: hsl(var(--accent)); 
 }
 .avatar-orbiting-arc-type2 {
   animation-duration: 9s;
   animation-delay: -2s;
-  border-right-color: hsla(var(--accent), 0.9);
+  border-right-color: hsl(var(--accent)); 
 }
 .avatar-orbiting-arc-type3 {
   animation-duration: 11s;
   animation-delay: -4s;
-  border-left-color: hsla(var(--accent), 0.9);
+  border-left-color: hsl(var(--accent)); 
 }
-
