@@ -415,10 +415,9 @@ export default function HomePage() {
   };
 
   const saveName = () => {
-    // Save the name as the user typed it (case-sensitive)
-    const nameToSave = editingName.trim();
+    const nameToSave = editingName; // Keep case as entered
     setUserProfile(prev => ({ ...prev, userName: nameToSave }));
-    if ((userProfile.userName || "").trim() !== nameToSave) {
+    if ((userProfile.userName || "") !== nameToSave) {
         toast({ title: "Name Updated!" });
     }
     setIsEditingName(false);
@@ -600,7 +599,7 @@ export default function HomePage() {
 
           <TabsContent value="daily">
             <Card className="bg-card/80 backdrop-blur-sm shadow-lg mt-2">
-              <CardHeader className="p-4 flex flex-row items-center justify-between">
+              <CardHeader className="p-4 flex flex-row items-baseline justify-between">
                 <CardTitle className="font-headline text-lg text-primary uppercase">Daily Directives</CardTitle>
                 <Dialog open={isAddDailyOpen} onOpenChange={setIsAddDailyOpen}>
                   <DialogTrigger asChild>
@@ -622,7 +621,7 @@ export default function HomePage() {
 
           <TabsContent value="rituals">
             <Card className="bg-card/80 backdrop-blur-sm shadow-lg mt-2">
-              <CardHeader className="p-4 flex flex-row items-center justify-between">
+              <CardHeader className="p-4 flex flex-row items-baseline justify-between">
                 <CardTitle className="font-headline text-lg text-primary uppercase">Active Rituals</CardTitle>
                  <Dialog open={isAddRitualOpen} onOpenChange={setIsAddRitualOpen}>
                   <DialogTrigger asChild>
@@ -644,7 +643,7 @@ export default function HomePage() {
 
           <TabsContent value="events"> 
             <Card className="bg-card/80 backdrop-blur-sm shadow-lg mt-2">
-              <CardHeader className="p-4 flex flex-row items-center justify-between">
+              <CardHeader className="p-4 flex flex-row items-baseline justify-between">
                 <CardTitle className="font-headline text-lg text-primary uppercase">Today's Events</CardTitle> 
                 <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}> 
                   <DialogTrigger asChild>
@@ -673,4 +672,5 @@ export default function HomePage() {
     
 
     
+
 
