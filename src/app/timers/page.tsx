@@ -792,16 +792,10 @@ const CustomGraphForm = ({
       return;
     }
 
-    // For variables, ensure new ones get a new ID and existing ones retain their ID for data mapping.
-    // The `tempId` is used for form keying, actual ID is what matters for data.
-    // This logic is now simpler as `onSave` expects `Omit<..., 'id' | 'data'>` and `addCustomGraph` creates the full object.
-    // For `updateCustomGraph`, the `id` is passed alongside, and `data` is preserved.
     const finalVariables = formData.variables.map(({ tempId, ...rest}) => {
-      // If initialData exists and a variable with this tempId (which was its original id) exists, use that id.
-      // Otherwise, this is a new variable, its tempId becomes its actual id upon saving.
       const originalVar = initialData?.variables.find(iv => iv.id === tempId);
       return {
-        id: originalVar ? originalVar.id : tempId, // this will become the actual ID
+        id: originalVar ? originalVar.id : tempId, 
         name: rest.name,
         color: rest.color,
       };
@@ -818,7 +812,7 @@ const CustomGraphForm = ({
         <Input id="graphName" value={formData.name} onChange={(e) => handleGraphChange('name', e.target.value)} className="mt-1"/>
       </div>
       <div>
-        <Label htmlFor="graphTimeView">Time View</Label>
+        <Label htmlFor="graphTimeView">Default Time View</Label>
         <Select value={formData.timeView} onValueChange={(value) => handleGraphChange('timeView', value as TimeView)}>
           <SelectTrigger id="graphTimeView" className="mt-1">
             <SelectValue placeholder="Select time view" />
@@ -890,6 +884,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
   const [todayInputs, setTodayInputs] = useState<{[variableId: string]: string}>({});
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const [isLoggingOpen, setIsLoggingOpen] = useState(false);
+  const [currentDisplayTimeView, setCurrentDisplayTimeView] = useState<TimeView>(graph.timeView);
 
 
   useEffect(() => {
@@ -908,13 +903,11 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
 
   const handleTodayInputChange = (variableId: string, value: string) => {
     setTodayInputs(prev => ({...prev, [variableId]: value}));
-    // Debounce or save on blur/enter could be added here
-    // For now, direct log on change for simplicity, AppContext handles storage.
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
       logCustomGraphData(graph.id, variableId, numValue);
     } else if (value === "") {
-       logCustomGraphData(graph.id, variableId, 0); // Treat empty as 0 for logging
+       logCustomGraphData(graph.id, variableId, 0); 
     }
   };
 
@@ -933,7 +926,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
   const chartData = useMemo(() => {
     let dates: Date[] = [];
     const now = new Date();
-    switch (graph.timeView) {
+    switch (currentDisplayTimeView) { // Use local state for time view
       case 'weekly':
         dates = eachDayOfInterval({ start: subDays(now, 6), end: now });
         break;
@@ -950,7 +943,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
 
     return dates.map(date => {
       const dateStr = format(date, 'yyyy-MM-dd');
-      const displayDate = graph.timeView === 'weekly' || graph.timeView === 'monthly' ? format(date, 'MMM d') : format(date, 'MMM yyyy');
+      const displayDate = currentDisplayTimeView === 'weekly' || currentDisplayTimeView === 'monthly' ? format(date, 'MMM d') : format(date, 'MMM yyyy');
       const entry: any = { date: displayDate };
       
       graph.variables.forEach(variable => {
@@ -963,12 +956,19 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
       });
       return entry;
     });
-  }, [graph, customGraphDailyLogs]);
+  }, [graph, customGraphDailyLogs, currentDisplayTimeView]); // Added currentDisplayTimeView to dependencies
+
+  const timeViewOptions: {value: TimeView, label: string}[] = [
+    { value: 'weekly', label: 'Weekly View' },
+    { value: 'monthly', label: 'Monthly View' },
+    { value: 'yearly', label: 'Yearly View' },
+    { value: 'alltime', label: 'All Time View' },
+  ];
 
   return (
     <Card className="bg-background/50 border">
       <CardHeader className="pb-3 pt-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-1">
           <CardTitle className="text-lg font-medium text-foreground">{graph.name}</CardTitle>
            <div className="flex space-x-1">
             <Button variant="ghost" size="icon" onClick={() => onEdit(graph)} className="h-7 w-7">
@@ -979,7 +979,18 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
             </Button>
           </div>
         </div>
-        <CardDescription className="text-xs capitalize">{graph.timeView} View</CardDescription>
+         <Select value={currentDisplayTimeView} onValueChange={(value: TimeView) => setCurrentDisplayTimeView(value)}>
+            <SelectTrigger className="w-[180px] h-8 text-xs bg-input/30 focus:bg-input">
+              <SelectValue placeholder="Select time view" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeViewOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
       </CardHeader>
       <CardContent className="pt-2 pb-4 h-[300px]">
         {chartData.length > 0 ? (
@@ -1015,16 +1026,19 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
           onClick={() => setIsLoggingOpen(!isLoggingOpen)} 
           className="flex items-center justify-between w-full cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
           role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsLoggingOpen(!isLoggingOpen); }}
           aria-expanded={isLoggingOpen}
+          aria-controls={`log-section-${graph.id}`}
         >
-          <Label className="text-sm font-medium cursor-pointer">Log Today's Values ({format(new Date(), 'MMM d, yyyy')}):</Label>
+          <Label htmlFor={`log-section-${graph.id}`} className="text-sm font-medium cursor-pointer">Log Today's Values ({format(new Date(), 'MMM d, yyyy')}):</Label>
           <ChevronDown className={cn("h-4 w-4 transition-transform", isLoggingOpen && "rotate-180")} />
         </div>
         {isLoggingOpen && (
-          <div className="w-full pl-2 pr-2 space-y-2 pt-1">
+          <div id={`log-section-${graph.id}`} className="w-full pl-2 pr-2 space-y-2 pt-1">
             {graph.variables.map(variable => (
               <div key={variable.id} className="flex items-center space-x-2 w-full mb-1 last:mb-0">
-                <Label htmlFor={`input-${graph.id}-${variable.id}`} className="text-sm min-w-[100px] truncate" title={variable.name}>
+                <Label htmlFor={`input-${graph.id}-${variable.id}`} className="text-sm min-w-[100px] md:min-w-[120px] truncate" title={variable.name}>
                   {variable.name}:
                 </Label>
                 <Input
@@ -1045,25 +1059,24 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
 };
 
 
-const GraphsManager = () => { // Renamed from CustomGraphsManager
+const GraphsManager = () => { 
   const { customGraphs, addCustomGraph, updateCustomGraph, deleteCustomGraph, commitStaleDailyLogs } = useApp();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGraph, setEditingGraph] = useState<CustomGraphSetting | undefined>(undefined);
 
   useEffect(() => {
-    commitStaleDailyLogs(); // Commit any old logs when component mounts or graphs change
+    commitStaleDailyLogs(); 
   }, [customGraphs, commitStaleDailyLogs]);
 
 
   const handleSaveGraph = (data: Omit<CustomGraphSetting, 'id' | 'data'>) => {
     if (editingGraph) {
-      // Preserve existing data when updating variables/name/timeView
       const existingData = customGraphs.find(g => g.id === editingGraph.id)?.data || {};
       updateCustomGraph({ ...data, id: editingGraph.id, data: existingData });
       toast({ title: "Graph Updated!" });
     } else {
-      addCustomGraph(data); // addCustomGraph in context initializes .data = {}
+      addCustomGraph(data); 
       toast({ title: "Graph Added!" });
     }
     setIsFormOpen(false);
@@ -1133,7 +1146,7 @@ export default function TimersPage() {
       <div className="space-y-8">
         <PomodoroTimer />
         <IntervalTimersManager />
-        <GraphsManager /> {/* Renamed */}
+        <GraphsManager /> 
       </div>
     </AppWrapper>
   );
