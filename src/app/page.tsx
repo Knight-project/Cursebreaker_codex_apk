@@ -5,24 +5,34 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import { PlusCircle, BarChart2, User, BookOpen } from 'lucide-react';
+import { PlusCircle, BarChart2, User, BookOpen, CalendarDays } from 'lucide-react';
 import React, { useEffect, useState, useRef, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Task, Attribute } from '@/lib/types';
+import type { Task, TaskType, Attribute } from '@/lib/types';
 import { ATTRIBUTES_LIST } from '@/lib/types';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import RankDisplay from '@/components/shared/RankDisplay';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from 'date-fns';
 
 
-const AddTaskForm = ({ onTaskAdd }: { onTaskAdd: () => void }) => {
+const AddTaskForm = ({
+  onTaskAdd,
+  currentTaskType
+}: {
+  onTaskAdd: () => void;
+  currentTaskType: TaskType;
+}) => {
   const [taskName, setTaskName] = useState('');
   const [difficulty, setDifficulty] = useState<'Easy' | 'Moderate' | 'Hard'>('Moderate');
   const [attribute, setAttribute] = useState<Attribute>('None');
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(new Date());
   const { addTask } = useApp();
   const { toast } = useToast();
 
@@ -32,26 +42,55 @@ const AddTaskForm = ({ onTaskAdd }: { onTaskAdd: () => void }) => {
       toast({ title: "Error", description: "Task name cannot be empty.", variant: "destructive" });
       return;
     }
-    addTask({ name: taskName, difficulty, attribute });
+    if (currentTaskType === 'protocol' && !scheduledDate) {
+      toast({ title: "Error", description: "Please select a date for protocol tasks.", variant: "destructive" });
+      return;
+    }
+
+    addTask({
+      name: taskName,
+      difficulty,
+      attribute,
+      taskType: currentTaskType,
+      scheduledDate: currentTaskType === 'protocol' ? format(scheduledDate!, 'yyyy-MM-dd') : undefined,
+    });
+
     setTaskName('');
     setDifficulty('Moderate');
     setAttribute('None');
-    toast({ title: "Success", description: "Task added!" });
+    setScheduledDate(new Date());
+    toast({ title: "Success", description: `${currentTaskType.charAt(0).toUpperCase() + currentTaskType.slice(1)} added!` });
     onTaskAdd();
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="taskName" className="font-headline">Task Name</Label>
+        <Label htmlFor="taskName" className="font-headline">Name</Label>
         <Input
           id="taskName"
           value={taskName}
           onChange={(e) => setTaskName(e.target.value)}
-          placeholder="e.g., Morning Meditation"
+          placeholder={
+            currentTaskType === 'daily' ? "e.g., Review project notes" :
+            currentTaskType === 'ritual' ? "e.g., Morning Meditation" :
+            "e.g., Team Sync Meeting"
+          }
           className="mt-1 bg-input/50 focus:bg-input"
         />
       </div>
+      {currentTaskType === 'protocol' && (
+        <div>
+          <Label htmlFor="scheduledDate" className="font-headline">Scheduled Date</Label>
+          <Calendar
+            mode="single"
+            selected={scheduledDate}
+            onSelect={setScheduledDate}
+            className="rounded-md border mt-1 bg-popover"
+            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} // Disable past dates
+          />
+        </div>
+      )}
       <div>
         <Label htmlFor="difficulty" className="font-headline">Difficulty</Label>
         <Select onValueChange={(value) => setDifficulty(value as 'Easy' | 'Moderate' | 'Hard')} defaultValue={difficulty}>
@@ -81,7 +120,7 @@ const AddTaskForm = ({ onTaskAdd }: { onTaskAdd: () => void }) => {
         <DialogClose asChild>
           <Button type="button" variant="outline">Cancel</Button>
         </DialogClose>
-        <Button type="submit" className="bg-primary hover:bg-primary/90">Add Task</Button>
+        <Button type="submit" className="bg-primary hover:bg-primary/90">Add {currentTaskType.charAt(0).toUpperCase() + currentTaskType.slice(1)}</Button>
       </DialogFooter>
     </form>
   );
@@ -90,30 +129,41 @@ const AddTaskForm = ({ onTaskAdd }: { onTaskAdd: () => void }) => {
 const TaskItem = ({ task }: { task: Task }) => {
   const { completeTask, deleteTask } = useApp();
   const { toast } = useToast();
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  // Determine if task is effectively completed for today (especially for rituals)
+  const isTaskDisplayCompleted = task.taskType === 'ritual' ? task.lastCompletedDate === today && task.isCompleted : task.isCompleted;
 
   const handleComplete = () => {
-    if (!task.isCompleted) {
+    if (!isTaskDisplayCompleted) {
       completeTask(task.id);
-      toast({ title: "Task Completed!", description: `+EXP for ${task.name}`});
+      toast({ title: `${task.taskType.charAt(0).toUpperCase() + task.taskType.slice(1)} Completed!`, description: `+EXP for ${task.name}`});
     }
   };
 
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete "${task.name}"?`)) {
+    if (window.confirm(`Are you sure you want to delete "${task.name}"? This action cannot be undone.`)) {
       deleteTask(task.id);
       toast({ title: "Task Deleted", description: `${task.name} removed.` });
     }
   };
+  
+  const descriptionText = task.taskType === 'protocol' && task.scheduledDate
+    ? `${task.difficulty} - ${task.attribute} (Due: ${format(new Date(task.scheduledDate), "MMM d")})`
+    : `${task.difficulty} - ${task.attribute}`;
 
   return (
-    <div className={`p-3 border flex items-center justify-between transition-all duration-300 rounded-md ${task.isCompleted ? 'bg-secondary/30 border-green-500/50' : 'bg-card hover:bg-card/90 border-border'}`}>
+    <div className={`p-3 border flex items-center justify-between transition-all duration-300 rounded-md ${isTaskDisplayCompleted ? 'bg-secondary/30 border-green-500/50' : 'bg-card hover:bg-card/90 border-border'}`}>
       <div>
-        <p className={`font-medium font-body ${task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
-        <p className="text-xs text-muted-foreground">{task.difficulty} - {task.attribute}</p>
+        <p className={`font-medium font-body ${isTaskDisplayCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
+        <p className="text-xs text-muted-foreground">{descriptionText}</p>
       </div>
       <div className="flex items-center space-x-2">
-        {!task.isCompleted && (
+        {!isTaskDisplayCompleted && (
           <Button onClick={handleComplete} size="sm" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">Complete</Button>
+        )}
+        {isTaskDisplayCompleted && (
+           <span className="text-xs text-green-400 font-semibold pr-2">DONE</span>
         )}
         <Button onClick={handleDelete} size="sm" variant="destructive" className="opacity-70 hover:opacity-100">Delete</Button>
       </div>
@@ -130,7 +180,7 @@ const CyberpunkAvatarPlaceholder = () => (
       </linearGradient>
     </defs>
     <circle cx="50" cy="40" r="20" stroke="hsl(var(--primary))" strokeWidth="2" fill="url(#cyberGradUser)" />
-    <path d="M30 70 Q50 90 70 70 Q50 80 30 70" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="hsl(var(--primary) / 0.1)" />
+    <path d="M30 70 Q50 90 70 70 Q50 80 30 70" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="hsl(var(--primary))" fillOpacity="0.1" />
     <rect x="46" y="5" width="8" height="10" fill="hsl(var(--border))" opacity="0.5"/>
     <line x1="40" y1="42" x2="60" y2="42" stroke="hsl(var(--accent))" strokeWidth="1"/>
   </svg>
@@ -138,8 +188,11 @@ const CyberpunkAvatarPlaceholder = () => (
 
 
 export default function HomePage() {
-  const { userProfile, tasks, getTodaysTasks, setUserProfile, setActiveTab } = useApp();
-  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const { userProfile, getDailyDirectives, getRituals, getProtocolsForToday, setUserProfile, setActiveTab } = useApp();
+  const [isAddDailyOpen, setIsAddDailyOpen] = useState(false);
+  const [isAddRitualOpen, setIsAddRitualOpen] = useState(false);
+  const [isAddProtocolOpen, setIsAddProtocolOpen] = useState(false);
+
   const { toast } = useToast();
   const userImageInputRef = useRef<HTMLInputElement>(null);
 
@@ -147,7 +200,9 @@ export default function HomePage() {
     setActiveTab('home');
   }, [setActiveTab]);
 
-  const todaysTasks = getTodaysTasks();
+  const dailyDirectives = getDailyDirectives();
+  const rituals = getRituals();
+  const protocolsForToday = getProtocolsForToday();
 
   const handleUserAvatarClick = () => {
     userImageInputRef.current?.click();
@@ -156,13 +211,13 @@ export default function HomePage() {
   const handleUserAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
         toast({
           title: "Image too large",
           description: "Please select an image smaller than 2MB.",
           variant: "destructive",
         });
-        if(event.target) event.target.value = "";
+        if(event.target) event.target.value = ""; // Clear the input
         return;
       }
       const reader = new FileReader();
@@ -179,10 +234,24 @@ export default function HomePage() {
       }
       reader.readAsDataURL(file);
     }
+    // Clear the input value to allow re-selecting the same file after an error
     if (event.target) {
       event.target.value = "";
     }
   };
+
+  const renderTaskList = (tasksToList: Task[], taskType: TaskType) => (
+    tasksToList.length > 0 ? (
+      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+        {tasksToList.map(task => (
+          <TaskItem key={task.id} task={task} />
+        ))}
+      </div>
+    ) : (
+      <p className="text-muted-foreground text-center py-4 font-code text-xs">No {taskType}s logged for this cycle. Initiate new tasks to proceed.</p>
+    )
+  );
+
 
   return (
     <AppWrapper>
@@ -242,22 +311,7 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-accent text-accent hover:bg-accent hover:text-accent-foreground font-headline uppercase text-xs">
-                <PlusCircle className="h-6 w-6 mb-1 neon-icon" />
-                <span>New Task</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-card border-border">
-              <DialogHeader>
-                <DialogTitle className="font-headline text-primary uppercase">Log New Directive</DialogTitle>
-              </DialogHeader>
-              <AddTaskForm onTaskAdd={() => setIsAddTaskOpen(false)} />
-            </DialogContent>
-          </Dialog>
-
+        <div className="grid grid-cols-2 gap-3">
           <Link href="/graphs" passHref>
             <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-muted-foreground/50 text-muted-foreground hover:bg-muted hover:text-foreground font-headline uppercase text-xs">
               <BarChart2 className="h-6 w-6 mb-1" />
@@ -272,22 +326,79 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <Card className="bg-card/80 backdrop-blur-sm shadow-lg">
-          <CardHeader className="p-4">
-            <CardTitle className="font-headline text-lg text-primary uppercase">Daily Directives</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            {todaysTasks.length > 0 ? (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                {todaysTasks.map(task => (
-                  <TaskItem key={task.id} task={task} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4 font-code text-xs">No directives logged for this cycle. Initiate new tasks to proceed.</p>
-            )}
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="daily" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-card/80 backdrop-blur-sm border-border">
+            <TabsTrigger value="daily" className="font-headline">Directives</TabsTrigger>
+            <TabsTrigger value="rituals" className="font-headline">Rituals</TabsTrigger>
+            <TabsTrigger value="protocols" className="font-headline">Protocols</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="daily">
+            <Card className="bg-card/80 backdrop-blur-sm shadow-lg mt-2">
+              <CardHeader className="p-4 flex flex-row items-center justify-between">
+                <CardTitle className="font-headline text-lg text-primary uppercase">Daily Directives</CardTitle>
+                <Dialog open={isAddDailyOpen} onOpenChange={setIsAddDailyOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
+                      <PlusCircle className="h-4 w-4 mr-2 neon-icon" /> New Directive
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] bg-card border-border">
+                    <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Log New Directive</DialogTitle></DialogHeader>
+                    <AddTaskForm currentTaskType="daily" onTaskAdd={() => setIsAddDailyOpen(false)} />
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {renderTaskList(dailyDirectives, 'daily')}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="rituals">
+            <Card className="bg-card/80 backdrop-blur-sm shadow-lg mt-2">
+              <CardHeader className="p-4 flex flex-row items-center justify-between">
+                <CardTitle className="font-headline text-lg text-primary uppercase">Active Rituals</CardTitle>
+                 <Dialog open={isAddRitualOpen} onOpenChange={setIsAddRitualOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
+                      <PlusCircle className="h-4 w-4 mr-2 neon-icon" /> New Ritual
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] bg-card border-border">
+                    <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Establish New Ritual</DialogTitle></DialogHeader>
+                    <AddTaskForm currentTaskType="ritual" onTaskAdd={() => setIsAddRitualOpen(false)} />
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {renderTaskList(rituals, 'ritual')}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="protocols">
+            <Card className="bg-card/80 backdrop-blur-sm shadow-lg mt-2">
+              <CardHeader className="p-4 flex flex-row items-center justify-between">
+                <CardTitle className="font-headline text-lg text-primary uppercase">Today's Protocols</CardTitle>
+                <Dialog open={isAddProtocolOpen} onOpenChange={setIsAddProtocolOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
+                      <CalendarDays className="h-4 w-4 mr-2 neon-icon" /> New Protocol
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] bg-card border-border">
+                    <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Schedule New Protocol</DialogTitle></DialogHeader>
+                    <AddTaskForm currentTaskType="protocol" onTaskAdd={() => setIsAddProtocolOpen(false)} />
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {renderTaskList(protocolsForToday, 'protocol')}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppWrapper>
   );

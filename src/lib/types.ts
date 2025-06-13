@@ -1,15 +1,18 @@
 
-
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
+export type TaskType = 'daily' | 'ritual' | 'protocol';
 
 export interface Task {
   id: string;
   name: string;
   difficulty: "Easy" | "Moderate" | "Hard";
   attribute: Attribute;
+  taskType: TaskType;
   isCompleted: boolean;
-  dateAdded: string; // ISO string
-  dateCompleted?: string; // ISO string
+  dateAdded: string; // ISO string (creation date for all types)
+  dateCompleted?: string; // ISO string (general completion, for daily/protocol)
+  lastCompletedDate?: string; // ISO string (for rituals, marks last day completed)
+  scheduledDate?: string; // ISO string (for protocol tasks)
   statExpGained?: number; // EXP gained for the specific attribute
   attributeAffectedForStatExp?: Attribute; // Which attribute got the stat EXP
 }
@@ -90,7 +93,7 @@ export interface IntervalTimerSetting {
 export interface CustomGraphVariable {
   id: string;
   name: string;
-  color: string; 
+  color: string;
 }
 
 export type TimeView = 'weekly' | 'monthly' | 'yearly' | 'alltime';
@@ -197,4 +200,3 @@ export const CHART_COLOR_OPTIONS = [
   { label: 'Chart Color 7 (Pink)', value: 'hsl(var(--chart-7))', key: 'chart-7' },
   { label: 'Chart Color 8 (Teal)', value: 'hsl(var(--chart-8))', key: 'chart-8' },
 ];
-
