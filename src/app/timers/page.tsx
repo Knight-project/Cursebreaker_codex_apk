@@ -4,8 +4,8 @@
 import AppWrapper from '@/components/layout/AppWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Settings2, PlusCircle, Trash2, Edit3, BellRing, BellOff } from 'lucide-react';
-import React, { useState, useEffect, useCallback } from 'react';
+import { Play, Pause, RotateCcw, Settings2, PlusCircle, Trash2, Edit3, BellRing, BellOff, BarChartBig, Palette } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
@@ -20,9 +20,14 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import type { IntervalTimerSetting } from '@/lib/types';
+import type { IntervalTimerSetting, CustomGraphSetting, CustomGraphVariable, TimeView } from '@/lib/types';
+import { CHART_COLOR_OPTIONS } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { CartesianGrid, XAxis, YAxis, Line, LineChart as RechartsLineChart, ResponsiveContainer } from 'recharts';
+import { format, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachWeekOfInterval, startOfYear, endOfYear } from 'date-fns';
 
 
 const PomodoroTimer = () => {
@@ -225,9 +230,9 @@ const IntervalTimerForm = ({
     const saveData: Omit<IntervalTimerSetting, 'id'> = {
         taskName: formData.taskName,
         timerMode: formData.timerMode,
-        repeatInterval: Math.max(1, formData.repeatInterval), // Ensure repeat interval is at least 1
+        repeatInterval: Math.max(1, formData.repeatInterval), 
         isEnabled: formData.isEnabled,
-        startTime: initialData?.startTime // Preserve startTime if editing
+        startTime: initialData?.startTime 
     };
 
     if (formData.timerMode === 'windowed') {
@@ -247,7 +252,7 @@ const IntervalTimerForm = ({
         saveData.windowEnd = formData.windowEnd;
         saveData.durationHours = undefined;
         saveData.durationMinutes = undefined;
-    } else { // duration mode
+    } else { 
         if ((formData.durationHours || 0) === 0 && (formData.durationMinutes || 0) === 0) {
             toast({ title: "Invalid Duration", description: "Duration must be greater than 0 minutes.", variant: "destructive" });
             return;
@@ -388,7 +393,6 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
           
           if (lastNotifiedTimestampString) {
             const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestampString));
-             // Ensure base time is not stuck in the past from a previous notification cycle on the same day
             if (lastNotifiedDate.getTime() >= baseTimeForNextInterval.getTime() && lastNotifiedDate.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate(), endParts[0], endParts[1]).getTime() ) {
                  baseTimeForNextInterval = lastNotifiedDate;
             }
@@ -416,7 +420,7 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
             setStatusMessage("Window ended for today.");
           }
         }
-      } else { // duration mode
+      } else { 
         if (!timer.startTime) {
           setStatusMessage("Timer enabled, awaiting start...");
           setTimeLeftForNotification(null);
@@ -432,7 +436,6 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
           setStatusMessage("Duration complete.");
           setTimeLeftForNotification(null);
           setTimeLeftForDuration(0);
-          // Manager will disable it
           return;
         }
 
@@ -454,7 +457,7 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
          }
 
         if (nextNotificationTime.getTime() >= endDate.getTime()) {
-           setTimeLeftForNotification(null); // No more notifications within this duration
+           setTimeLeftForNotification(null); 
            setStatusMessage(`Duration ending in: ${formatTimeLeft(secondsUntilDurationEnd)}`);
         } else {
           const secondsUntilNextNotification = Math.max(0, Math.round((nextNotificationTime.getTime() - now.getTime()) / 1000));
@@ -464,7 +467,7 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
       }
     };
 
-    calculateAndUpdateState(); // Initial call
+    calculateAndUpdateState(); 
     const intervalId = setInterval(calculateAndUpdateState, 1000);
     return () => clearInterval(intervalId);
   }, [timer]);
@@ -495,7 +498,7 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
             aria-label={`Toggle timer ${timer.taskName}`}
           />
         </div>
-        <CardDescription className="text-xs h-6 flex items-center"> {/* Added h-6 and flex items-center for consistent height */}
+        <CardDescription className="text-xs h-6 flex items-center"> 
           {getDescription()}
         </CardDescription>
       </CardHeader>
@@ -557,17 +560,15 @@ const IntervalTimersManager = () => {
             }
             
             let nextPotentialNotificationTime = new Date(baseTimeForNotificationCheck.getTime());
-            // Ensure nextPotential is at or after current time within window
             while(nextPotentialNotificationTime.getTime() <= now.getTime()){
                  nextPotentialNotificationTime.setTime(nextPotentialNotificationTime.getTime() + setting.repeatInterval * 60000);
             }
-            // Check if this calculated next time is the current minute
             if(nextPotentialNotificationTime.getHours() === now.getHours() && nextPotentialNotificationTime.getMinutes() === now.getMinutes()){
                  shouldNotify = true;
             }
 
 
-        } else { // duration mode
+        } else { 
             if (!setting.startTime || !setting.durationHours && !setting.durationMinutes) return;
 
             const startDate = new Date(setting.startTime);
@@ -575,10 +576,9 @@ const IntervalTimersManager = () => {
             const endDate = new Date(startDate.getTime() + totalDurationSeconds * 1000);
 
             if (now.getTime() >= endDate.getTime()) {
-                // Duration ended, disable timer
                 updateIntervalTimerSetting({ ...setting, isEnabled: false, startTime: undefined });
                 toast({ title: "Timer Finished", description: `${setting.taskName} duration has completed.` });
-                localStorage.removeItem(lastNotifiedTimestampKey); // Clean up local storage
+                localStorage.removeItem(lastNotifiedTimestampKey); 
                 localStorage.removeItem(lastNotifiedMinuteMarkerKey);
                 return;
             }
@@ -610,17 +610,17 @@ const IntervalTimersManager = () => {
           }
         }
       });
-    }, 60000); // Check every minute
+    }, 60000); 
 
     return () => clearInterval(timerId);
   }, [intervalTimerSettings, toast, updateIntervalTimerSetting]);
 
   const handleSaveTimer = (data: Omit<IntervalTimerSetting, 'id'>) => {
      const saveData = { ...data };
-     if (saveData.timerMode === 'duration' && saveData.isEnabled && !saveData.startTime && !editingTimer?.startTime){ // If new duration timer is enabled, set start time
+     if (saveData.timerMode === 'duration' && saveData.isEnabled && !saveData.startTime && !editingTimer?.startTime){ 
         saveData.startTime = new Date().toISOString();
      } else if (saveData.timerMode === 'windowed'){
-        saveData.startTime = undefined; // Clear startTime for windowed mode
+        saveData.startTime = undefined; 
      }
 
 
@@ -638,11 +638,11 @@ const IntervalTimersManager = () => {
   const handleToggleEnable = (timer: IntervalTimerSetting, newEnabledState: boolean) => {
     const updatedTimer = { ...timer, isEnabled: newEnabledState };
     if (timer.timerMode === 'duration') {
-      if (newEnabledState && !timer.startTime) { // Enabling a duration timer
+      if (newEnabledState && !timer.startTime) { 
         updatedTimer.startTime = new Date().toISOString();
-      } else if (!newEnabledState) { // Disabling any timer (duration or windowed)
-        updatedTimer.startTime = undefined; // Clear startTime if disabling a duration timer
-        localStorage.removeItem(`lastNotified_${timer.id}_timestamp`); // Clean up for this timer
+      } else if (!newEnabledState) { 
+        updatedTimer.startTime = undefined; 
+        localStorage.removeItem(`lastNotified_${timer.id}_timestamp`); 
         localStorage.removeItem(`lastNotified_${timer.id}_minuteMarker`);
       }
     }
@@ -653,7 +653,7 @@ const IntervalTimersManager = () => {
   const handleDeleteTimer = (timerId: string) => {
     if (window.confirm("Are you sure you want to delete this interval timer?")) {
       deleteIntervalTimerSetting(timerId);
-      localStorage.removeItem(`lastNotified_${timerId}_timestamp`); // Clean up local storage
+      localStorage.removeItem(`lastNotified_${timerId}_timestamp`); 
       localStorage.removeItem(`lastNotified_${timerId}_minuteMarker`);
       toast({ title: "Interval Timer Deleted", variant: "destructive" });
     }
@@ -700,6 +700,322 @@ const IntervalTimersManager = () => {
   );
 };
 
+type CustomGraphFormData = Omit<CustomGraphSetting, 'id' | 'variables'> & {
+  variables: Array<Omit<CustomGraphVariable, 'id'> & { tempId: string }>;
+};
+
+const CustomGraphForm = ({
+  onSave,
+  initialData,
+  onClose,
+}: {
+  onSave: (data: Omit<CustomGraphSetting, 'id'>) => void;
+  initialData?: CustomGraphSetting;
+  onClose: () => void;
+}) => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState<CustomGraphFormData>(
+    initialData ? 
+    { 
+      name: initialData.name,
+      timeView: initialData.timeView,
+      variables: initialData.variables.map(v => ({ ...v, tempId: v.id })),
+    } : 
+    { 
+      name: '', 
+      timeView: 'monthly',
+      variables: [{ tempId: Date.now().toString(), name: 'Variable 1', color: CHART_COLOR_OPTIONS[0].value }]
+    }
+  );
+
+  const handleGraphChange = (field: keyof Omit<CustomGraphFormData, 'variables'>, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleVariableChange = (tempId: string, field: keyof Omit<CustomGraphVariable, 'id'>, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      variables: prev.variables.map(v => v.tempId === tempId ? { ...v, [field]: value } : v)
+    }));
+  };
+
+  const addVariable = () => {
+    const nextColorIndex = formData.variables.length % CHART_COLOR_OPTIONS.length;
+    setFormData(prev => ({
+      ...prev,
+      variables: [...prev.variables, { 
+        tempId: Date.now().toString() + Math.random(), 
+        name: `Variable ${prev.variables.length + 1}`, 
+        color: CHART_COLOR_OPTIONS[nextColorIndex].value 
+      }]
+    }));
+  };
+
+  const removeVariable = (tempId: string) => {
+    if (formData.variables.length <= 1) {
+      toast({ title: "Cannot Remove", description: "A graph must have at least one variable.", variant: "destructive" });
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      variables: prev.variables.filter(v => v.tempId !== tempId)
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      toast({ title: "Invalid Input", description: "Graph name cannot be empty.", variant: "destructive" });
+      return;
+    }
+    if (formData.variables.some(v => !v.name.trim())) {
+      toast({ title: "Invalid Input", description: "Variable names cannot be empty.", variant: "destructive" });
+      return;
+    }
+
+    const finalVariables = formData.variables.map(({tempId, ...rest}) => ({
+      ...rest,
+      id: initialData?.variables.find(iv => iv.id === tempId)?.id || tempId // Preserve original ID if editing, else use tempId
+    }));
+
+    onSave({ name: formData.name, timeView: formData.timeView, variables: finalVariables });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-2">
+      <div>
+        <Label htmlFor="graphName">Graph Name</Label>
+        <Input id="graphName" value={formData.name} onChange={(e) => handleGraphChange('name', e.target.value)} className="mt-1"/>
+      </div>
+      <div>
+        <Label htmlFor="graphTimeView">Time View</Label>
+        <Select value={formData.timeView} onValueChange={(value) => handleGraphChange('timeView', value as TimeView)}>
+          <SelectTrigger id="graphTimeView" className="mt-1">
+            <SelectValue placeholder="Select time view" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="weekly">Weekly</SelectItem>
+            <SelectItem value="monthly">Monthly</SelectItem>
+            <SelectItem value="yearly">Yearly</SelectItem>
+            <SelectItem value="alltime">All Time</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-3">
+        <Label>Variables</Label>
+        {formData.variables.map((variable, index) => (
+          <Card key={variable.tempId} className="p-3 bg-background/70">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-sm font-medium">Variable {index + 1}</p>
+              {formData.variables.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeVariable(variable.tempId)} className="h-6 w-6 text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <div className="space-y-2">
+              <div>
+                <Label htmlFor={`varName-${variable.tempId}`}>Name</Label>
+                <Input id={`varName-${variable.tempId}`} value={variable.name} onChange={(e) => handleVariableChange(variable.tempId, 'name', e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor={`varColor-${variable.tempId}`}>Color</Label>
+                <Select value={variable.color} onValueChange={(value) => handleVariableChange(variable.tempId, 'color', value)}>
+                  <SelectTrigger id={`varColor-${variable.tempId}`}>
+                    <SelectValue placeholder="Select color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CHART_COLOR_OPTIONS.map(opt => (
+                      <SelectItem key={opt.key} value={opt.value}>
+                        <div className="flex items-center">
+                           <Palette className="mr-2 h-4 w-4" style={{ color: opt.value }} />
+                           {opt.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </Card>
+        ))}
+        <Button type="button" variant="outline" onClick={addVariable} className="w-full">
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Variable
+        </Button>
+      </div>
+      <DialogFooter className="pt-4">
+        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+        <Button type="submit">Save Graph</Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
+const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
+  graph: CustomGraphSetting;
+  onDelete: (id: string) => void;
+  onEdit: (graph: CustomGraphSetting) => void;
+}) => {
+  const chartConfig = useMemo(() => {
+    const config: import("@/components/ui/chart").ChartConfig = {};
+    graph.variables.forEach((variable, index) => {
+      // Use variable.id or a generated key for uniqueness if names can collide
+      config[variable.id] = { 
+        label: variable.name, 
+        color: variable.color 
+      };
+    });
+    return config;
+  }, [graph.variables]);
+
+  const chartData = useMemo(() => {
+    let dates: Date[] = [];
+    const now = new Date();
+    switch (graph.timeView) {
+      case 'weekly':
+        dates = eachDayOfInterval({ start: subDays(now, 6), end: now });
+        break;
+      case 'monthly':
+        dates = eachDayOfInterval({ start: subDays(now, 29), end: now });
+        break;
+      case 'yearly':
+        dates = eachMonthOfInterval({ start: subMonths(now, 11), end: now });
+        break;
+      case 'alltime': // Placeholder: last 24 months for "alltime"
+        dates = eachMonthOfInterval({ start: subMonths(now, 23), end: now });
+        break;
+    }
+
+    return dates.map(date => {
+      const entry: any = {
+        date: graph.timeView === 'weekly' || graph.timeView === 'monthly' ? format(date, 'MMM d') : format(date, 'MMM yyyy'),
+      };
+      graph.variables.forEach(variable => {
+        entry[variable.id] = Math.floor(Math.random() * 100); // Placeholder data
+      });
+      return entry;
+    });
+  }, [graph.timeView, graph.variables]);
+
+  return (
+    <Card className="bg-background/50 border">
+      <CardHeader className="pb-3 pt-4">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-medium text-foreground">{graph.name}</CardTitle>
+           <div className="flex space-x-1">
+            <Button variant="ghost" size="icon" onClick={() => onEdit(graph)} className="h-7 w-7">
+              <Edit3 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onDelete(graph.id)} className="text-destructive hover:text-destructive h-7 w-7">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <CardDescription className="text-xs capitalize">{graph.timeView} View - Placeholder Data</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-2 pb-4 h-[300px]">
+        {chartData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="h-full w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsLineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={10}/>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  {graph.variables.map(variable => (
+                    <Line
+                      key={variable.id}
+                      type="monotone"
+                      dataKey={variable.id}
+                      stroke={variable.color} // Direct HSL string
+                      strokeWidth={2}
+                      dot={{ r: 2, fill: variable.color }}
+                      activeDot={{ r: 4 }}
+                      name={variable.name}
+                    />
+                  ))}
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">Not enough data to display graph.</p>
+          )}
+      </CardContent>
+    </Card>
+  );
+};
+
+
+const CustomGraphsManager = () => {
+  const { customGraphs, addCustomGraph, updateCustomGraph, deleteCustomGraph } = useApp();
+  const { toast } = useToast();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingGraph, setEditingGraph] = useState<CustomGraphSetting | undefined>(undefined);
+
+  const handleSaveGraph = (data: Omit<CustomGraphSetting, 'id'>) => {
+    if (editingGraph) {
+      updateCustomGraph({ ...data, id: editingGraph.id });
+      toast({ title: "Custom Graph Updated!" });
+    } else {
+      addCustomGraph(data);
+      toast({ title: "Custom Graph Added!" });
+    }
+    setIsFormOpen(false);
+    setEditingGraph(undefined);
+  };
+  
+  const handleDeleteGraph = (graphId: string) => {
+    if (window.confirm("Are you sure you want to delete this custom graph?")) {
+      deleteCustomGraph(graphId);
+      toast({ title: "Custom Graph Deleted", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+      <CardHeader className="flex flex-row items-baseline justify-between">
+        <CardTitle className="font-headline text-xl text-accent flex items-center">
+          <BarChartBig className="mr-2 h-5 w-5"/> Custom Graphs
+        </CardTitle>
+        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingGraph(undefined); }}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" onClick={() => { setEditingGraph(undefined); setIsFormOpen(true); }}>
+              <PlusCircle className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Graph</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md md:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingGraph ? "Edit" : "Create New"} Custom Graph</DialogTitle>
+            </DialogHeader>
+            <CustomGraphForm 
+              onSave={handleSaveGraph} 
+              initialData={editingGraph} 
+              onClose={() => { setIsFormOpen(false); setEditingGraph(undefined); }}
+            />
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent className="space-y-4 py-6">
+        {customGraphs.length === 0 && (
+          <p className="text-muted-foreground text-center">No custom graphs configured. Create one to track your progress!</p>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {customGraphs.map(graph => (
+            <CustomGraphDisplayItem
+              key={graph.id}
+              graph={graph}
+              onDelete={handleDeleteGraph}
+              onEdit={(g) => { setEditingGraph(g); setIsFormOpen(true); }}
+            />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default function TimersPage() {
   const { setActiveTab } = useApp();
@@ -712,7 +1028,9 @@ export default function TimersPage() {
       <div className="space-y-8">
         <PomodoroTimer />
         <IntervalTimersManager />
+        <CustomGraphsManager />
       </div>
     </AppWrapper>
   );
 }
+

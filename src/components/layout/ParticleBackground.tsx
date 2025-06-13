@@ -1,3 +1,4 @@
+
 // src/components/layout/ParticleBackground.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
@@ -6,14 +7,13 @@ const ParticleBackground = () => {
   const [particles, setParticles] = useState<Array<{ id: number; style: React.CSSProperties }>>([]);
 
   useEffect(() => {
-    const numParticles = 20; // Increased number of lines
+    const numParticles = 12; // Reduced number of lines
     const newParticles = Array.from({ length: numParticles }).map((_, i) => {
-      const animationDuration = Math.random() * 3 + 5; // Faster: Animation duration 5s to 8s
-      const animationDelay = Math.random() * 10; // Delay up to 10s
+      const animationDuration = Math.random() * 4 + 6; // Slightly Slower: Animation duration 6s to 10s
+      const animationDelay = Math.random() * 12; // Delay up to 12s
       
-      // Only vertical lines
-      const lineWidthPx = Math.random() * 1 + 0.5; // 0.5px to 1.5px thick
-      const lineHeightVh = Math.random() * 50 + 30; // 30vh to 80vh tall
+      const lineWidthPx = Math.random() * 1 + 0.5; 
+      const lineHeightVh = Math.random() * 50 + 30; 
       const style: React.CSSProperties = {
         width: `${lineWidthPx}px`,
         height: `${lineHeightVh}vh`,
@@ -42,3 +42,4 @@ const ParticleBackground = () => {
 };
 
 export default ParticleBackground;
+

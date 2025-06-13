@@ -1,4 +1,5 @@
 
+
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
 
 export interface Task {
@@ -82,6 +83,22 @@ export interface IntervalTimerSetting {
   repeatInterval: number; // minutes (common to both)
 }
 
+export interface CustomGraphVariable {
+  id: string;
+  name: string;
+  color: string; // e.g., "hsl(var(--chart-1))" or "chart-1"
+}
+
+export type TimeView = 'weekly' | 'monthly' | 'yearly' | 'alltime';
+
+export interface CustomGraphSetting {
+  id: string;
+  name: string;
+  timeView: TimeView;
+  variables: CustomGraphVariable[];
+}
+
+
 export const RANK_NAMES = [
   "Aether Disciple",
   "Mystic Initiate",
@@ -142,3 +159,13 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
 };
 
 export const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSetting[] = [];
+export const INITIAL_CUSTOM_GRAPHS: CustomGraphSetting[] = [];
+
+export const CHART_COLOR_OPTIONS = [
+  { label: 'Chart Color 1 (Cyan)', value: 'hsl(var(--chart-1))', key: 'chart-1' },
+  { label: 'Chart Color 2 (Orange)', value: 'hsl(var(--chart-2))', key: 'chart-2' },
+  { label: 'Chart Color 3 (Magenta)', value: 'hsl(var(--chart-3))', key: 'chart-3' },
+  { label: 'Chart Color 4 (Yellow)', value: 'hsl(var(--chart-4))', key: 'chart-4' },
+  { label: 'Chart Color 5 (Green)', value: 'hsl(var(--chart-5))', key: 'chart-5' },
+];
+

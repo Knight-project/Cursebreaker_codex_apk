@@ -3,8 +3,8 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute } from '@/lib/types'; // Updated import
-import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS } from '@/lib/types'; // Added INITIAL_INTERVAL_TIMER_SETTINGS
+import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute, CustomGraphSetting } from '@/lib/types'; // Updated import
+import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS, INITIAL_CUSTOM_GRAPHS } from '@/lib/types'; // Added INITIAL_CUSTOM_GRAPHS
 import {
   RANK_NAMES_LIST,
   MAX_SUB_RANKS,
@@ -13,7 +13,8 @@ import {
   TASK_DIFFICULTY_EXP_MULTIPLIER,
   BASE_TASK_EXP,
   RANK_EXP_SCALING_FACTOR,
-  RIVAL_NAMES_POOL
+  RIVAL_NAMES_POOL,
+  APP_NAME
 } from '@/lib/constants';
 import { getAdaptiveTaunt } from '@/ai/flows/adaptive-taunts';
 import type { AdaptiveTauntInput } from '@/ai/flows/adaptive-taunts';
@@ -29,11 +30,16 @@ interface AppContextType {
   setAppSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   pomodoroSettings: PomodoroSettings;
   setPomodoroSettings: React.Dispatch<React.SetStateAction<PomodoroSettings>>;
-  intervalTimerSettings: IntervalTimerSetting[]; // Updated type
-  setIntervalTimerSettings: React.Dispatch<React.SetStateAction<IntervalTimerSetting[]>>; // Updated type
+  intervalTimerSettings: IntervalTimerSetting[]; 
+  setIntervalTimerSettings: React.Dispatch<React.SetStateAction<IntervalTimerSetting[]>>; 
   addIntervalTimerSetting: (setting: Omit<IntervalTimerSetting, 'id'>) => void;
   updateIntervalTimerSetting: (setting: IntervalTimerSetting) => void;
   deleteIntervalTimerSetting: (settingId: string) => void;
+  customGraphs: CustomGraphSetting[];
+  setCustomGraphs: React.Dispatch<React.SetStateAction<CustomGraphSetting[]>>;
+  addCustomGraph: (graph: Omit<CustomGraphSetting, 'id'>) => void;
+  updateCustomGraph: (graph: CustomGraphSetting) => void;
+  deleteCustomGraph: (graphId: string) => void;
   addTask: (task: Omit<Task, 'id' | 'dateAdded' | 'isCompleted'>) => void;
   updateTask: (updatedTask: Task) => void;
   deleteTask: (taskId: string) => void;
@@ -64,15 +70,16 @@ const INITIAL_POMODORO_SETTINGS: PomodoroSettings = {
   sessionsBeforeLongBreak: 4,
 };
 
-// INITIAL_INTERVAL_TIMER_SETTINGS is now imported from types.ts
 
 const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('cursebreakerCodexUserProfile', INITIAL_USER_PROFILE);
-  const [tasks, setTasks] = useLocalStorage<Task[]>('cursebreakerCodexTasks', []);
-  const [rival, setRival] = useLocalStorage<Rival>('cursebreakerCodexRival', INITIAL_RIVAL);
-  const [appSettings, setAppSettings] = useLocalStorage<AppSettings>('cursebreakerCodexSettings', INITIAL_APP_SETTINGS);
-  const [pomodoroSettings, setPomodoroSettings] = useLocalStorage<PomodoroSettings>('cursebreakerCodexPomodoroSettings', INITIAL_POMODORO_SETTINGS);
-  const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSetting[]>('cursebreakerCodexIntervalTimers', INITIAL_INTERVAL_TIMER_SETTINGS); // Key changed, type updated
+  const [userProfile, setUserProfile] = useLocalStorage<UserProfile>(`${APP_NAME}UserProfile`, INITIAL_USER_PROFILE);
+  const [tasks, setTasks] = useLocalStorage<Task[]>(`${APP_NAME}Tasks`, []);
+  const [rival, setRival] = useLocalStorage<Rival>(`${APP_NAME}Rival`, INITIAL_RIVAL);
+  const [appSettings, setAppSettings] = useLocalStorage<AppSettings>(`${APP_NAME}Settings`, INITIAL_APP_SETTINGS);
+  const [pomodoroSettings, setPomodoroSettings] = useLocalStorage<PomodoroSettings>(`${APP_NAME}PomodoroSettings`, INITIAL_POMODORO_SETTINGS);
+  const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSetting[]>(`${APP_NAME}IntervalTimers`, INITIAL_INTERVAL_TIMER_SETTINGS);
+  const [customGraphs, setCustomGraphs] = useLocalStorage<CustomGraphSetting[]>(`${APP_NAME}CustomGraphs`, INITIAL_CUSTOM_GRAPHS);
+
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -152,10 +159,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   const grantStatExp = useCallback((attribute: Attribute, expGainedStat: number) => {
-    // The check for attribute === "None" is already implicitly handled by type system for `stats` keys
     setUserProfile(prev => {
       const statKey = attribute.toLowerCase() as keyof typeof prev.stats;
-      if (!prev.stats[statKey]) return prev; // Should not happen with proper types
+      if (!prev.stats[statKey]) return prev; 
       const currentStat = prev.stats[statKey];
 
       let newExp = currentStat.exp + expGainedStat;
@@ -312,6 +318,22 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     setIntervalTimerSettings(prev => prev.filter(s => s.id !== settingId));
   };
 
+  const addCustomGraph = (graphData: Omit<CustomGraphSetting, 'id'>) => {
+    const newGraph: CustomGraphSetting = {
+      ...graphData,
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
+    };
+    setCustomGraphs(prev => [...prev, newGraph]);
+  };
+
+  const updateCustomGraph = (updatedGraph: CustomGraphSetting) => {
+    setCustomGraphs(prev => prev.map(g => g.id === updatedGraph.id ? updatedGraph : g));
+  };
+
+  const deleteCustomGraph = (graphId: string) => {
+    setCustomGraphs(prev => prev.filter(g => g.id !== graphId));
+  };
+
 
   if (!isInitialized) {
     return null;
@@ -326,6 +348,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       pomodoroSettings, setPomodoroSettings,
       intervalTimerSettings, setIntervalTimerSettings,
       addIntervalTimerSetting, updateIntervalTimerSetting, deleteIntervalTimerSetting,
+      customGraphs, setCustomGraphs,
+      addCustomGraph, updateCustomGraph, deleteCustomGraph,
       addTask, updateTask, deleteTask, completeTask,
       getTodaysTasks,
       updateRivalTaunt,
