@@ -1,3 +1,4 @@
+
 // src/components/layout/Header.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
@@ -6,15 +7,15 @@ import { Button } from '@/components/ui/button';
 import { APP_NAME } from '@/lib/constants';
 import Link from 'next/link';
 import { useApp } from '@/contexts/AppContext';
-import { useRouter } from 'next/navigation'; // Corrected import
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const languageCycles = [
   { lang: 'en', text: APP_NAME },
-  { lang: 'jp', text: "呪破秘典" }, // Placeholder for Cursebreaker Codex in Japanese
-  { lang: 'ko', text: "파멸의서" },   // Placeholder for Cursebreaker Codex in Korean
-  { lang: 'ru', text: "КодексРазлома" },// Placeholder for Cursebreaker Codex in Russian
-  { lang: 'zh', text: "破咒密碼" }, // Placeholder for Cursebreaker Codex in Chinese
+  { lang: 'jp', text: "呪破秘典" }, // Cursebreaker Codex in Japanese
+  { lang: 'ko', text: "파멸의서" },   // Cursebreaker Codex in Korean
+  { lang: 'ru', text: "КодексРазлома" },// Cursebreaker Codex in Russian
+  { lang: 'zh', text: "破咒密碼" }, // Cursebreaker Codex in Chinese
 ];
 
 
@@ -30,17 +31,14 @@ const Header = () => {
     const intervalId = setInterval(() => {
       setCurrentLangIndex(prevIndex => {
         const nextIndex = (prevIndex + 1) % languageCycles.length;
-        // Alternate between English (index 0) and one other random language
-        if (nextIndex === 0) { // Back to English
+        if (nextIndex === 0) { 
             return 0;
-        } else if (prevIndex === 0) { // Was English, pick a random foreign one
-            // Pick a random index from 1 to length-1
+        } else if (prevIndex === 0) { 
             return Math.floor(Math.random() * (languageCycles.length - 1)) + 1;
         }
-        // If it was a foreign language, switch back to English
         return 0; 
       });
-    }, 300000); // 5 minutes for foreign, 5 for english = 10 minute cycle for one pair
+    }, 300000); // 5 minutes 
 
     return () => clearInterval(intervalId);
   }, [currentLangIndex]);
@@ -67,7 +65,7 @@ const Header = () => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link
           href="/"
-          className="text-xl font-brand brand-gradient hover:opacity-80 transition-opacity"
+          className="text-xl font-brand text-accent hover:opacity-80 transition-opacity"
         >
           {displayedAppName}
         </Link>

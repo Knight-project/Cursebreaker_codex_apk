@@ -4,7 +4,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Home, Timer, Users } from 'lucide-react';
+import { Home, Timer, Users } from 'lucide-react'; // Users instead of User, assuming for 'Rival' (plural or group context)
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
@@ -24,8 +24,6 @@ const OrbitingIconAnimator = ({ children }: { children: React.ReactNode }) => {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    // borderRadius, borderStyle, borderWidth, borderColor are in .orbit-arc class
-    // Specific animation and border colors are in .nav-orbit-arc-primary-X classes
   };
 
   return (
@@ -47,8 +45,8 @@ const BottomNavigationBar = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border z-50">
-      <div className="container mx-auto px-4 h-16 flex justify-around items-center">
-        {navItems.map((item) => {
+      <div className="container mx-auto px-0 h-16 flex justify-around items-stretch"> {/* Changed items-center to items-stretch */}
+        {navItems.map((item, index) => {
           const Icon = item.icon;
           const active = isActive(item.key);
           return (
@@ -57,17 +55,26 @@ const BottomNavigationBar = () => {
               key={item.label}
               onClick={() => setActiveTab(item.key)}
               className={cn(
-              "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200 group", // Added group for hover effect on label
-              active ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            )}>
-              <div className={cn("mb-0.5 transition-transform duration-200 flex items-center justify-center h-8", active ? "scale-110" : "scale-90")}>
-                {active ? (
-                  <OrbitingIconAnimator>
-                    <Icon className={cn("h-6 w-6 text-primary neon-icon-primary")} />
-                  </OrbitingIconAnimator>
-                ) : (
-                  <Icon className={cn("h-6 w-6 text-muted-foreground group-hover:text-foreground")} />
-                )}
+                "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200 group relative",
+                active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                index < navItems.length - 1 ? "border-r border-border/30" : "", // Divider
+                active ? "border-t-2 border-accent" : "border-t-2 border-transparent" // Active tab accent border
+              )}
+            >
+              <div className={cn(
+                "flex flex-col items-center justify-center transition-transform duration-200 h-full", // Ensure inner div also takes height for centering
+                active ? "scale-110" : "scale-90 group-hover:scale-100"
+              )}>
+                <div className={cn("mb-0.5 flex items-center justify-center h-8")}>
+                  {active ? (
+                    <OrbitingIconAnimator>
+                      <Icon className={cn("h-6 w-6 text-primary neon-icon-primary")} />
+                    </OrbitingIconAnimator>
+                  ) : (
+                    <Icon className={cn("h-6 w-6 text-muted-foreground group-hover:text-foreground")} />
+                  )}
+                </div>
+                {/* <span className="text-xs truncate">{item.label}</span> Removed label text as per visual, can be re-added if needed */}
               </div>
             </Link>
           );
