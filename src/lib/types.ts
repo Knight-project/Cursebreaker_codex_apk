@@ -181,5 +181,8 @@ export const CHART_COLOR_OPTIONS = [
   { label: 'Chart Color 3 (Magenta)', value: 'hsl(var(--chart-3))', key: 'chart-3' },
   { label: 'Chart Color 4 (Yellow)', value: 'hsl(var(--chart-4))', key: 'chart-4' },
   { label: 'Chart Color 5 (Green)', value: 'hsl(var(--chart-5))', key: 'chart-5' },
+  { label: 'Chart Color 6 (Blue)', value: 'hsl(var(--chart-6))', key: 'chart-6' },
+  { label: 'Chart Color 7 (Pink)', value: 'hsl(var(--chart-7))', key: 'chart-7' },
+  { label: 'Chart Color 8 (Teal)', value: 'hsl(var(--chart-8))', key: 'chart-8' },
 ];
 

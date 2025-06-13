@@ -8,10 +8,10 @@
     --background: 220 30% 5%; /* Very dark blue-black */
     --foreground: 180 10% 85%; /* Light cyan-grey */
 
-    --card: hsla(220, 25%, 10%, 0.85); /* Darker, semi-transparent */
+    --card: 220 25% 10%; /* Darker, fully opaque */
     --card-foreground: 180 10% 85%;
 
-    --popover: hsla(220, 25%, 10%, 0.85); /* Darker, semi-transparent */
+    --popover: 220 25% 10%; /* Darker, fully opaque */
     --popover-foreground: 180 10% 85%;
 
     --primary: 180 100% 50%; /* Bright Cyan */
@@ -40,6 +40,9 @@
     --chart-3: 300 100% 60%; /* Magenta/Purple */
     --chart-4: 60 100% 50%;  /* Yellow */
     --chart-5: 120 100% 50%; /* Green */
+    --chart-6: 210 100% 50%; /* Blue */
+    --chart-7: 330 100% 60%; /* Pink */
+    --chart-8: 150 100% 50%; /* Teal */
   }
 }
 
