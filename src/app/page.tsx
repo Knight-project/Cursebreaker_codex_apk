@@ -149,7 +149,7 @@ const TaskItem = ({ task }: { task: Task }) => {
   };
   
   const descriptionText = task.taskType === 'protocol' && task.scheduledDate
-    ? `${task.difficulty} - ${task.attribute} (Due: ${format(new Date(task.scheduledDate), "MMM d")})`
+    ? `${task.difficulty} - ${task.attribute} (Due: ${format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d")})` // Ensure date is parsed correctly
     : `${task.difficulty} - ${task.attribute}`;
 
   return (

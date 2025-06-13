@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
@@ -128,7 +127,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount and when `today` changes (implicitly via re-render if it were a state)
+  }, []); 
 
 
   const setActiveTab = (tab: string) => {
@@ -202,7 +201,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const grantStatExp = useCallback((attribute: Attribute, expGainedStat: number) => {
     setUserProfile(prev => {
       const statKey = attribute.toLowerCase() as keyof typeof prev.stats;
-      if (!prev.stats[statKey]) return prev; // Should not happen with ATTRIBUTES_LIST check
+      if (!prev.stats[statKey] || attribute === "None") return prev; 
       const currentStat = prev.stats[statKey];
 
       let newExp = currentStat.exp + expGainedStat;
@@ -238,7 +237,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       attribute: taskData.attribute,
       taskType: taskData.taskType,
       isCompleted: false,
-      dateAdded: format(new Date(), 'yyyy-MM-dd'), // Creation date
+      dateAdded: format(new Date(), 'yyyy-MM-dd'), 
       scheduledDate: taskData.taskType === 'protocol' ? taskData.scheduledDate : undefined,
       lastCompletedDate: undefined,
     };
@@ -262,7 +261,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       if (taskIndex === -1) return prevTasks;
 
       const task = prevTasks[taskIndex];
-      if (task && !task.isCompleted) { // For rituals, isCompleted means for today
+      // For rituals, isCompleted means for today. They can be completed again on a new day.
+      // For daily/protocol, isCompleted is a one-time flag.
+      const canComplete = (task.taskType === 'ritual' && task.lastCompletedDate !== today) || 
+                          (task.taskType !== 'ritual' && !task.isCompleted);
+
+      if (task && canComplete) {
         const rankIndex = RANK_NAMES_LIST.indexOf(userProfile.rankName as typeof RANK_NAMES_LIST[number]);
         const difficultyMultiplier = TASK_DIFFICULTY_EXP_MULTIPLIER[task.difficulty];
         const rankMultiplier = 1 + (rankIndex * RANK_EXP_SCALING_FACTOR);
@@ -274,26 +278,26 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         let attributeAffectedForStatExpForTask: Attribute | undefined = undefined;
 
         if (task.attribute !== "None" && appSettings.autoAssignStatExp && ATTRIBUTES_LIST.includes(task.attribute as typeof ATTRIBUTES_LIST[number])) {
-          const statExp = Math.floor(expFromTask * 0.5); // Example: 50% of task EXP goes to attribute
+          const statExp = Math.floor(expFromTask * 0.5); 
           grantStatExp(task.attribute as Attribute, statExp);
           statExpGainedForTask = statExp;
           attributeAffectedForStatExpForTask = task.attribute;
         }
 
         const updatedTaskData: Partial<Task> = {
-          isCompleted: true,
+          isCompleted: true, // Mark as completed
           statExpGained: statExpGainedForTask,
           attributeAffectedForStatExp: attributeAffectedForStatExpForTask
         };
 
         if (task.taskType === 'ritual') {
-          updatedTaskData.lastCompletedDate = today;
+          updatedTaskData.lastCompletedDate = today; // Also update lastCompletedDate for rituals
         } else {
-          updatedTaskData.dateCompleted = today;
+          updatedTaskData.dateCompleted = today; // For daily/protocol, set dateCompleted
         }
 
         const updatedTask = { ...task, ...updatedTaskData };
-        completedTaskForHistory = { ...updatedTask }; // Capture state for history
+        completedTaskForHistory = { ...updatedTask }; 
 
         const newTasks = [...prevTasks];
         newTasks[taskIndex] = updatedTask;
@@ -304,18 +308,26 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     if (completedTaskForHistory) {
       setUserProfile(prev => {
-        const historyIndex = prev.taskHistory.findIndex(ht => ht.id === completedTaskForHistory!.id);
+         // For rituals, we might want to add a new history entry each time it's completed,
+        // or update if a "daily ritual completion" concept is preferred in history.
+        // For simplicity now, if it's a ritual, it might be added multiple times to history for different days.
+        // If it's daily/protocol, it's usually a one-time completion.
+        const isNonRitualAndAlreadyInHistory = 
+          completedTaskForHistory!.taskType !== 'ritual' && 
+          prev.taskHistory.some(ht => ht.id === completedTaskForHistory!.id && ht.dateCompleted);
+        
         let newTaskHistory = [...prev.taskHistory];
-        if (historyIndex > -1) {
-          // If task is already in history (e.g. a ritual completed on a previous day), update it.
-          // Or, decide if rituals should create new history entries each day.
-          // For now, let's update if exists, otherwise add.
-          newTaskHistory[historyIndex] = completedTaskForHistory!;
-        } else {
-          newTaskHistory.push(completedTaskForHistory!);
+
+        if (!isNonRitualAndAlreadyInHistory) {
+            const existingHistoryIndex = prev.taskHistory.findIndex(
+                ht => ht.id === completedTaskForHistory!.id && ht.dateCompleted === completedTaskForHistory!.dateCompleted
+            );
+            if(existingHistoryIndex > -1 && completedTaskForHistory!.taskType !== 'ritual') {
+                 newTaskHistory[existingHistoryIndex] = completedTaskForHistory!;
+            } else {
+                 newTaskHistory.push(completedTaskForHistory!);
+            }
         }
-        // Optionally, limit history size
-        // newTaskHistory = newTaskHistory.slice(-100);
         return { ...prev, taskHistory: newTaskHistory };
       });
     }
@@ -324,23 +336,25 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const getDailyDirectives = useCallback(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
-    return tasks.filter(task => task.taskType === 'daily' && task.dateAdded === today);
+    return tasks.filter(task => task.taskType === 'daily' && task.dateAdded === today && !task.isCompleted);
   }, [tasks]);
 
   const getRituals = useCallback(() => {
+    // Rituals are always active unless deleted. Their completion status is daily.
     return tasks.filter(task => task.taskType === 'ritual');
   }, [tasks]);
 
   const getProtocolsForToday = useCallback(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
-    return tasks.filter(task => task.taskType === 'protocol' && task.scheduledDate === today);
+    // Protocols for today that are not yet completed.
+    return tasks.filter(task => task.taskType === 'protocol' && task.scheduledDate === today && !task.isCompleted);
   }, [tasks]);
 
 
   const updateRivalTaunt = useCallback(async () => {
     if (!isInitialized) return;
     try {
-      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; // Simulate rival's completion
+      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; 
       const input: AdaptiveTauntInput = {
         userTaskCompletionRate: userProfile.dailyTaskCompletionPercentage / 100,
         rivalTaskCompletionRate: rivalTaskCompletionRate,
@@ -352,7 +366,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error) {
       console.error("Failed to get rival taunt:", error);
-      // Fallback taunt
       setRival(prev => ({ ...prev, lastTaunt: "Hmph. My systems are... momentarily indisposed." }));
     }
   }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized]);
@@ -365,7 +378,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     return Math.floor(BASE_TASK_EXP * difficultyMultiplier * rankMultiplier);
   }, []);
 
-  // Effect for scheduled Rival EXP gain & Daily Ritual Reset
   useEffect(() => {
     if (!isInitialized) return;
 
@@ -373,28 +385,28 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       const now = new Date();
       const todayStr = format(now, 'yyyy-MM-dd');
 
-      // Rival EXP Gain Check
       if (rival.nextExpGainTime && now.toISOString() >= rival.nextExpGainTime) {
         const previousDayForExpCalc = format(subDays(parseISO(rival.nextExpGainTime), 1), 'yyyy-MM-dd');
 
         let userExpGainedForRival = 0;
-        // Check if userProfile's lastExpResetDate corresponds to the day before rival's exp gain.
-        // This ensures we are using the exp gained by the user on the correct day.
         if (userProfile.lastExpResetDate === previousDayForExpCalc) {
             userExpGainedForRival = userProfile.expGainedToday;
         } else {
-            // If dates don't align (e.g., user didn't play, or data is from even earlier),
-            // we might consider it 0 or fetch historical data if available. For simplicity, 0.
             userExpGainedForRival = 0;
         }
-
-        const expFromUserUncompletedTasks = tasks
-          .filter(t => t.dateAdded === previousDayForExpCalc && !t.isCompleted && t.taskType === 'daily') // Only count uncompleted 'daily' tasks from prev day
+        
+        const expFromUserUncompletedDailyTasks = tasks
+          .filter(t => t.dateAdded === previousDayForExpCalc && !t.isCompleted && t.taskType === 'daily') 
+          .reduce((sum, task) => sum + calculatePotentialTaskExp(task, userProfile.rankName), 0);
+        
+        const expFromUserUncompletedProtocolTasksForYesterday = tasks
+          .filter(t => t.scheduledDate === previousDayForExpCalc && !t.isCompleted && t.taskType === 'protocol')
           .reduce((sum, task) => sum + calculatePotentialTaskExp(task, userProfile.rankName), 0);
 
         let baseRivalExpGain =
             (userExpGainedForRival * RIVAL_USER_DAILY_EXP_PERCENTAGE) +
-            expFromUserUncompletedTasks;
+            expFromUserUncompletedDailyTasks + expFromUserUncompletedProtocolTasksForYesterday;
+
 
         baseRivalExpGain *= RIVAL_DIFFICULTY_MULTIPLIERS[appSettings.rivalDifficulty];
 
@@ -428,13 +440,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           }
 
           const newHistoryEntry = {
-            date: format(parseISO(prev.nextExpGainTime!), 'yyyy-MM-dd'), // Log with the date it was supposed to be gained
+            date: format(parseISO(prev.nextExpGainTime!), 'yyyy-MM-dd'), 
             expGained: expGainedByRival,
             totalExp: newTotalExp,
           };
-          const updatedExpHistory = [...(prev.expHistory || []), newHistoryEntry].slice(-30); // Keep last 30 entries
+          const updatedExpHistory = [...(prev.expHistory || []), newHistoryEntry].slice(-30); 
 
-          const nextGainTime = startOfDay(addHours(parseISO(prev.nextExpGainTime!), 25)); // Set for next day
+          const nextGainTime = startOfDay(addHours(parseISO(prev.nextExpGainTime!), 25)); 
 
           return {
             ...prev,
@@ -447,24 +459,18 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
             nextExpGainTime: nextGainTime.toISOString(),
           };
         });
-
-        // Reset user's expGainedToday for the new day
         setUserProfile(prevUser => ({
             ...prevUser,
             expGainedToday: 0,
-            lastExpResetDate: todayStr, // current actual day
+            lastExpResetDate: todayStr, 
         }));
       }
-
-      // Daily Ritual Reset
-      // Check if a reset is needed (e.g., based on a stored "lastRitualResetDate")
-      // For simplicity, this effect runs once per day effectively on first load or if app is kept open.
-      // If app is opened after midnight, this will trigger.
       const lastRitualResetDate = localStorage.getItem(`${APP_NAME}_lastRitualResetDate`);
       if (lastRitualResetDate !== todayStr) {
         setTasks(prevTasks =>
           prevTasks.map(task => {
             if (task.taskType === 'ritual' && task.lastCompletedDate !== todayStr) {
+              // Ensure isCompleted is also reset if lastCompletedDate is not today
               return { ...task, isCompleted: false };
             }
             return task;
@@ -474,8 +480,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    dailyCheck(); // Run once on mount
-    const intervalId = setInterval(dailyCheck, 60000); // Check every minute
+    dailyCheck(); 
+    const intervalId = setInterval(dailyCheck, 60000); 
 
     return () => clearInterval(intervalId);
   }, [isInitialized, rival.nextExpGainTime, userProfile, tasks, appSettings.rivalDifficulty, setRival, setUserProfile, calculatePotentialTaskExp, setTasks]);
@@ -485,7 +491,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!isInitialized) return;
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    // Calculate daily completion based on 'daily' tasks added today and 'protocol' tasks scheduled for today
     const relevantTasksForCompletion = tasks.filter(t =>
       (t.taskType === 'daily' && t.dateAdded === todayStr) ||
       (t.taskType === 'protocol' && t.scheduledDate === todayStr)
