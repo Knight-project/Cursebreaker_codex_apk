@@ -6,26 +6,51 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect, useState, useRef, type ChangeEvent } from 'react';
+import React, { useEffect, useState, useRef, type ChangeEvent, useMemo } from 'react';
 import Image from 'next/image';
-import { Swords, PlusCircle } from 'lucide-react';
+import { Swords, PlusCircle, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
+import { format, subDays, eachDayOfInterval } from 'date-fns';
 
 const CyberpunkRivalPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
     <defs>
       <linearGradient id="cyberRivalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.3}} />
-        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.3}} />
+        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.4}} />
+        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.2}} />
       </linearGradient>
+       <clipPath id="rivalHeadClip">
+        <circle cx="50" cy="40" r="22"/>
+      </clipPath>
     </defs>
-    <circle cx="50" cy="40" r="22" stroke="hsl(var(--destructive))" strokeWidth="2" fill="url(#cyberRivalGrad)" />
-    <path d="M35 75 Q50 95 65 75 Q50 85 35 75" stroke="hsl(var(--destructive))" strokeWidth="1.5" fill="hsl(var(--destructive) / 0.1)" />
-    <rect x="45" y="8" width="10" height="8" fill="hsl(var(--border))" opacity="0.5" transform="rotate(10 50 12)"/>
-    <line x1="38" y1="45" x2="48" y2="40" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
-    <line x1="62" y1="45" x2="52" y2="40" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
+    {/* Base head shape */}
+    <circle cx="50" cy="40" r="22" stroke="hsl(var(--destructive))" strokeWidth="2.5" fill="url(#cyberRivalGrad)" />
+    
+    {/* Aggressive "Horns" or "Crest" */}
+    <path d="M40 18 Q50 10 60 18 L55 25 Q50 20 45 25 Z" fill="hsl(var(--destructive) / 0.7)" stroke="hsl(var(--destructive))" strokeWidth="1.5" />
+
+    {/* Sharper "Eyes" - more angular */}
+    <path d="M35 42 L48 38 L45 46 Z" fill="hsl(var(--accent) / 0.8)" stroke="hsl(var(--accent))" strokeWidth="1"/>
+    <path d="M65 42 L52 38 L55 46 Z" fill="hsl(var(--accent) / 0.8)" stroke="hsl(var(--accent))" strokeWidth="1"/>
+
+    {/* More angular "Chin guard" or "Jawline" */}
+    <path d="M30 70 L50 85 L70 70 L65 75 L50 90 L35 75 Z" stroke="hsl(var(--destructive))" strokeWidth="2" fill="hsl(var(--destructive) / 0.3)" />
+    
+    {/* Extra "Tech" detail, slightly menacing */}
+     <rect x="25" y="50" width="8" height="4" fill="hsl(var(--border))" opacity="0.6" transform="rotate(-15 25 50)"/>
+     <rect x="67" y="50" width="8" height="4" fill="hsl(var(--border))" opacity="0.6" transform="rotate(15 67 50)"/>
+      <line x1="50" y1="58" x2="50" y2="68" stroke="hsl(var(--border))" strokeWidth="1.5" opacity="0.7"/>
   </svg>
 );
+
+const chartConfigRival = {
+  rivalExp: {
+    label: "Rival Cumulative EXP",
+    color: "hsl(var(--destructive))",
+  },
+} satisfies import("@/components/ui/chart").ChartConfig;
 
 
 export default function RivalPage() {
@@ -83,6 +108,55 @@ export default function RivalPage() {
     }
   };
 
+  const rivalExpGrowthData = useMemo(() => {
+    const history = rival.expHistory || []; 
+    
+    const last14Days = eachDayOfInterval({
+      start: subDays(new Date(), 13),
+      end: new Date(),
+    });
+
+    const cumulativeStatsByDay: { [date: string]: number } = {};
+    
+    let initialExpBeforeWindow = 0;
+    const firstDayOfWindow = format(last14Days[0], 'yyyy-MM-dd');
+    const sortedHistory = [...history].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const lastHistoricalEntryBeforeWindow = sortedHistory
+        .filter(h => h.date < firstDayOfWindow)
+        .pop();
+
+    if (lastHistoricalEntryBeforeWindow) {
+        initialExpBeforeWindow = lastHistoricalEntryBeforeWindow.totalExp;
+    } else {
+        const firstHistoricalEntry = sortedHistory[0];
+        if (firstHistoricalEntry) {
+             initialExpBeforeWindow = (firstHistoricalEntry.totalExp || 0) - (firstHistoricalEntry.expGained || 0);
+             if (initialExpBeforeWindow < 0) initialExpBeforeWindow = 0;
+        }
+    }
+    
+    let runningTotal = initialExpBeforeWindow;
+
+    last14Days.forEach(day => {
+      const dayString = format(day, 'yyyy-MM-dd');
+      const entriesForThisDay = history.filter(h => h.date === dayString);
+      if (entriesForThisDay.length > 0) {
+          runningTotal = entriesForThisDay[entriesForThisDay.length - 1].totalExp;
+      }
+      cumulativeStatsByDay[dayString] = runningTotal;
+    });
+    
+    return last14Days.map(day => {
+      const dayString = format(day, 'yyyy-MM-dd');
+      return {
+        date: format(day, 'MMM d'),
+        rivalExp: cumulativeStatsByDay[dayString] || 0, 
+      };
+    });
+
+  }, [rival.expHistory]);
+
   return (
     <AppWrapper>
       <div className="space-y-6">
@@ -118,14 +192,14 @@ export default function RivalPage() {
             <CardDescription className="text-muted-foreground text-xs font-code">{rival.rankName} - {rival.subRank}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-center pt-2 pb-4 px-4">
-            <div>
-              <div className="flex justify-between text-xs mb-1 px-4 font-code">
+            <div className="px-0 sm:px-4"> {/* Adjusted padding for progress bar container */}
+              <div className="flex justify-between text-xs mb-1 font-code">
                 <span className="text-foreground uppercase">Rival EXP</span>
                 <span className="text-destructive">{rival.currentExpInSubRank} / {rival.expToNextSubRank}</span>
               </div>
               <Progress
                 value={(rival.currentExpInSubRank / rival.expToNextSubRank) * 100}
-                className="h-2 bg-secondary mx-4"
+                className="h-2 bg-secondary" /* Removed mx-4, parent div handles padding */
                 indicatorClassName="bg-destructive"
               />
             </div>
@@ -144,9 +218,37 @@ export default function RivalPage() {
                 </Button>
               </CardContent>
             </Card>
-
           </CardContent>
         </Card>
+
+        <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+          <CardHeader>
+            <CardTitle className="font-headline text-xl text-destructive flex items-center">
+              <TrendingUp className="mr-2 h-5 w-5" /> Rival EXP Growth
+            </CardTitle>
+            <CardDescription>Cumulative EXP gained by your rival (over the past 14 days).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {rivalExpGrowthData.length > 1 ? ( // Require at least 2 points to draw a line
+              <ChartContainer config={chartConfigRival} className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={rivalExpGrowthData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))"/>
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={10}/>
+                    <ChartTooltip 
+                      content={<ChartTooltipContent />} 
+                    />
+                    <Line type="monotone" dataKey="rivalExp" stroke="var(--color-rivalExp)" strokeWidth={2} dot={{ r: 3, fill: "var(--color-rivalExp)", strokeWidth:1, stroke:"hsl(var(--background))" }} activeDot={{r:5}} name="Rival EXP"/>
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">Not enough EXP history for your rival to display growth graph.</p>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
     </AppWrapper>
   );

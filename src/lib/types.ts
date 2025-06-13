@@ -50,6 +50,7 @@ export interface Rival {
   currentExpInSubRank: number;
   avatarUrl?: string;
   lastTaunt?: string;
+  expHistory: Array<{ date: string; expGained: number; totalExp: number }>;
 }
 
 export interface AppSettings {
@@ -162,6 +163,7 @@ export const INITIAL_RIVAL: Rival = {
   expToNextSubRank: 100,
   currentExpInSubRank: 0,
   avatarUrl: `https://placehold.co/120x120.png`,
+  expHistory: [],
 };
 
 export const INITIAL_APP_SETTINGS: AppSettings = {
@@ -185,4 +187,3 @@ export const CHART_COLOR_OPTIONS = [
   { label: 'Chart Color 7 (Pink)', value: 'hsl(var(--chart-7))', key: 'chart-7' },
   { label: 'Chart Color 8 (Teal)', value: 'hsl(var(--chart-8))', key: 'chart-8' },
 ];
-

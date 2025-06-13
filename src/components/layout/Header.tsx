@@ -69,7 +69,10 @@ const Header = () => {
         >
           {displayedAppName}
         </Link>
-        <h1 className="text-lg font-semibold text-foreground absolute left-1/2 -translate-x-1/2 hidden md:block">
+        <h1 className={cn(
+            "text-lg font-semibold absolute left-1/2 -translate-x-1/2 hidden md:block",
+            activeTab === 'rival' ? 'text-destructive' : 'text-foreground'
+          )}>
           {title}
         </h1>
         <Button variant="ghost" size="icon" onClick={handleSettingsClick} aria-label="Settings">
@@ -81,4 +84,3 @@ const Header = () => {
 };
 
 export default Header;
-

@@ -4,7 +4,7 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute, CustomGraphSetting, CustomGraphDailyLogs, DailyGraphLog } from '@/lib/types'; // Updated import
-import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS, INITIAL_CUSTOM_GRAPHS, INITIAL_CUSTOM_GRAPH_DAILY_LOGS } from '@/lib/types'; // Added INITIAL_CUSTOM_GRAPHS
+import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS, INITIAL_CUSTOM_GRAPHS, INITIAL_CUSTOM_GRAPH_DAILY_LOGS, RANK_NAMES as RANK_NAMES_TYPED_ARRAY } from '@/lib/types'; // Added INITIAL_CUSTOM_GRAPHS
 import {
   RANK_NAMES_LIST,
   MAX_SUB_RANKS,
@@ -102,9 +102,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         name: RIVAL_NAMES_POOL[Math.floor(Math.random() * RIVAL_NAMES_POOL.length)]
       }));
     }
+     if (!rival.expHistory) {
+      setRival(prev => ({ ...prev, expHistory: [] }));
+    }
     setIsInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile.customQuote, rival.name]);
+  }, [userProfile.customQuote, rival.name, rival.expHistory]);
 
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
@@ -279,7 +282,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateRivalTaunt = useCallback(async () => {
     if (!isInitialized) return;
     try {
-      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5;
+      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; // Rival is doing okay
       const input: AdaptiveTauntInput = {
         userTaskCompletionRate: userProfile.dailyTaskCompletionPercentage / 100,
         rivalTaskCompletionRate: rivalTaskCompletionRate,
@@ -287,12 +290,59 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         rivalRank: `${rival.rankName} (Sub-Rank ${rival.subRank})`,
       };
       const result = await getAdaptiveTaunt(input);
-      setRival(prev => ({ ...prev, lastTaunt: result.taunt }));
+      
+      // Simulate rival EXP gain
+      const expGainedByRival = Math.floor(Math.random() * (appSettings.rivalDifficulty === "Hard" ? 45 : appSettings.rivalDifficulty === "Normal" ? 30 : 20)) + 
+                               (appSettings.rivalDifficulty === "Hard" ? 15 : appSettings.rivalDifficulty === "Normal" ? 10 : 5);
+
+
+      setRival(prev => {
+        let newCurrentExp = prev.currentExpInSubRank + expGainedByRival;
+        let newSubRank = prev.subRank;
+        let newRankName = prev.rankName;
+        let newExpToNext = prev.expToNextSubRank;
+        let newTotalExp = prev.totalExp + expGainedByRival;
+
+        while (newCurrentExp >= newExpToNext) {
+          newCurrentExp -= newExpToNext;
+          newSubRank++;
+          if (newSubRank > MAX_SUB_RANKS) {
+            newSubRank = 1;
+            const currentRankIndex = RANK_NAMES_TYPED_ARRAY.indexOf(newRankName as typeof RANK_NAMES_TYPED_ARRAY[number]);
+            if (currentRankIndex < RANK_NAMES_TYPED_ARRAY.length - 1) {
+              newRankName = RANK_NAMES_TYPED_ARRAY[currentRankIndex + 1];
+            } else { // Max rank
+              newSubRank = MAX_SUB_RANKS;
+              newCurrentExp = newExpToNext; // Cap EXP at max
+            }
+          }
+          newExpToNext = calculateExpForNextSubRank(newRankName, newSubRank);
+        }
+
+        const newHistoryEntry = {
+          date: new Date().toISOString().split('T')[0],
+          expGained: expGainedByRival,
+          totalExp: newTotalExp,
+        };
+        const updatedExpHistory = [...(prev.expHistory || []), newHistoryEntry].slice(-30); // Keep last 30
+
+        return {
+          ...prev,
+          lastTaunt: result.taunt,
+          currentExpInSubRank: newCurrentExp,
+          subRank: newSubRank,
+          rankName: newRankName,
+          expToNextSubRank: newExpToNext,
+          totalExp: newTotalExp,
+          expHistory: updatedExpHistory,
+        };
+      });
+
     } catch (error) {
       console.error("Failed to get rival taunt:", error);
       setRival(prev => ({ ...prev, lastTaunt: "Hmph. Thinking..." }));
     }
-  }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized]);
+  }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized, appSettings.rivalDifficulty, calculateExpForNextSubRank]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -364,41 +414,47 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const commitStaleDailyLogs = useCallback(() => {
     const todayDate = startOfDay(new Date());
-    const todayStr = format(todayDate, 'yyyy-MM-dd');
+    // const todayStr = format(todayDate, 'yyyy-MM-dd'); // Not directly needed for comparison logic
     let logsUpdated = false;
-    let graphsUpdated = false;
-
-    const newDailyLogs: CustomGraphDailyLogs = JSON.parse(JSON.stringify(customGraphDailyLogs)); // Deep copy
-    const updatedGraphs: CustomGraphSetting[] = JSON.parse(JSON.stringify(customGraphs)); // Deep copy
-
-    for (const graphId in newDailyLogs) {
-      for (const variableId in newDailyLogs[graphId]) {
-        const logEntry = newDailyLogs[graphId][variableId];
-        const logDate = startOfDay(new Date(logEntry.date)); // Ensure we compare dates only
-
-        if (isBefore(logDate, todayDate)) {
-          const graphIndex = updatedGraphs.findIndex(g => g.id === graphId);
-          if (graphIndex !== -1) {
-            if (!updatedGraphs[graphIndex].data[variableId]) {
-              updatedGraphs[graphIndex].data[variableId] = {};
+    let graphsNeedUpdating = false;
+  
+    const newDailyLogsState: CustomGraphDailyLogs = JSON.parse(JSON.stringify(customGraphDailyLogs)); // Deep copy for modification
+    const updatedCustomGraphsState: CustomGraphSetting[] = JSON.parse(JSON.stringify(customGraphs)); // Deep copy
+  
+    for (const graphId in newDailyLogsState) {
+      const graphVariables = newDailyLogsState[graphId];
+      for (const variableId in graphVariables) {
+        const logEntry = graphVariables[variableId];
+        // Ensure logEntry.date is valid before parsing
+        if (logEntry && logEntry.date && typeof logEntry.date === 'string') {
+          const logDate = startOfDay(new Date(logEntry.date)); 
+          if (isBefore(logDate, todayDate)) {
+            const graphIndex = updatedCustomGraphsState.findIndex(g => g.id === graphId);
+            if (graphIndex !== -1) {
+              if (!updatedCustomGraphsState[graphIndex].data) {
+                updatedCustomGraphsState[graphIndex].data = {};
+              }
+              if (!updatedCustomGraphsState[graphIndex].data[variableId]) {
+                updatedCustomGraphsState[graphIndex].data[variableId] = {};
+              }
+              updatedCustomGraphsState[graphIndex].data[variableId][logEntry.date] = logEntry.value;
+              graphsNeedUpdating = true;
             }
-            updatedGraphs[graphIndex].data[variableId][logEntry.date] = logEntry.value;
-            graphsUpdated = true;
+            delete newDailyLogsState[graphId][variableId];
+            logsUpdated = true;
           }
-          delete newDailyLogs[graphId][variableId];
-          if (Object.keys(newDailyLogs[graphId]).length === 0) {
-            delete newDailyLogs[graphId];
-          }
-          logsUpdated = true;
         }
       }
+      if (Object.keys(newDailyLogsState[graphId]).length === 0) {
+        delete newDailyLogsState[graphId];
+      }
     }
-
-    if (graphsUpdated) {
-      setCustomGraphs(updatedGraphs);
+  
+    if (graphsNeedUpdating) {
+      setCustomGraphs(updatedCustomGraphsState);
     }
     if (logsUpdated) {
-      setCustomGraphDailyLogs(newDailyLogs);
+      setCustomGraphDailyLogs(newDailyLogsState);
     }
   }, [customGraphDailyLogs, customGraphs, setCustomGraphs, setCustomGraphDailyLogs]);
 
