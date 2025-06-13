@@ -158,6 +158,23 @@
   border-bottom-color: hsl(var(--accent));
 }
 
+.nav-orbit-arc-primary-1 {
+  animation-duration: 6s;
+  animation-delay: 0s;
+  border-top-color: hsl(var(--primary));
+}
+.nav-orbit-arc-primary-2 {
+  animation-duration: 6s;
+  animation-delay: -1.5s;
+  border-right-color: hsl(var(--primary));
+}
+.nav-orbit-arc-primary-3 {
+  animation-duration: 6s;
+  animation-delay: -3s;
+  border-bottom-color: hsl(var(--primary));
+}
+
+
 .avatar-arc-container {
   position: relative;
   display: grid;
@@ -191,8 +208,6 @@
   animation-delay: -4s;
   border-left-color: hsl(var(--accent));
 }
-
-/* Removed .bottom-nav-glow class as requested */
 
 .brand-gradient {
   @apply bg-gradient-to-r from-primary to-accent;

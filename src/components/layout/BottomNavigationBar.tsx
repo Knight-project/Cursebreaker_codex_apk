@@ -25,15 +25,15 @@ const OrbitingIconAnimator = ({ children }: { children: React.ReactNode }) => {
     left: '50%',
     transform: 'translate(-50%, -50%)',
     // borderRadius, borderStyle, borderWidth, borderColor are in .orbit-arc class
-    // Specific animation and border colors are in .orbit-arc-X classes
+    // Specific animation and border colors are in .nav-orbit-arc-primary-X classes
   };
 
   return (
     <div className="relative grid place-items-center w-6 h-6"> {/* Parent is relative, sized like icon */}
       {children} {/* The Icon itself */}
-      <span className="orbit-arc orbit-arc-1" style={commonArcStyles}></span>
-      <span className="orbit-arc orbit-arc-2" style={commonArcStyles}></span>
-      <span className="orbit-arc orbit-arc-3" style={commonArcStyles}></span>
+      <span className="orbit-arc nav-orbit-arc-primary-1" style={commonArcStyles}></span>
+      <span className="orbit-arc nav-orbit-arc-primary-2" style={commonArcStyles}></span>
+      <span className="orbit-arc nav-orbit-arc-primary-3" style={commonArcStyles}></span>
     </div>
   );
 };
@@ -46,7 +46,7 @@ const BottomNavigationBar = () => {
   const isActive = (itemKey: string) => itemKey === activeTab || (itemKey === 'home' && pathname === '/');
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border z-50"> {/* Removed bottom-nav-glow */}
+    <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border z-50">
       <div className="container mx-auto px-4 h-16 flex justify-around items-center">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -57,7 +57,7 @@ const BottomNavigationBar = () => {
               key={item.label}
               onClick={() => setActiveTab(item.key)}
               className={cn(
-              "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200",
+              "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200 group", // Added group for hover effect on label
               active ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}>
               <div className={cn("mb-0.5 transition-transform duration-200 flex items-center justify-center h-8", active ? "scale-110" : "scale-90")}>

@@ -1080,7 +1080,7 @@ const GraphsManager = () => { // Renamed from CustomGraphsManager
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
       <CardHeader className="flex flex-row items-baseline justify-between">
-        <CardTitle className="font-headline text-xl text-accent flex items-center">
+        <CardTitle className="font-headline text-xl text-primary flex items-center">
           <BarChartBig className="mr-2 h-5 w-5"/> Graphs 
         </CardTitle>
         <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingGraph(undefined); }}>
