@@ -57,7 +57,7 @@ interface AppContextType {
   completeTask: (taskId: string) => void;
   getDailyDirectives: () => Task[];
   getRituals: () => Task[];
-  getEventsForToday: () => Task[]; // Renamed
+  getEventsForToday: () => Task[];
   updateRivalTaunt: () => Promise<void>;
   triggerLevelUpAnimation: () => void;
   showLevelUp: boolean;
@@ -112,6 +112,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     return format(currentDate, 'yyyy-MM-dd');
   }, []);
 
+  const calculateExpForNextSubRank = useCallback((rankName: string, subRank: number): number => {
+    const rankIndex = RANK_NAMES_LIST.indexOf(rankName as typeof RANK_NAMES_LIST[number]);
+    const overallSubRankIndex = rankIndex * MAX_SUB_RANKS + (subRank -1) ;
+    return Math.floor(BASE_EXP_PER_SUBRANK * Math.pow(EXP_SCALING_FACTOR, overallSubRankIndex));
+  }, []);
+
 
   useEffect(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -131,6 +137,24 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     if (userProfile.lastExpResetDate !== today) {
       setUserProfile(prev => ({ ...prev, expGainedToday: 0, lastExpResetDate: today }));
     }
+
+    // Recalculate expToNextSubRank for user and rival to ensure consistency
+    setUserProfile(prev => {
+      const correctExpToNext = calculateExpForNextSubRank(prev.rankName, prev.subRank);
+      if (prev.expToNextSubRank !== correctExpToNext) {
+        return { ...prev, expToNextSubRank: correctExpToNext };
+      }
+      return prev;
+    });
+
+    setRival(prev => {
+      const correctExpToNext = calculateExpForNextSubRank(prev.rankName, prev.subRank);
+      if (prev.expToNextSubRank !== correctExpToNext) {
+        return { ...prev, expToNextSubRank: correctExpToNext };
+      }
+      return prev;
+    });
+
 
     setTasks(prevTasks =>
       prevTasks.map(task => {
@@ -171,7 +195,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       tasks.forEach(task => {
         if (
-          task.taskType === 'event' && // Changed from 'protocol'
+          task.taskType === 'event' && 
           task.scheduledDate === todayStr &&
           !task.isAllDay &&
           task.startTime &&
@@ -182,12 +206,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           const startTimeToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
           const reminderTime = new Date(startTimeToday.getTime() - task.reminderOffsetMinutes * 60000);
           
-          const reminderSentKey = `reminderSent_event_${task.id}_${task.scheduledDate}`; // Changed key prefix
+          const reminderSentKey = `reminderSent_event_${task.id}_${task.scheduledDate}`; 
           const reminderAlreadySent = localStorage.getItem(reminderSentKey);
 
           if (now >= reminderTime && now < startTimeToday && !reminderAlreadySent) {
             toast({
-              title: "Event Reminder", // Changed title
+              title: "Event Reminder", 
               description: `${task.name} is scheduled to start at ${task.startTime}.`,
             });
             playSound('notification');
@@ -214,12 +238,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       setTimeout(() => setShowLevelUp(false), 1500);
     }
     playSound('levelUp');
-  };
-
-  const calculateExpForNextSubRank = (rankName: string, subRank: number): number => {
-    const rankIndex = RANK_NAMES_LIST.indexOf(rankName as typeof RANK_NAMES_LIST[number]);
-    const overallSubRankIndex = rankIndex * MAX_SUB_RANKS + (subRank -1) ;
-    return Math.floor(BASE_EXP_PER_SUBRANK * Math.pow(EXP_SCALING_FACTOR, overallSubRankIndex));
   };
 
   const grantExp = useCallback((expGained: number) => {
@@ -270,7 +288,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         lastExpResetDate: prev.lastExpResetDate !== today ? today : prev.lastExpResetDate, 
       };
     });
-  }, [setUserProfile, isInitialized, appSettings.enableAnimations]);
+  }, [setUserProfile, isInitialized, appSettings.enableAnimations, calculateExpForNextSubRank, triggerLevelUpAnimation]);
 
 
   const grantStatExp = useCallback((attribute: Attribute, expGainedStat: number) => {
@@ -286,7 +304,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       while (newExp >= newExpToNext) {
         newExp -= newExpToNext;
         newLevel++;
-        newExpToNext = Math.floor(DEFAULT_USER_STAT.expToNextLevel * Math.pow(1.2, newLevel -1));
+        newExpToNext = Math.floor(INITIAL_USER_PROFILE.stats.strength.expToNextLevel * Math.pow(1.2, newLevel -1)); // Using strength as a base for formula consistency
       }
 
       return {
@@ -321,11 +339,11 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       dateAdded: dateAdded,
       repeatIntervalDays: taskData.taskType === 'ritual' ? (taskData.repeatIntervalDays || 1) : undefined,
       nextDueDate: taskData.taskType === 'ritual' ? nextDueDateCalculated : undefined,
-      scheduledDate: taskData.taskType === 'event' ? taskData.scheduledDate : undefined, // Changed from 'protocol'
-      isAllDay: taskData.taskType === 'event' ? taskData.isAllDay : undefined, // Changed from 'protocol'
-      startTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.startTime : undefined, // Changed from 'protocol'
-      endTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.endTime : undefined, // Changed from 'protocol'
-      reminderOffsetMinutes: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.reminderOffsetMinutes : undefined, // Changed from 'protocol'
+      scheduledDate: taskData.taskType === 'event' ? taskData.scheduledDate : undefined, 
+      isAllDay: taskData.taskType === 'event' ? taskData.isAllDay : undefined, 
+      startTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.startTime : undefined, 
+      endTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.endTime : undefined, 
+      reminderOffsetMinutes: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.reminderOffsetMinutes : undefined, 
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
     playSound('buttonClick'); 
@@ -350,7 +368,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       let task = { ...prevTasks[taskIndex] }; 
 
-      const canCompleteDailyOrEvent = (task.taskType === 'daily' || task.taskType === 'event') && !task.isCompleted && (task.taskType === 'daily' || task.scheduledDate === today); // Changed from 'protocol'
+      const canCompleteDailyOrEvent = (task.taskType === 'daily' || task.taskType === 'event') && !task.isCompleted && (task.taskType === 'daily' || task.scheduledDate === today); 
       const canCompleteRitual = task.taskType === 'ritual' && task.nextDueDate === today && task.lastCompletedDate !== today;
 
       if (!canCompleteDailyOrEvent && !canCompleteRitual) {
@@ -434,9 +452,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [tasks, calculateNextDueDate]);
 
-  const getEventsForToday = useCallback(() => { // Renamed
+  const getEventsForToday = useCallback(() => { 
     const today = format(new Date(), 'yyyy-MM-dd');
-    return tasks.filter(task => task.taskType === 'event' && task.scheduledDate === today && !task.isCompleted); // Changed from 'protocol'
+    return tasks.filter(task => task.taskType === 'event' && task.scheduledDate === today && !task.isCompleted); 
   }, [tasks]);
 
 
@@ -489,8 +507,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           .filter(t => t.taskType === 'daily' && t.dateAdded === previousDayForExpCalc && !t.isCompleted)
           .reduce((sum, task) => sum + calculatePotentialTaskExp(task, userProfile.rankName), 0);
         
-        const expFromUserUncompletedEventTasksForYesterday = tasks // Changed from 'protocol'
-          .filter(t => t.taskType === 'event' && t.scheduledDate === previousDayForExpCalc && !t.isCompleted) // Changed from 'protocol'
+        const expFromUserUncompletedEventTasksForYesterday = tasks 
+          .filter(t => t.taskType === 'event' && t.scheduledDate === previousDayForExpCalc && !t.isCompleted) 
           .reduce((sum, task) => sum + calculatePotentialTaskExp(task, userProfile.rankName), 0);
 
         let baseRivalExpGain =
@@ -590,7 +608,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const intervalId = setInterval(dailyCheck, 60000 * 5); 
 
     return () => clearInterval(intervalId);
-  }, [isInitialized, rival.nextExpGainTime, userProfile, tasks, appSettings.rivalDifficulty, setRival, setUserProfile, calculatePotentialTaskExp, setTasks, calculateNextDueDate]);
+  }, [isInitialized, rival.nextExpGainTime, userProfile, tasks, appSettings.rivalDifficulty, setRival, setUserProfile, calculatePotentialTaskExp, setTasks, calculateNextDueDate, calculateExpForNextSubRank]);
 
 
   useEffect(() => {
@@ -599,12 +617,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const relevantTasksForCompletion = tasks.filter(t =>
       (t.taskType === 'daily' && t.dateAdded === todayStr && t.isCompleted) ||
-      (t.taskType === 'event' && t.scheduledDate === todayStr && t.isCompleted) || // Changed from 'protocol'
+      (t.taskType === 'event' && t.scheduledDate === todayStr && t.isCompleted) || 
       (t.taskType === 'ritual' && t.nextDueDate === todayStr && t.lastCompletedDate === todayStr)
     );
     const totalRelevantTasks = tasks.filter(t =>
         (t.taskType === 'daily' && t.dateAdded === todayStr) ||
-        (t.taskType === 'event' && t.scheduledDate === todayStr) || // Changed from 'protocol'
+        (t.taskType === 'event' && t.scheduledDate === todayStr) || 
         (t.taskType === 'ritual' && t.nextDueDate === todayStr)
     ).length;
 
@@ -759,7 +777,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       customGraphDailyLogs, setCustomGraphDailyLogs,
       logCustomGraphData, commitStaleDailyLogs,
       addTask, updateTask, deleteTask, completeTask,
-      getDailyDirectives, getRituals, getEventsForToday, // Renamed
+      getDailyDirectives, getRituals, getEventsForToday, 
       updateRivalTaunt,
       triggerLevelUpAnimation, showLevelUp,
       activeTab, setActiveTab,
@@ -771,3 +789,4 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export default AppProvider;
+
