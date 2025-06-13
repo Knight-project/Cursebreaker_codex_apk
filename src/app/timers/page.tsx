@@ -239,12 +239,12 @@ const IntervalTimerForm = ({
 
     if (formData.timerMode === 'windowed') {
         const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-        if (!timeRegex.test(formData.windowStart!) || !timeRegex.test(formData.windowEnd!)) {
+        if (!formData.windowStart || !formData.windowEnd || !timeRegex.test(formData.windowStart) || !timeRegex.test(formData.windowEnd)) {
             toast({ title: "Invalid Time Format", description: "Please enter valid start and end times in HH:MM format for windowed mode.", variant: "destructive" });
             return;
         }
-        const startTotalMinutes = parseInt(formData.windowStart!.split(':')[0]) * 60 + parseInt(formData.windowStart!.split(':')[1]);
-        const endTotalMinutes = parseInt(formData.windowEnd!.split(':')[0]) * 60 + parseInt(formData.windowEnd!.split(':')[1]);
+        const startTotalMinutes = parseInt(formData.windowStart.split(':')[0]) * 60 + parseInt(formData.windowStart.split(':')[1]);
+        const endTotalMinutes = parseInt(formData.windowEnd.split(':')[0]) * 60 + parseInt(formData.windowEnd.split(':')[1]);
 
         if (startTotalMinutes >= endTotalMinutes) {
             toast({ title: "Invalid Time Window", description: "Window start time must be before end time.", variant: "destructive"});
@@ -395,7 +395,7 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
           
           if (lastNotifiedTimestampString) {
             const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestampString));
-            if (lastNotifiedDate.getTime() >= baseTimeForNextInterval.getTime() && lastNotifiedDate.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate(), endParts[0], endParts[1]).getTime() ) {
+            if (isValid(lastNotifiedDate) && lastNotifiedDate.getTime() >= baseTimeForNextInterval.getTime() && lastNotifiedDate.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate(), endParts[0], endParts[1]).getTime() ) {
                  baseTimeForNextInterval = lastNotifiedDate;
             }
           }
@@ -557,7 +557,7 @@ const IntervalTimersManager = () => {
             let baseTimeForNotificationCheck = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startParts[0], startParts[1]);
              if (lastNotifiedTimestamp) {
                  const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestamp));
-                 if (lastNotifiedDate.getTime() >= baseTimeForNotificationCheck.getTime() && (lastNotifiedDate.getHours()*60 + lastNotifiedDate.getMinutes()) < windowEndTotalMinutes) {
+                 if (isValid(lastNotifiedDate) && lastNotifiedDate.getTime() >= baseTimeForNotificationCheck.getTime() && (lastNotifiedDate.getHours()*60 + lastNotifiedDate.getMinutes()) < windowEndTotalMinutes) {
                     baseTimeForNotificationCheck = lastNotifiedDate;
                  }
             }
@@ -896,7 +896,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
       if (dailyLog && dailyLog.date === todayStr) {
         initialInputs[variable.id] = dailyLog.value.toString();
       } else {
-        initialInputs[variable.id] = (graph.data?.[variable.id]?.[todayStr] || 0).toString();
+        initialInputs[variable.id] = graph.data?.[variable.id]?.[todayStr]?.toString() || '';
       }
     });
     setTodayInputs(initialInputs);
@@ -1007,11 +1007,11 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
             <p className="text-muted-foreground text-center py-4">Not enough data to display graph.</p>
           )}
       </CardContent>
-      <CardFooter className="flex flex-col space-y-2 items-start p-4 pt-0">
-        <Label className="text-sm font-medium">Log Today's Values ({todayStr}):</Label>
+      <CardFooter className="flex flex-col space-y-3 items-start p-4 pt-0">
+        <Label className="text-sm font-medium">Log Today's Values ({format(new Date(), 'MMM d, yyyy')}):</Label>
         {graph.variables.map(variable => (
-          <div key={variable.id} className="flex items-center space-x-2 w-full">
-            <Label htmlFor={`input-${graph.id}-${variable.id}`} className="text-xs min-w-[80px] truncate" title={variable.name}>
+          <div key={variable.id} className="flex items-center space-x-2 w-full mb-1 last:mb-0">
+            <Label htmlFor={`input-${graph.id}-${variable.id}`} className="text-sm min-w-[120px] truncate" title={variable.name}>
               {variable.name}:
             </Label>
             <Input
@@ -1020,7 +1020,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
               value={todayInputs[variable.id] || ""}
               onChange={(e) => handleTodayInputChange(variable.id, e.target.value)}
               placeholder="Enter value"
-              className="h-8 text-xs flex-grow"
+              className="h-9 text-sm flex-grow"
             />
           </div>
         ))}
