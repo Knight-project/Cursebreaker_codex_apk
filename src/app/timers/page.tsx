@@ -449,7 +449,7 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
         let baseTimeForNotification = startDate;
         if (lastNotifiedTimestampString) {
             const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestampString));
-            if(lastNotifiedDate.getTime() >= startDate.getTime() && lastNotifiedDate.getTime() < endDate.getTime()){
+            if(isValid(lastNotifiedDate) && lastNotifiedDate.getTime() >= startDate.getTime() && lastNotifiedDate.getTime() < endDate.getTime()){
                  baseTimeForNotification = lastNotifiedDate;
             }
         }
@@ -896,7 +896,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
       if (dailyLog && dailyLog.date === todayStr) {
         initialInputs[variable.id] = dailyLog.value.toString();
       } else {
-        initialInputs[variable.id] = (graph.data[variable.id]?.[todayStr] || 0).toString();
+        initialInputs[variable.id] = (graph.data?.[variable.id]?.[todayStr] || 0).toString();
       }
     });
     setTodayInputs(initialInputs);
@@ -955,7 +955,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
         if (dailyLog && dailyLog.date === dateStr) {
           entry[variable.id] = dailyLog.value;
         } else {
-          entry[variable.id] = graph.data[variable.id]?.[dateStr] || 0;
+          entry[variable.id] = graph.data?.[variable.id]?.[dateStr] || 0;
         }
       });
       return entry;
