@@ -2,7 +2,7 @@
 import type { format } from 'date-fns';
 
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
-export type TaskType = 'daily' | 'ritual' | 'event'; // Changed 'protocol' to 'event'
+export type TaskType = 'daily' | 'ritual' | 'event';
 
 export interface Task {
   id: string;
@@ -19,7 +19,7 @@ export interface Task {
   repeatIntervalDays?: number; 
   nextDueDate?: string; 
 
-  scheduledDate?: string; // For 'event' tasks (formerly protocol)
+  scheduledDate?: string; 
   isAllDay?: boolean; 
   startTime?: string; 
   endTime?: string; 
@@ -36,6 +36,7 @@ export interface UserStat {
 }
 
 export interface UserProfile {
+  userName: string; // Added userName
   rankName: string;
   subRank: number; 
   totalExp: number;
@@ -148,6 +149,7 @@ export const DEFAULT_USER_STAT: UserStat = {
 };
 
 export const INITIAL_USER_PROFILE: UserProfile = {
+  userName: "Codex User", // Added default userName
   rankName: RANK_NAMES[0],
   subRank: 1,
   totalExp: 0,

@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle } from 'lucide-react';
-import React, { useEffect, useState, useRef, type ChangeEvent } from 'react';
+import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2 } from 'lucide-react';
+import React, { useEffect, useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -329,12 +329,40 @@ export default function HomePage() {
   const [isAddRitualOpen, setIsAddRitualOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingName, setEditingName] = useState(userProfile.userName);
+  const [isEditingQuote, setIsEditingQuote] = useState(false);
+  const [editingQuote, setEditingQuote] = useState(userProfile.customQuote);
+
   const { toast } = useToast();
   const userImageInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const quoteInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setActiveTab('home');
   }, [setActiveTab]);
+
+  useEffect(() => {
+    setEditingName(userProfile.userName);
+  }, [userProfile.userName]);
+
+  useEffect(() => {
+    setEditingQuote(userProfile.customQuote);
+  }, [userProfile.customQuote]);
+  
+  useEffect(() => {
+    if (isEditingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  }, [isEditingName]);
+
+  useEffect(() => {
+    if (isEditingQuote && quoteInputRef.current) {
+      quoteInputRef.current.focus();
+    }
+  }, [isEditingQuote]);
+
 
   const dailyDirectives = getDailyDirectives();
   const rituals = getRituals();
@@ -376,6 +404,60 @@ export default function HomePage() {
       event.target.value = "";
     }
   };
+
+  const handleNameDoubleClick = () => {
+    setEditingName(userProfile.userName);
+    setIsEditingName(true);
+  };
+
+  const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setEditingName(e.target.value);
+  };
+
+  const saveName = () => {
+    if (editingName.trim() === "") {
+      toast({ title: "Invalid Name", description: "Name cannot be empty.", variant: "destructive" });
+      setEditingName(userProfile.userName); // Revert to original if empty
+    } else {
+      setUserProfile(prev => ({ ...prev, userName: editingName.trim() }));
+      toast({ title: "Name Updated!" });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleNameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      saveName();
+    } else if (e.key === 'Escape') {
+      setEditingName(userProfile.userName);
+      setIsEditingName(false);
+    }
+  };
+
+  const handleQuoteDoubleClick = () => {
+    setEditingQuote(userProfile.customQuote);
+    setIsEditingQuote(true);
+  };
+
+  const handleQuoteChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setEditingQuote(e.target.value);
+  };
+
+  const saveQuote = () => {
+    setUserProfile(prev => ({ ...prev, customQuote: editingQuote }));
+    toast({ title: "Quote Updated!" });
+    setIsEditingQuote(false);
+  };
+  
+  const handleQuoteKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      saveQuote();
+    } else if (e.key === 'Escape') {
+      setEditingQuote(userProfile.customQuote);
+      setIsEditingQuote(false);
+    }
+  };
+
 
   const renderTaskList = (tasksToList: Task[], taskType: TaskType) => (
     tasksToList.length > 0 ? (
@@ -424,11 +506,52 @@ export default function HomePage() {
                 <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '118px', height: '118px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(50deg)', borderTopColor: 'transparent', borderRightColor: 'transparent' }}></span>
              </div>
               <input type="file" ref={userImageInputRef} onChange={handleUserAvatarChange} accept="image/*" className="hidden" />
+            
+            {isEditingName ? (
+              <Input
+                ref={nameInputRef}
+                type="text"
+                value={editingName}
+                onChange={handleNameChange}
+                onBlur={saveName}
+                onKeyDown={handleNameKeyDown}
+                className="text-2xl font-bold text-center bg-input/50 focus:bg-input border-primary text-primary mb-1 p-1 max-w-[250px]"
+                maxLength={30}
+              />
+            ) : (
+              <h2 
+                onDoubleClick={handleNameDoubleClick} 
+                className="text-2xl font-bold text-primary mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors"
+                title="Double-click to edit name"
+              >
+                {userProfile.userName}
+              </h2>
+            )}
 
             <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">
               <RankDisplay rankName={userProfile.rankName} subRank={userProfile.subRank} />
             </CardTitle>
-            <CardDescription className="text-muted-foreground mt-1 text-xs font-code italic">{userProfile.customQuote}</CardDescription>
+
+            {isEditingQuote ? (
+              <Input
+                ref={quoteInputRef}
+                type="text"
+                value={editingQuote}
+                onChange={handleQuoteChange}
+                onBlur={saveQuote}
+                onKeyDown={handleQuoteKeyDown}
+                className="text-xs text-center bg-input/50 focus:bg-input border-muted-foreground text-muted-foreground mt-1 p-1 italic max-w-[300px] w-full"
+                maxLength={100}
+              />
+            ) : (
+              <CardDescription 
+                onDoubleClick={handleQuoteDoubleClick}
+                className="text-muted-foreground mt-1 text-xs font-code italic cursor-pointer hover:bg-muted/30 rounded-md p-1 transition-colors min-h-[20px]"
+                title="Double-click to edit quote"
+              >
+                {userProfile.customQuote || "No quote set. Double-click to add one."}
+              </CardDescription>
+            )}
 
             <Link href="/stats" passHref className="mt-3 w-full sm:w-auto">
               <Button variant="outline" className="w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4" onClick={() => playSound('buttonClick')}>
@@ -544,4 +667,3 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
-

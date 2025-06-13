@@ -29,15 +29,6 @@ export default function SettingsPage() {
     playSound('buttonClick');
   };
 
-  const handleQuoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUserProfile(prev => ({ ...prev, customQuote: e.target.value }));
-  };
-
-  const handleSaveQuote = () => {
-     toast({ title: "Quote Updated", description: "Your motivational quote has been saved." });
-     playSound('buttonClick');
-  };
-
   const handleRivalNameChange = (newName: string) => {
     setRival(prev => ({ ...prev, name: newName }));
     toast({ title: "Rival Name Updated!", description: `Your rival is now known as ${newName}.` });
@@ -122,22 +113,6 @@ export default function SettingsPage() {
              <p className="text-xs text-muted-foreground -mt-4 pl-4">
                 If enabled, completing tasks automatically assigns portion of EXP to selected attribute.
               </p>
-
-            <div className="p-4 rounded-md border bg-background/30 space-y-2">
-              <Label htmlFor="customQuote" className="text-lg font-medium">Custom Motivational Quote</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="customQuote"
-                  value={userProfile.customQuote}
-                  onChange={handleQuoteChange}
-                  placeholder="Enter your motivational quote"
-                  className="flex-grow bg-input/50 focus:bg-input"
-                />
-                <Button onClick={handleSaveQuote} size="sm">Save Quote</Button>
-              </div>
-              <p className="text-xs text-muted-foreground">This quote appears on your Home dashboard.</p>
-            </div>
-
           </CardContent>
         </Card>
       </div>
