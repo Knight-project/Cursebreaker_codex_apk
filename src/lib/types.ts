@@ -86,7 +86,7 @@ export interface IntervalTimerSetting {
 export interface CustomGraphVariable {
   id: string;
   name: string;
-  color: string; // e.g., "hsl(var(--chart-1))" or "chart-1"
+  color: string; 
 }
 
 export type TimeView = 'weekly' | 'monthly' | 'yearly' | 'alltime';
@@ -96,6 +96,18 @@ export interface CustomGraphSetting {
   name: string;
   timeView: TimeView;
   variables: CustomGraphVariable[];
+  data: { [variableId: string]: { [date: string]: number } }; // date is YYYY-MM-DD
+}
+
+// For storing today's uncommitted graph data
+export interface DailyGraphLog {
+  date: string; // YYYY-MM-DD, should always be "today"
+  value: number;
+}
+export interface CustomGraphDailyLogs {
+  [graphId: string]: {
+    [variableId: string]: DailyGraphLog;
+  };
 }
 
 
@@ -160,6 +172,8 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
 
 export const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSetting[] = [];
 export const INITIAL_CUSTOM_GRAPHS: CustomGraphSetting[] = [];
+export const INITIAL_CUSTOM_GRAPH_DAILY_LOGS: CustomGraphDailyLogs = {};
+
 
 export const CHART_COLOR_OPTIONS = [
   { label: 'Chart Color 1 (Cyan)', value: 'hsl(var(--chart-1))', key: 'chart-1' },

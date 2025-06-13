@@ -3,8 +3,8 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute, CustomGraphSetting } from '@/lib/types'; // Updated import
-import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS, INITIAL_CUSTOM_GRAPHS } from '@/lib/types'; // Added INITIAL_CUSTOM_GRAPHS
+import type { UserProfile, Task, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute, CustomGraphSetting, CustomGraphDailyLogs, DailyGraphLog } from '@/lib/types'; // Updated import
+import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS, INITIAL_CUSTOM_GRAPHS, INITIAL_CUSTOM_GRAPH_DAILY_LOGS } from '@/lib/types'; // Added INITIAL_CUSTOM_GRAPHS
 import {
   RANK_NAMES_LIST,
   MAX_SUB_RANKS,
@@ -18,6 +18,8 @@ import {
 } from '@/lib/constants';
 import { getAdaptiveTaunt } from '@/ai/flows/adaptive-taunts';
 import type { AdaptiveTauntInput } from '@/ai/flows/adaptive-taunts';
+import { format, isBefore, startOfDay } from 'date-fns';
+
 
 interface AppContextType {
   userProfile: UserProfile;
@@ -37,9 +39,13 @@ interface AppContextType {
   deleteIntervalTimerSetting: (settingId: string) => void;
   customGraphs: CustomGraphSetting[];
   setCustomGraphs: React.Dispatch<React.SetStateAction<CustomGraphSetting[]>>;
-  addCustomGraph: (graph: Omit<CustomGraphSetting, 'id'>) => void;
+  addCustomGraph: (graph: Omit<CustomGraphSetting, 'id' | 'data'>) => void;
   updateCustomGraph: (graph: CustomGraphSetting) => void;
   deleteCustomGraph: (graphId: string) => void;
+  customGraphDailyLogs: CustomGraphDailyLogs;
+  setCustomGraphDailyLogs: React.Dispatch<React.SetStateAction<CustomGraphDailyLogs>>;
+  logCustomGraphData: (graphId: string, variableId: string, value: number) => void;
+  commitStaleDailyLogs: () => void;
   addTask: (task: Omit<Task, 'id' | 'dateAdded' | 'isCompleted'>) => void;
   updateTask: (updatedTask: Task) => void;
   deleteTask: (taskId: string) => void;
@@ -79,6 +85,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [pomodoroSettings, setPomodoroSettings] = useLocalStorage<PomodoroSettings>(`${APP_NAME}PomodoroSettings`, INITIAL_POMODORO_SETTINGS);
   const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSetting[]>(`${APP_NAME}IntervalTimers`, INITIAL_INTERVAL_TIMER_SETTINGS);
   const [customGraphs, setCustomGraphs] = useLocalStorage<CustomGraphSetting[]>(`${APP_NAME}CustomGraphs`, INITIAL_CUSTOM_GRAPHS);
+  const [customGraphDailyLogs, setCustomGraphDailyLogs] = useLocalStorage<CustomGraphDailyLogs>(`${APP_NAME}CustomGraphDailyLogs`, INITIAL_CUSTOM_GRAPH_DAILY_LOGS);
 
 
   const [isInitialized, setIsInitialized] = useState(false);
@@ -318,10 +325,11 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     setIntervalTimerSettings(prev => prev.filter(s => s.id !== settingId));
   };
 
-  const addCustomGraph = (graphData: Omit<CustomGraphSetting, 'id'>) => {
+  const addCustomGraph = (graphData: Omit<CustomGraphSetting, 'id' | 'data'>) => {
     const newGraph: CustomGraphSetting = {
       ...graphData,
       id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
+      data: {}, // Initialize with empty data
     };
     setCustomGraphs(prev => [...prev, newGraph]);
   };
@@ -332,7 +340,75 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteCustomGraph = (graphId: string) => {
     setCustomGraphs(prev => prev.filter(g => g.id !== graphId));
+    // Also clean up daily logs for this graph
+    setCustomGraphDailyLogs(prevLogs => {
+      const newLogs = {...prevLogs};
+      delete newLogs[graphId];
+      return newLogs;
+    });
   };
+  
+  const logCustomGraphData = (graphId: string, variableId: string, value: number) => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    setCustomGraphDailyLogs(prevLogs => ({
+      ...prevLogs,
+      [graphId]: {
+        ...(prevLogs[graphId] || {}),
+        [variableId]: {
+          date: todayStr,
+          value: value,
+        },
+      },
+    }));
+  };
+
+  const commitStaleDailyLogs = useCallback(() => {
+    const todayDate = startOfDay(new Date());
+    const todayStr = format(todayDate, 'yyyy-MM-dd');
+    let logsUpdated = false;
+    let graphsUpdated = false;
+
+    const newDailyLogs: CustomGraphDailyLogs = JSON.parse(JSON.stringify(customGraphDailyLogs)); // Deep copy
+    const updatedGraphs: CustomGraphSetting[] = JSON.parse(JSON.stringify(customGraphs)); // Deep copy
+
+    for (const graphId in newDailyLogs) {
+      for (const variableId in newDailyLogs[graphId]) {
+        const logEntry = newDailyLogs[graphId][variableId];
+        const logDate = startOfDay(new Date(logEntry.date)); // Ensure we compare dates only
+
+        if (isBefore(logDate, todayDate)) {
+          const graphIndex = updatedGraphs.findIndex(g => g.id === graphId);
+          if (graphIndex !== -1) {
+            if (!updatedGraphs[graphIndex].data[variableId]) {
+              updatedGraphs[graphIndex].data[variableId] = {};
+            }
+            updatedGraphs[graphIndex].data[variableId][logEntry.date] = logEntry.value;
+            graphsUpdated = true;
+          }
+          delete newDailyLogs[graphId][variableId];
+          if (Object.keys(newDailyLogs[graphId]).length === 0) {
+            delete newDailyLogs[graphId];
+          }
+          logsUpdated = true;
+        }
+      }
+    }
+
+    if (graphsUpdated) {
+      setCustomGraphs(updatedGraphs);
+    }
+    if (logsUpdated) {
+      setCustomGraphDailyLogs(newDailyLogs);
+    }
+  }, [customGraphDailyLogs, customGraphs, setCustomGraphs, setCustomGraphDailyLogs]);
+
+  useEffect(() => {
+    if (isInitialized) {
+      commitStaleDailyLogs();
+    }
+    // Run this when the app initializes and perhaps on a timer or app focus in a real scenario
+    // For simplicity, running on init and when dependencies change.
+  }, [isInitialized, commitStaleDailyLogs]);
 
 
   if (!isInitialized) {
@@ -350,6 +426,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       addIntervalTimerSetting, updateIntervalTimerSetting, deleteIntervalTimerSetting,
       customGraphs, setCustomGraphs,
       addCustomGraph, updateCustomGraph, deleteCustomGraph,
+      customGraphDailyLogs, setCustomGraphDailyLogs,
+      logCustomGraphData, commitStaleDailyLogs,
       addTask, updateTask, deleteTask, completeTask,
       getTodaysTasks,
       updateRivalTaunt,
