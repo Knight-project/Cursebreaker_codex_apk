@@ -58,7 +58,7 @@ const RankDisplay: React.FC<RankDisplayProps> = ({ rankName, subRank, className,
                       : 'text-foreground/80 hover:bg-muted/50'
                   )}
                 >
-                  {index + 1}. {rn}
+                  {rn} {/* Removed explicit "{index + 1}." */}
                 </li>
               ))}
             </ol>
@@ -70,3 +70,4 @@ const RankDisplay: React.FC<RankDisplayProps> = ({ rankName, subRank, className,
 };
 
 export default RankDisplay;
+
