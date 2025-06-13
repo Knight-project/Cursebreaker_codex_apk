@@ -15,8 +15,17 @@ interface RankDisplayProps {
   isRival?: boolean;
 }
 
+const toRoman = (num: number): string => {
+  const romanMap: { [key: number]: string } = {
+    1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V',
+    6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X',
+  };
+  return romanMap[num] || num.toString();
+};
+
 const RankDisplay: React.FC<RankDisplayProps> = ({ rankName, subRank, className, isRival = false }) => {
-  const currentRankText = `${rankName} - ${subRank}`;
+  const romanSubRank = toRoman(subRank);
+  const currentRankText = `${rankName} - ${romanSubRank}`;
 
   return (
     <Popover>
