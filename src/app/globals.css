@@ -91,6 +91,9 @@
 .neon-icon-primary {
  filter: drop-shadow(0 0 25px hsl(var(--primary))) drop-shadow(0 0 50px hsl(var(--primary))) drop-shadow(0 0 75px hsl(var(--primary)));
 }
+.neon-icon-destructive {
+ filter: drop-shadow(0 0 25px hsl(var(--destructive))) drop-shadow(0 0 50px hsl(var(--destructive))) drop-shadow(0 0 75px hsl(var(--destructive)));
+}
 
 .magical-transition {
   transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
@@ -172,6 +175,22 @@
   animation-duration: 6s;
   animation-delay: -3s;
   border-bottom-color: hsl(var(--primary));
+}
+
+.nav-orbit-arc-destructive-1 {
+  animation-duration: 6s;
+  animation-delay: 0s;
+  border-top-color: hsl(var(--destructive));
+}
+.nav-orbit-arc-destructive-2 {
+  animation-duration: 6s;
+  animation-delay: -1.5s;
+  border-right-color: hsl(var(--destructive));
+}
+.nav-orbit-arc-destructive-3 {
+  animation-duration: 6s;
+  animation-delay: -3s;
+  border-bottom-color: hsl(var(--destructive));
 }
 
 

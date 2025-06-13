@@ -26,19 +26,19 @@ const CyberpunkRivalPlaceholder = () => (
     <path d="M50 15 C 30 15, 20 30, 20 45 C 20 70, 35 85, 50 85 C 65 85, 80 70, 80 45 C 80 30, 70 15, 50 15 Z" stroke="hsl(var(--destructive))" strokeWidth="2.5" fill="url(#cyberRivalGrad)" />
     
     {/* Aggressive "Horns" or "Crest" - more pronounced */}
-    <path d="M38 22 Q50 12 62 22 L57 30 Q50 23 43 30 Z" fill="hsl(var(--destructive) / 0.8)" stroke="hsl(var(--destructive))" strokeWidth="2" />
+    <path d="M38 22 Q50 12 62 22 L57 30 Q50 23 43 30 Z" fill="hsl(var(--destructive))" fillOpacity="0.8" stroke="hsl(var(--destructive))" strokeWidth="2" />
 
     {/* Sharper, downward-angled "Eyes" */}
-    <path d="M33 45 L48 40 L44 50 Z" fill="hsl(var(--accent) / 0.9)" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
-    <path d="M67 45 L52 40 L56 50 Z" fill="hsl(var(--accent) / 0.9)" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
+    <path d="M33 45 L48 40 L44 50 Z" fill="hsl(var(--accent))" fillOpacity="0.9" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
+    <path d="M67 45 L52 40 L56 50 Z" fill="hsl(var(--accent))" fillOpacity="0.9" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
 
     {/* More angular and prominent "Jawline" or "Mandibles" */}
-    <path d="M28 65 L50 88 L72 65 L68 78 L50 92 L32 78 Z" stroke="hsl(var(--destructive) / 0.7)" strokeWidth="2.5" fill="hsl(var(--destructive) / 0.4)" />
+    <path d="M28 65 L50 88 L72 65 L68 78 L50 92 L32 78 Z" stroke="hsl(var(--destructive))" strokeOpacity="0.7" strokeWidth="2.5" fill="hsl(var(--destructive))" fillOpacity="0.4" />
     
     {/* Tech detail: lines/vents */}
-     <line x1="45" y1="25" x2="40" y2="35" stroke="hsl(var(--border) / 0.5)" strokeWidth="1"/>
-     <line x1="55" y1="25" x2="60" y2="35" stroke="hsl(var(--border) / 0.5)" strokeWidth="1"/>
-     <rect x="48" y="60" width="4" height="8" fill="hsl(var(--border) / 0.4)" transform="rotate(10 50 60)" />
+     <line x1="45" y1="25" x2="40" y2="35" stroke="hsl(var(--border))" strokeOpacity="0.5" strokeWidth="1"/>
+     <line x1="55" y1="25" x2="60" y2="35" stroke="hsl(var(--border))" strokeOpacity="0.5" strokeWidth="1"/>
+     <rect x="48" y="60" width="4" height="8" fill="hsl(var(--border))" fillOpacity="0.4" transform="rotate(10 50 60)" />
   </svg>
 );
 
@@ -208,7 +208,7 @@ export default function RivalPage() {
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                  <PlusCircle className="h-10 w-10 text-destructive neon-icon" />
+                  <PlusCircle className="h-10 w-10 text-destructive neon-icon-destructive" />
                 </div>
               </div>
               <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '128px', height: '128px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
