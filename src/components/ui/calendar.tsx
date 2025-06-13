@@ -28,7 +28,7 @@ function Calendar({
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 focus-visible:border-transparent"
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
@@ -40,8 +40,8 @@ function Calendar({
         cell: cn(
           "h-9 w-9 text-center text-sm p-0 relative",
           "[&:has([aria-selected].day-range-end)]:rounded-r-md",
-          "[&:has([aria-selected].day-outside)]:bg-primary/30", // Changed from accent
-          "[&:has([aria-selected])]:bg-primary", // Changed from accent
+          "[&:has([aria-selected].day-outside)]:bg-primary/30", 
+          "[&:has([aria-selected])]:bg-primary", 
           "first:[&:has([aria-selected])]:rounded-l-md",
           "last:[&:has([aria-selected])]:rounded-r-md",
           "focus-within:relative focus-within:z-20"
@@ -53,12 +53,12 @@ function Calendar({
         day_range_end: "day-range-end",
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent/15 text-accent border border-accent/40", // Changed for subtle highlight
+        day_today: "bg-accent/15 text-accent border border-accent/40 focus-visible:border-transparent", 
         day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-primary/30 aria-selected:text-muted-foreground", // Changed from accent
+          "day-outside text-muted-foreground opacity-50 aria-selected:bg-primary/30 aria-selected:text-muted-foreground", 
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
-          "aria-selected:bg-primary aria-selected:text-primary-foreground", // Changed from accent
+          "aria-selected:bg-primary aria-selected:text-primary-foreground", 
         day_hidden: "invisible",
         ...classNames,
       }}
@@ -77,3 +77,4 @@ function Calendar({
 Calendar.displayName = "Calendar"
 
 export { Calendar }
+
