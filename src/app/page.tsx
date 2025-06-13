@@ -16,6 +16,7 @@ import type { Task, Attribute } from '@/lib/types';
 import { ATTRIBUTES_LIST } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import RankDisplay from '@/components/shared/RankDisplay';
 
 
 const AddTaskForm = ({ onTaskAdd }: { onTaskAdd: () => void }) => {
@@ -214,7 +215,9 @@ export default function HomePage() {
              </div>
               <input type="file" ref={userImageInputRef} onChange={handleUserAvatarChange} accept="image/*" className="hidden" />
 
-            <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">{userProfile.rankName} - {userProfile.subRank}</CardTitle>
+            <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">
+              <RankDisplay rankName={userProfile.rankName} subRank={userProfile.subRank} />
+            </CardTitle>
             <CardDescription className="text-muted-foreground mt-1 text-xs font-code italic">{userProfile.customQuote}</CardDescription>
 
             <Link href="/stats" passHref className="mt-3 w-full sm:w-auto">

@@ -13,8 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
 import { format, subDays, eachDayOfInterval, differenceInSeconds, isValid as dateIsValid } from 'date-fns';
+import RankDisplay from '@/components/shared/RankDisplay';
 
-// Copied from src/app/page.tsx and modified for rival
 const CyberpunkRivalPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
     <defs>
@@ -24,7 +24,7 @@ const CyberpunkRivalPlaceholder = () => (
       </linearGradient>
     </defs>
     <circle cx="50" cy="40" r="20" stroke="hsl(var(--destructive))" strokeWidth="2" fill="url(#cyberGradRival)" />
-    <path d="M30 70 Q50 90 70 70 Q50 80 30 70" stroke="hsl(var(--destructive))" strokeWidth="1.5" fill="hsl(var(--destructive) / 0.1)" />
+    <path d="M30 70 Q50 90 70 70 Q50 80 30 70" stroke="hsl(var(--destructive))" strokeWidth="1.5" fill="hsl(var(--destructive))" fillOpacity="0.1" />
     <rect x="46" y="5" width="8" height="10" fill="hsl(var(--border))" opacity="0.5"/>
     <line x1="40" y1="42" x2="60" y2="42" stroke="hsl(var(--accent))" strokeWidth="1"/>
   </svg>
@@ -126,19 +126,19 @@ export default function RivalPage() {
   };
 
   const rivalExpGrowthData = useMemo(() => {
-    const history = rival.expHistory || []; 
-    
+    const history = rival.expHistory || [];
+
     const last14Days = eachDayOfInterval({
       start: subDays(new Date(), 13),
       end: new Date(),
     });
 
     const cumulativeStatsByDay: { [date: string]: number } = {};
-    
+
     let initialExpBeforeWindow = 0;
     const firstDayOfWindow = format(last14Days[0], 'yyyy-MM-dd');
     const sortedHistory = [...history].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
+
     const lastHistoricalEntryBeforeWindow = sortedHistory
         .filter(h => h.date < firstDayOfWindow)
         .pop();
@@ -146,32 +146,29 @@ export default function RivalPage() {
     if (lastHistoricalEntryBeforeWindow) {
         initialExpBeforeWindow = lastHistoricalEntryBeforeWindow.totalExp;
     } else {
-        // If no history before the window, try to find the earliest entry in the window
-        // and subtract its expGained to estimate the value just before the window.
         const firstEntryInOrAfterWindow = sortedHistory.find(h => h.date >= firstDayOfWindow);
         if (firstEntryInOrAfterWindow) {
             initialExpBeforeWindow = (firstEntryInOrAfterWindow.totalExp || 0) - (firstEntryInOrAfterWindow.expGained || 0);
             if (initialExpBeforeWindow < 0) initialExpBeforeWindow = 0;
         }
     }
-    
+
     let runningTotal = initialExpBeforeWindow;
 
     last14Days.forEach(day => {
       const dayString = format(day, 'yyyy-MM-dd');
-      // Find the latest entry for this day or any day before it if no entry for this specific day
       const relevantHistoryEntries = sortedHistory.filter(h => h.date <= dayString);
       if (relevantHistoryEntries.length > 0) {
           runningTotal = relevantHistoryEntries[relevantHistoryEntries.length - 1].totalExp;
       }
       cumulativeStatsByDay[dayString] = runningTotal;
     });
-    
+
     return last14Days.map(day => {
       const dayString = format(day, 'yyyy-MM-dd');
       return {
         date: format(day, 'MMM d'),
-        rivalExp: cumulativeStatsByDay[dayString] || 0, 
+        rivalExp: cumulativeStatsByDay[dayString] || 0,
       };
     });
 
@@ -209,7 +206,9 @@ export default function RivalPage() {
             <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
 
             <CardTitle className="font-headline text-2xl text-destructive uppercase tracking-wider">{rival.name}</CardTitle>
-            <CardDescription className="text-muted-foreground text-xs font-code">{rival.rankName} - {rival.subRank}</CardDescription>
+            <CardDescription className="text-xs font-code">
+              <RankDisplay rankName={rival.rankName} subRank={rival.subRank} isRival className="text-muted-foreground" />
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-center pt-2 pb-4 px-4">
             <div className="px-0 sm:px-4">
@@ -219,11 +218,11 @@ export default function RivalPage() {
               </div>
               <Progress
                 value={(rival.expToNextSubRank > 0 ? (rival.currentExpInSubRank / rival.expToNextSubRank) : 0) * 100}
-                className="h-2 bg-secondary" 
+                className="h-2 bg-secondary"
                 indicatorClassName="bg-destructive"
               />
             </div>
-            
+
             <Card className="bg-background/30 border-border/50 mt-4 rounded-md shadow-inner">
               <CardHeader className="p-2">
                  <CardTitle className="text-xs font-medium text-center text-muted-foreground uppercase font-headline tracking-wider flex items-center justify-center">
@@ -264,15 +263,15 @@ export default function RivalPage() {
             <CardDescription>Cumulative EXP gained by your rival (over the past 14 days).</CardDescription>
           </CardHeader>
           <CardContent>
-            {rivalExpGrowthData.length > 1 ? ( 
+            {rivalExpGrowthData.length > 1 ? (
               <ChartContainer config={chartConfigRival} className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={rivalExpGrowthData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))"/>
                     <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
                     <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={10}/>
-                    <ChartTooltip 
-                      content={<ChartTooltipContent />} 
+                    <ChartTooltip
+                      content={<ChartTooltipContent />}
                     />
                     <Line type="monotone" dataKey="rivalExp" stroke="var(--color-rivalExp)" strokeWidth={2} dot={{ r: 3, fill: "var(--color-rivalExp)", strokeWidth:1, stroke:"hsl(var(--background))" }} activeDot={{r:5}} name="Rival EXP"/>
                   </LineChart>
@@ -288,4 +287,3 @@ export default function RivalPage() {
     </AppWrapper>
   );
 }
-

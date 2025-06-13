@@ -1,3 +1,4 @@
+
 // src/app/stats/page.tsx
 'use client';
 
@@ -7,8 +8,9 @@ import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
 import React, { useEffect } from 'react';
 import type { UserStat } from '@/lib/types';
-import { ATTRIBUTES_LIST } from '@/lib/types'; // Ensure this is correctly imported
-import { BarChart, Brain, Zap, Shield, Palette, Smile } from 'lucide-react'; // Icons for stats
+import { ATTRIBUTES_LIST } from '@/lib/types';
+import { BarChart, Brain, Zap, Shield, Palette, Smile } from 'lucide-react';
+import RankDisplay from '@/components/shared/RankDisplay';
 
 const attributeIcons: { [key in typeof ATTRIBUTES_LIST[number]]?: React.ElementType } = {
   Strength: BarChart,
@@ -20,7 +22,7 @@ const attributeIcons: { [key in typeof ATTRIBUTES_LIST[number]]?: React.ElementT
 
 
 const StatDisplay = ({ name, stat }: { name: string; stat: UserStat }) => {
-  const Icon = attributeIcons[name as typeof ATTRIBUTES_LIST[number]] || Zap; // Default icon
+  const Icon = attributeIcons[name as typeof ATTRIBUTES_LIST[number]] || Zap;
   const progress = stat.expToNextLevel > 0 ? (stat.exp / stat.expToNextLevel) * 100 : 100;
 
   return (
@@ -60,7 +62,9 @@ export default function StatsPage() {
             <CardDescription className="text-muted-foreground">Your current standing in the realms.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <p><strong>Rank:</strong> {rankName} (Sub-Rank {subRank})</p>
+            <div>
+              <strong>Rank:</strong> <RankDisplay rankName={rankName} subRank={subRank} className="inline text-foreground" />
+            </div>
             <p><strong>Total EXP:</strong> {totalExp}</p>
             <p><strong>Current Streak:</strong> {currentStreak} days</p>
             <p><strong>Today's Completion:</strong> {dailyTaskCompletionPercentage.toFixed(1)}%</p>
@@ -76,10 +80,10 @@ export default function StatsPage() {
             {(Object.keys(stats) as Array<keyof typeof stats>).map((key) => {
               if (ATTRIBUTES_LIST.includes(key.charAt(0).toUpperCase() + key.slice(1) as typeof ATTRIBUTES_LIST[number])) {
                 return (
-                  <StatDisplay 
-                    key={key} 
-                    name={key.charAt(0).toUpperCase() + key.slice(1)} 
-                    stat={stats[key]} 
+                  <StatDisplay
+                    key={key}
+                    name={key.charAt(0).toUpperCase() + key.slice(1)}
+                    stat={stats[key]}
                   />
                 );
               }
@@ -95,7 +99,6 @@ export default function StatsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">Detailed task history and notable achievements will be displayed here in the future.</p>
-            {/* Example: userProfile.taskHistory.length could be displayed */}
             <p className="mt-2">Total tasks logged: {userProfile.taskHistory.length}</p>
           </CardContent>
         </Card>

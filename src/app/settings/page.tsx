@@ -1,3 +1,4 @@
+
 // src/app/settings/page.tsx
 'use client';
 
@@ -11,9 +12,10 @@ import { useApp } from '@/contexts/AppContext';
 import React, { useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { RIVAL_NAMES_POOL } from '@/lib/constants';
 
 export default function SettingsPage() {
-  const { appSettings, setAppSettings, userProfile, setUserProfile, setActiveTab } = useApp();
+  const { appSettings, setAppSettings, userProfile, setUserProfile, rival, setRival, setActiveTab } = useApp();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,10 +30,14 @@ export default function SettingsPage() {
   const handleQuoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUserProfile(prev => ({ ...prev, customQuote: e.target.value }));
   };
-  
+
   const handleSaveQuote = () => {
      toast({ title: "Quote Updated", description: "Your motivational quote has been saved." });
-     // User profile is already updated via useLocalStorage hook on change.
+  };
+
+  const handleRivalNameChange = (newName: string) => {
+    setRival(prev => ({ ...prev, name: newName }));
+    toast({ title: "Rival Name Updated!", description: `Your rival is now known as ${newName}.` });
   };
 
   return (
@@ -40,10 +46,10 @@ export default function SettingsPage() {
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
           <CardHeader>
             <CardTitle className="font-headline text-2xl text-primary">Application Settings</CardTitle>
-            <CardDescription>Customize your Habit Horizon experience.</CardDescription>
+            <CardDescription>Customize your experience.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            
+
             <div className="flex items-center justify-between p-4 rounded-md border bg-background/30">
               <Label htmlFor="enableAnimations" className="text-lg font-medium">Enable Animations</Label>
               <Switch
@@ -52,6 +58,24 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => handleSettingsChange('enableAnimations', checked)}
                 aria-label="Toggle animations"
               />
+            </div>
+
+            <div className="p-4 rounded-md border bg-background/30 space-y-2">
+              <Label htmlFor="rivalName" className="text-lg font-medium">Rival Name</Label>
+              <Select
+                value={rival.name}
+                onValueChange={handleRivalNameChange}
+              >
+                <SelectTrigger id="rivalName" className="w-full bg-input/50 focus:bg-input">
+                  <SelectValue placeholder="Select rival name" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RIVAL_NAMES_POOL.map(name => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Choose the designation of your adversary.</p>
             </div>
 
             <div className="p-4 rounded-md border bg-background/30 space-y-2">
@@ -71,7 +95,7 @@ export default function SettingsPage() {
               </Select>
               <p className="text-xs text-muted-foreground">Adjusts how quickly your rival gains EXP.</p>
             </div>
-            
+
             <div className="flex items-center justify-between p-4 rounded-md border bg-background/30">
               <Label htmlFor="autoAssignStatExp" className="text-lg font-medium">Auto-Assign Stat XP</Label>
               <Switch
@@ -82,7 +106,7 @@ export default function SettingsPage() {
               />
             </div>
              <p className="text-xs text-muted-foreground -mt-4 pl-4">
-                If enabled, completing tasks automatically assigns portion of EXP to selected attribute. If disabled, you might need a manual assignment system (not yet implemented).
+                If enabled, completing tasks automatically assigns portion of EXP to selected attribute.
               </p>
 
             <div className="p-4 rounded-md border bg-background/30 space-y-2">

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
@@ -14,7 +13,6 @@ import {
   TASK_DIFFICULTY_EXP_MULTIPLIER,
   BASE_TASK_EXP,
   RANK_EXP_SCALING_FACTOR,
-  RIVAL_NAMES_POOL,
   APP_NAME,
   RIVAL_USER_DAILY_EXP_PERCENTAGE,
   RIVAL_DIFFICULTY_MULTIPLIERS,
@@ -37,8 +35,8 @@ interface AppContextType {
   setAppSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   pomodoroSettings: PomodoroSettings;
   setPomodoroSettings: React.Dispatch<React.SetStateAction<PomodoroSettings>>;
-  intervalTimerSettings: IntervalTimerSetting[]; 
-  setIntervalTimerSettings: React.Dispatch<React.SetStateAction<IntervalTimerSetting[]>>; 
+  intervalTimerSettings: IntervalTimerSetting[];
+  setIntervalTimerSettings: React.Dispatch<React.SetStateAction<IntervalTimerSetting[]>>;
   addIntervalTimerSetting: (setting: Omit<IntervalTimerSetting, 'id'>) => void;
   updateIntervalTimerSetting: (setting: IntervalTimerSetting) => void;
   deleteIntervalTimerSetting: (settingId: string) => void;
@@ -101,12 +99,15 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     if (userProfile.customQuote === undefined || userProfile.customQuote.toLowerCase() === "fuck" ) {
        setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
     }
-    if (!rival.name || !RIVAL_NAMES_POOL.includes(rival.name)) {
+    // Rival name is now managed through settings or defaults to INITIAL_RIVAL.name
+    // No longer randomly assign rival name here.
+    if (!rival.name) {
       setRival(prev => ({
         ...prev,
-        name: RIVAL_NAMES_POOL[Math.floor(Math.random() * RIVAL_NAMES_POOL.length)]
+        name: INITIAL_RIVAL.name // Default to initial if not set
       }));
     }
+
      if (!rival.expHistory) {
       setRival(prev => ({ ...prev, expHistory: [] }));
     }
@@ -122,7 +123,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Added userProfile.lastExpResetDate dependencies if it changes elsewhere
+  }, []);
 
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
@@ -173,7 +174,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const today = new Date().toISOString().split('T')[0];
       let currentExpGainedToday = prev.expGainedToday;
-      if (prev.lastExpResetDate !== today) { 
+      if (prev.lastExpResetDate !== today) {
         currentExpGainedToday = 0;
       }
       currentExpGainedToday += expGained;
@@ -195,7 +196,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const grantStatExp = useCallback((attribute: Attribute, expGainedStat: number) => {
     setUserProfile(prev => {
       const statKey = attribute.toLowerCase() as keyof typeof prev.stats;
-      if (!prev.stats[statKey]) return prev; 
+      if (!prev.stats[statKey]) return prev;
       const currentStat = prev.stats[statKey];
 
       let newExp = currentStat.exp + expGainedStat;
@@ -306,7 +307,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateRivalTaunt = useCallback(async () => {
     if (!isInitialized) return;
     try {
-      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; 
+      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5;
       const input: AdaptiveTauntInput = {
         userTaskCompletionRate: userProfile.dailyTaskCompletionPercentage / 100,
         rivalTaskCompletionRate: rivalTaskCompletionRate,
@@ -337,27 +338,22 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const checkRivalExpGain = () => {
       const now = new Date();
       if (now.toISOString() >= rival.nextExpGainTime!) {
-        
+
         const yesterdayStr = format(subDays(new Date(rival.nextExpGainTime!), 1), 'yyyy-MM-dd');
 
         let userExpGainedForRival = 0;
-        // Check if userProfile.lastExpResetDate was indeed yesterday relative to rival's update time
-        // And that expGainedToday has values from "yesterday"
         if (userProfile.lastExpResetDate === yesterdayStr) {
             userExpGainedForRival = userProfile.expGainedToday;
         } else {
-            // If lastExpResetDate is not yesterday, it means user might not have gained EXP
-            // or the timing is off. For safety, assume 0 or log a warning.
-            // This could happen if app wasn't opened for a full day.
-            userExpGainedForRival = 0; 
+            userExpGainedForRival = 0;
         }
-        
+
         const expFromUserUncompletedTasks = tasks
           .filter(t => t.dateAdded === yesterdayStr && !t.isCompleted)
           .reduce((sum, task) => sum + calculatePotentialTaskExp(task, userProfile.rankName), 0);
 
-        let baseRivalExpGain = 
-            (userExpGainedForRival * RIVAL_USER_DAILY_EXP_PERCENTAGE) + 
+        let baseRivalExpGain =
+            (userExpGainedForRival * RIVAL_USER_DAILY_EXP_PERCENTAGE) +
             expFromUserUncompletedTasks;
 
         baseRivalExpGain *= RIVAL_DIFFICULTY_MULTIPLIERS[appSettings.rivalDifficulty];
@@ -365,8 +361,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         if ((userProfile.totalExp - rival.totalExp) > RIVAL_CATCH_UP_EXP_DIFFERENCE && userProfile.totalExp > rival.totalExp) {
           baseRivalExpGain *= RIVAL_CATCH_UP_BOOST_MULTIPLIER;
         }
-        
-        const expGainedByRival = Math.max(0, Math.floor(baseRivalExpGain)); // Ensure non-negative
+
+        const expGainedByRival = Math.max(0, Math.floor(baseRivalExpGain));
 
         setRival(prev => {
           let newCurrentExp = prev.currentExpInSubRank + expGainedByRival;
@@ -383,22 +379,22 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
               const currentRankIndex = RANK_NAMES_TYPED_ARRAY.indexOf(newRankName as typeof RANK_NAMES_TYPED_ARRAY[number]);
               if (currentRankIndex < RANK_NAMES_TYPED_ARRAY.length - 1) {
                 newRankName = RANK_NAMES_TYPED_ARRAY[currentRankIndex + 1];
-              } else { 
+              } else {
                 newSubRank = MAX_SUB_RANKS;
-                newCurrentExp = newExpToNext; 
+                newCurrentExp = newExpToNext;
               }
             }
             newExpToNext = calculateExpForNextSubRank(newRankName, newSubRank);
           }
 
           const newHistoryEntry = {
-            date: format(new Date(rival.nextExpGainTime!), 'yyyy-MM-dd'), // Log with the date it was processed for
+            date: format(new Date(rival.nextExpGainTime!), 'yyyy-MM-dd'),
             expGained: expGainedByRival,
             totalExp: newTotalExp,
           };
           const updatedExpHistory = [...(prev.expHistory || []), newHistoryEntry].slice(-30);
-          
-          const nextGainTime = startOfDay(addHours(new Date(prev.nextExpGainTime!), 25)); // Ensure it's next day's midnight
+
+          const nextGainTime = startOfDay(addHours(new Date(prev.nextExpGainTime!), 25));
 
           return {
             ...prev,
@@ -412,7 +408,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           };
         });
 
-        // Reset user's daily counter for the NEW day (which is now 'today')
         const newCurrentDateStr = format(new Date(), 'yyyy-MM-dd');
         setUserProfile(prevUser => ({
             ...prevUser,
@@ -422,11 +417,11 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const intervalId = setInterval(checkRivalExpGain, 60000); // Check every minute
-    checkRivalExpGain(); // Initial check
+    const intervalId = setInterval(checkRivalExpGain, 60000);
+    checkRivalExpGain();
 
     return () => clearInterval(intervalId);
-  }, [isInitialized, rival.nextExpGainTime, userProfile, tasks, appSettings.rivalDifficulty, setRival, setUserProfile, calculateExpForNextSubRank, calculatePotentialTaskExp]);
+  }, [isInitialized, rival.nextExpGainTime, userProfile, tasks, appSettings.rivalDifficulty, setRival, setUserProfile, calculatePotentialTaskExp]);
 
 
   useEffect(() => {
@@ -464,7 +459,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const newGraph: CustomGraphSetting = {
       ...graphData,
       id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
-      data: {}, // Initialize with empty data
+      data: {},
     };
     setCustomGraphs(prev => [...prev, newGraph]);
   };
@@ -475,14 +470,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteCustomGraph = (graphId: string) => {
     setCustomGraphs(prev => prev.filter(g => g.id !== graphId));
-    // Also clean up daily logs for this graph
     setCustomGraphDailyLogs(prevLogs => {
       const newLogs = {...prevLogs};
       delete newLogs[graphId];
       return newLogs;
     });
   };
-  
+
   const logCustomGraphData = (graphId: string, variableId: string, value: number) => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     setCustomGraphDailyLogs(prevLogs => ({
@@ -501,16 +495,16 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const todayDate = startOfDay(new Date());
     let logsUpdated = false;
     let graphsNeedUpdating = false;
-  
-    const newDailyLogsState: CustomGraphDailyLogs = JSON.parse(JSON.stringify(customGraphDailyLogs)); 
-    const updatedCustomGraphsState: CustomGraphSetting[] = JSON.parse(JSON.stringify(customGraphs)); 
-  
+
+    const newDailyLogsState: CustomGraphDailyLogs = JSON.parse(JSON.stringify(customGraphDailyLogs));
+    const updatedCustomGraphsState: CustomGraphSetting[] = JSON.parse(JSON.stringify(customGraphs));
+
     for (const graphId in newDailyLogsState) {
       const graphVariables = newDailyLogsState[graphId];
       for (const variableId in graphVariables) {
         const logEntry = graphVariables[variableId];
         if (logEntry && logEntry.date && typeof logEntry.date === 'string') {
-          const logDate = startOfDay(new Date(logEntry.date)); 
+          const logDate = startOfDay(new Date(logEntry.date));
           if (isBefore(logDate, todayDate)) {
             const graphIndex = updatedCustomGraphsState.findIndex(g => g.id === graphId);
             if (graphIndex !== -1) {
@@ -532,7 +526,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         delete newDailyLogsState[graphId];
       }
     }
-  
+
     if (graphsNeedUpdating) {
       setCustomGraphs(updatedCustomGraphsState);
     }
@@ -578,4 +572,3 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export default AppProvider;
-
