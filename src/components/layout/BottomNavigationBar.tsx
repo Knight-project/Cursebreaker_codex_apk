@@ -56,12 +56,12 @@ const BottomNavigationBar = () => {
               onClick={() => setActiveTab(item.key)}
               className={cn(
                 "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200 group relative",
-                "border-2", 
+                "border-l-2 border-r-2 border-b-2", // Base border width for inactive to match active
                 active
-                  ? "text-primary border-accent active-nav-shadow" 
+                  ? "text-primary border-t-2 border-t-accent border-l-transparent border-r-transparent border-b-transparent active-nav-shadow" 
                   : [
-                      "text-muted-foreground hover:text-foreground",
-                      (index < navItems.length - 1) ? "border-r-border/30 border-transparent" : "border-transparent" 
+                      "text-muted-foreground hover:text-foreground border-transparent",
+                      (index < navItems.length - 1) ? "border-r-border/30" : "border-r-transparent" 
                     ]
               )}
             >
@@ -88,3 +88,4 @@ const BottomNavigationBar = () => {
 };
 
 export default BottomNavigationBar;
+

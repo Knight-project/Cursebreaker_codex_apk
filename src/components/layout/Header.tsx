@@ -65,7 +65,7 @@ const Header = () => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link
           href="/"
-          className="text-xl font-brand text-accent hover:opacity-80 transition-opacity"
+          className="text-xl font-brand text-accent hover:opacity-80 transition-opacity uppercase"
         >
           {displayedAppName}
         </Link>
@@ -81,3 +81,4 @@ const Header = () => {
 };
 
 export default Header;
+
