@@ -1,4 +1,6 @@
 
+import type { format } from 'date-fns';
+
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
 export type TaskType = 'daily' | 'ritual' | 'protocol';
 
@@ -8,13 +10,27 @@ export interface Task {
   difficulty: "Easy" | "Moderate" | "Hard";
   attribute: Attribute;
   taskType: TaskType;
-  isCompleted: boolean;
+  isCompleted: boolean; // For daily/protocol: overall completion. For ritual: completed on its current due date.
   dateAdded: string; // ISO string (creation date for all types)
-  dateCompleted?: string; // ISO string (general completion, for daily/protocol)
-  lastCompletedDate?: string; // ISO string (for rituals, marks last day completed)
-  scheduledDate?: string; // ISO string (for protocol tasks)
-  statExpGained?: number; // EXP gained for the specific attribute
-  attributeAffectedForStatExp?: Attribute; // Which attribute got the stat EXP
+  
+  // General completion tracking
+  dateCompleted?: string; // ISO string (general completion, for daily/protocol one-time completion)
+  
+  // Ritual-specific fields
+  lastCompletedDate?: string; // ISO string (for rituals, marks the actual date it was last completed)
+  repeatIntervalDays?: number; // e.g., 1 for daily, 7 for weekly. Default 1.
+  nextDueDate?: string; // ISO string, calculated next date the ritual is active.
+
+  // Protocol-specific fields
+  scheduledDate?: string; // ISO string (for protocol tasks, the date of the event)
+  isAllDay?: boolean; // For protocols, if true, ignore startTime/endTime
+  startTime?: string; // HH:MM format, for protocols
+  endTime?: string; // HH:MM format, for protocols
+  reminderOffsetMinutes?: number; // Minutes before startTime to remind, for protocols
+
+  // For stats and history
+  statExpGained?: number;
+  attributeAffectedForStatExp?: Attribute;
 }
 
 export interface UserStat {
@@ -39,11 +55,11 @@ export interface UserProfile {
   currentStreak: number;
   dailyTaskCompletionPercentage: number; // 0-100
   customQuote: string;
-  taskHistory: Task[]; // Stores completed tasks with details like statExpGained
+  taskHistory: Task[];
   journalEntries: { [date: string]: string }; // date is YYYY-MM-DD
   avatarUrl?: string;
-  expGainedToday: number; // Tracks EXP user gained since last daily reset
-  lastExpResetDate: string; // YYYY-MM-DD, records when expGainedToday was last reset
+  expGainedToday: number;
+  lastExpResetDate: string; // YYYY-MM-DD
 }
 
 export interface Rival {
@@ -56,19 +72,19 @@ export interface Rival {
   avatarUrl?: string;
   lastTaunt?: string;
   expHistory: Array<{ date: string; expGained: number; totalExp: number }>;
-  nextExpGainTime?: string; // ISO string for the next scheduled EXP gain
+  nextExpGainTime?: string;
 }
 
 export interface AppSettings {
   enableAnimations: boolean;
-  rivalDifficulty: "Easy" | "Normal" | "Hard"; // Affects EXP gain rate
+  rivalDifficulty: "Easy" | "Normal" | "Hard";
   autoAssignStatExp: boolean;
 }
 
 export interface PomodoroSettings {
-  focusDuration: number; // minutes
-  shortBreakDuration: number; // minutes
-  longBreakDuration: number; // minutes
+  focusDuration: number;
+  shortBreakDuration: number;
+  longBreakDuration: number;
   sessionsBeforeLongBreak: number;
 }
 
@@ -77,17 +93,12 @@ export interface IntervalTimerSetting {
   taskName: string;
   isEnabled: boolean;
   timerMode: 'windowed' | 'duration';
-
-  // Windowed mode specific (optional)
-  windowStart?: string; // HH:mm
-  windowEnd?: string; // HH:mm
-
-  // Duration mode specific (optional)
+  windowStart?: string; 
+  windowEnd?: string;
   durationHours?: number;
   durationMinutes?: number;
-  startTime?: string; // ISO string, when the current duration period started
-
-  repeatInterval: number; // minutes (common to both)
+  startTime?: string;
+  repeatInterval: number;
 }
 
 export interface CustomGraphVariable {
@@ -103,12 +114,11 @@ export interface CustomGraphSetting {
   name: string;
   timeView: TimeView;
   variables: CustomGraphVariable[];
-  data: { [variableId: string]: { [date: string]: number } }; // date is YYYY-MM-DD
+  data: { [variableId: string]: { [date: string]: number } };
 }
 
-// For storing today's uncommitted graph data
 export interface DailyGraphLog {
-  date: string; // YYYY-MM-DD, should always be "today"
+  date: string;
   value: number;
 }
 export interface CustomGraphDailyLogs {
@@ -165,7 +175,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
 
 const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
-tomorrow.setHours(0, 0, 0, 0); // Set to midnight
+tomorrow.setHours(0, 0, 0, 0);
 
 export const INITIAL_RIVAL: Rival = {
   name: "Kairos",
@@ -200,3 +210,13 @@ export const CHART_COLOR_OPTIONS = [
   { label: 'Chart Color 7 (Pink)', value: 'hsl(var(--chart-7))', key: 'chart-7' },
   { label: 'Chart Color 8 (Teal)', value: 'hsl(var(--chart-8))', key: 'chart-8' },
 ];
+
+export const REMINDER_OPTIONS = [
+  { label: "No reminder", value: 0 },
+  { label: "5 minutes before", value: 5 },
+  { label: "15 minutes before", value: 15 },
+  { label: "30 minutes before", value: 30 },
+  { label: "1 hour before", value: 60 },
+];
+
+    

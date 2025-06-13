@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import { PlusCircle, BarChart2, User, BookOpen, CalendarDays } from 'lucide-react';
+import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle } from 'lucide-react';
 import React, { useEffect, useState, useRef, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -13,13 +13,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Task, TaskType, Attribute } from '@/lib/types';
-import { ATTRIBUTES_LIST } from '@/lib/types';
+import { ATTRIBUTES_LIST, REMINDER_OPTIONS } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import RankDisplay from '@/components/shared/RankDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from 'date-fns';
+import { format, parseISO, startOfDay, isBefore } from 'date-fns';
+import { Switch } from '@/components/ui/switch';
 
 
 const AddTaskForm = ({
@@ -32,7 +33,17 @@ const AddTaskForm = ({
   const [taskName, setTaskName] = useState('');
   const [difficulty, setDifficulty] = useState<'Easy' | 'Moderate' | 'Hard'>('Moderate');
   const [attribute, setAttribute] = useState<Attribute>('None');
+  
+  // Protocol specific
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(new Date());
+  const [isAllDay, setIsAllDay] = useState(true);
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('17:00');
+  const [reminderOffsetMinutes, setReminderOffsetMinutes] = useState<number>(0);
+
+  // Ritual specific
+  const [repeatIntervalDays, setRepeatIntervalDays] = useState<number>(1);
+
   const { addTask } = useApp();
   const { toast } = useToast();
 
@@ -42,29 +53,65 @@ const AddTaskForm = ({
       toast({ title: "Error", description: "Task name cannot be empty.", variant: "destructive" });
       return;
     }
-    if (currentTaskType === 'protocol' && !scheduledDate) {
-      toast({ title: "Error", description: "Please select a date for protocol tasks.", variant: "destructive" });
-      return;
-    }
 
-    addTask({
+    const baseTaskData = {
       name: taskName,
       difficulty,
       attribute,
       taskType: currentTaskType,
-      scheduledDate: currentTaskType === 'protocol' ? format(scheduledDate!, 'yyyy-MM-dd') : undefined,
-    });
+    };
 
+    if (currentTaskType === 'protocol') {
+      if (!scheduledDate) {
+        toast({ title: "Error", description: "Please select a date for protocol tasks.", variant: "destructive" });
+        return;
+      }
+      if (!isAllDay) {
+        if (!startTime) {
+            toast({ title: "Error", description: "Please enter a start time for timed protocols.", variant: "destructive" });
+            return;
+        }
+        if (endTime && startTime >= endTime) {
+            toast({ title: "Error", description: "End time must be after start time.", variant: "destructive"});
+            return;
+        }
+      }
+      addTask({
+        ...baseTaskData,
+        scheduledDate: format(scheduledDate, 'yyyy-MM-dd'),
+        isAllDay,
+        startTime: !isAllDay ? startTime : undefined,
+        endTime: !isAllDay && endTime ? endTime : undefined,
+        reminderOffsetMinutes: !isAllDay && reminderOffsetMinutes ? reminderOffsetMinutes : undefined,
+      });
+    } else if (currentTaskType === 'ritual') {
+      if (repeatIntervalDays < 1) {
+        toast({ title: "Error", description: "Repeat interval must be at least 1 day.", variant: "destructive"});
+        return;
+      }
+      addTask({ ...baseTaskData, repeatIntervalDays });
+    } else { // Daily
+      addTask(baseTaskData);
+    }
+
+    // Reset common fields
     setTaskName('');
     setDifficulty('Moderate');
     setAttribute('None');
+    // Reset specific fields
     setScheduledDate(new Date());
+    setIsAllDay(true);
+    setStartTime('09:00');
+    setEndTime('17:00');
+    setReminderOffsetMinutes(0);
+    setRepeatIntervalDays(1);
+    
     toast({ title: "Success", description: `${currentTaskType.charAt(0).toUpperCase() + currentTaskType.slice(1)} added!` });
-    onTaskAdd();
+    onTaskAdd(); // Close dialog
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
       <div>
         <Label htmlFor="taskName" className="font-headline">Name</Label>
         <Input
@@ -79,18 +126,65 @@ const AddTaskForm = ({
           className="mt-1 bg-input/50 focus:bg-input"
         />
       </div>
+
       {currentTaskType === 'protocol' && (
+        <>
+          <div>
+            <Label htmlFor="scheduledDate" className="font-headline">Scheduled Date</Label>
+            <Calendar
+              mode="single"
+              selected={scheduledDate}
+              onSelect={setScheduledDate}
+              className="rounded-md border mt-1 bg-popover"
+              disabled={(date) => date < startOfDay(new Date())} 
+            />
+          </div>
+          <div className="flex items-center space-x-2 pt-2">
+            <Switch id="isAllDay" checked={isAllDay} onCheckedChange={setIsAllDay} />
+            <Label htmlFor="isAllDay" className="font-headline">All Day Event</Label>
+          </div>
+          {!isAllDay && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="startTime" className="font-headline">Start Time</Label>
+                  <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="mt-1 bg-input/50 focus:bg-input"/>
+                </div>
+                <div>
+                  <Label htmlFor="endTime" className="font-headline">End Time (Optional)</Label>
+                  <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="mt-1 bg-input/50 focus:bg-input"/>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="reminderOffsetMinutes" className="font-headline">Reminder</Label>
+                <Select onValueChange={(value) => setReminderOffsetMinutes(parseInt(value))} defaultValue={reminderOffsetMinutes.toString()}>
+                    <SelectTrigger id="reminderOffsetMinutes" className="mt-1 bg-input/50 focus:bg-input">
+                        <SelectValue placeholder="Select reminder time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {REMINDER_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value.toString()}>{opt.label}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {currentTaskType === 'ritual' && (
         <div>
-          <Label htmlFor="scheduledDate" className="font-headline">Scheduled Date</Label>
-          <Calendar
-            mode="single"
-            selected={scheduledDate}
-            onSelect={setScheduledDate}
-            className="rounded-md border mt-1 bg-popover"
-            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} // Disable past dates
+          <Label htmlFor="repeatIntervalDays" className="font-headline">Repeat Every (days)</Label>
+          <Input
+            id="repeatIntervalDays"
+            type="number"
+            value={repeatIntervalDays}
+            onChange={(e) => setRepeatIntervalDays(Math.max(1, parseInt(e.target.value) || 1))}
+            min="1"
+            className="mt-1 bg-input/50 focus:bg-input"
           />
         </div>
       )}
+
       <div>
         <Label htmlFor="difficulty" className="font-headline">Difficulty</Label>
         <Select onValueChange={(value) => setDifficulty(value as 'Easy' | 'Moderate' | 'Hard')} defaultValue={difficulty}>
@@ -116,7 +210,7 @@ const AddTaskForm = ({
           </SelectContent>
         </Select>
       </div>
-      <DialogFooter>
+      <DialogFooter className="pt-3">
         <DialogClose asChild>
           <Button type="button" variant="outline">Cancel</Button>
         </DialogClose>
@@ -131,13 +225,42 @@ const TaskItem = ({ task }: { task: Task }) => {
   const { toast } = useToast();
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  // Determine if task is effectively completed for today (especially for rituals)
-  const isTaskDisplayCompleted = task.taskType === 'ritual' ? task.lastCompletedDate === today && task.isCompleted : task.isCompleted;
+  let isTaskEffectivelyCompleted = false;
+  let descriptionText = `${task.difficulty} - ${task.attribute}`;
+  let isDueToday = true; // Assume due today unless specified otherwise
+
+  if (task.taskType === 'ritual') {
+    isTaskEffectivelyCompleted = task.lastCompletedDate === today && task.nextDueDate === today;
+    descriptionText = `Due: ${task.nextDueDate ? format(parseISO(task.nextDueDate), "MMM d") : "N/A"}. Repeats every ${task.repeatIntervalDays} day(s). ${task.difficulty} - ${task.attribute}`;
+    isDueToday = task.nextDueDate === today;
+  } else if (task.taskType === 'protocol') {
+    isTaskEffectivelyCompleted = task.isCompleted;
+    let timeInfo = "";
+    if (!task.isAllDay && task.startTime) {
+        timeInfo = ` at ${task.startTime}`;
+        if (task.endTime) timeInfo += ` - ${task.endTime}`;
+    } else if (task.isAllDay) {
+        timeInfo = " (All Day)";
+    }
+    descriptionText = `Scheduled: ${task.scheduledDate ? format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d") : "N/A"}${timeInfo}. ${task.difficulty} - ${task.attribute}`;
+    isDueToday = task.scheduledDate === today;
+
+  } else { // Daily
+    isTaskEffectivelyCompleted = task.isCompleted;
+  }
+  
+  const canComplete = (task.taskType === 'ritual' && isDueToday && !isTaskEffectivelyCompleted) || 
+                      ((task.taskType === 'daily' || task.taskType === 'protocol') && !task.isCompleted && isDueToday);
+
 
   const handleComplete = () => {
-    if (!isTaskDisplayCompleted) {
+    if (canComplete) {
       completeTask(task.id);
       toast({ title: `${task.taskType.charAt(0).toUpperCase() + task.taskType.slice(1)} Completed!`, description: `+EXP for ${task.name}`});
+    } else if (task.taskType === 'ritual' && task.lastCompletedDate === today) {
+        toast({ title: "Ritual Already Done", description: "This ritual has already been completed today.", variant: "default" });
+    } else if (!isDueToday) {
+        toast({ title: "Not Due Yet", description: "This task is not scheduled for today.", variant: "default" });
     }
   };
 
@@ -148,21 +271,28 @@ const TaskItem = ({ task }: { task: Task }) => {
     }
   };
   
-  const descriptionText = task.taskType === 'protocol' && task.scheduledDate
-    ? `${task.difficulty} - ${task.attribute} (Due: ${format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d")})` // Ensure date is parsed correctly
-    : `${task.difficulty} - ${task.attribute}`;
+  const isPastDue = (task.taskType === 'protocol' && task.scheduledDate && isBefore(parseISO(task.scheduledDate), startOfDay(new Date())) && !task.isCompleted) ||
+                     (task.taskType === 'ritual' && task.nextDueDate && isBefore(parseISO(task.nextDueDate), startOfDay(new Date())) && task.lastCompletedDate !== task.nextDueDate && task.lastCompletedDate !== today);
+
 
   return (
-    <div className={`p-3 border flex items-center justify-between transition-all duration-300 rounded-md ${isTaskDisplayCompleted ? 'bg-secondary/30 border-green-500/50' : 'bg-card hover:bg-card/90 border-border'}`}>
-      <div>
-        <p className={`font-medium font-body ${isTaskDisplayCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
-        <p className="text-xs text-muted-foreground">{descriptionText}</p>
+    <div className={`p-3 border flex items-center justify-between transition-all duration-300 rounded-md 
+      ${isTaskEffectivelyCompleted ? 'bg-secondary/30 border-green-500/50' : 
+        isPastDue ? 'bg-destructive/10 border-destructive/30' :
+        'bg-card hover:bg-card/90 border-border'}`}>
+      <div className="flex-1 min-w-0">
+         <div className="flex items-center">
+          {task.taskType === 'ritual' && <Repeat className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />}
+          {isPastDue && <AlertTriangle className="h-4 w-4 mr-2 text-destructive flex-shrink-0" />}
+          <p className={`font-medium font-body truncate ${isTaskEffectivelyCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
+        </div>
+        <p className="text-xs text-muted-foreground truncate">{descriptionText}</p>
       </div>
-      <div className="flex items-center space-x-2">
-        {!isTaskDisplayCompleted && (
+      <div className="flex items-center space-x-2 pl-2">
+        {canComplete && !isTaskEffectivelyCompleted && (
           <Button onClick={handleComplete} size="sm" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">Complete</Button>
         )}
-        {isTaskDisplayCompleted && (
+        {isTaskEffectivelyCompleted && (
            <span className="text-xs text-green-400 font-semibold pr-2">DONE</span>
         )}
         <Button onClick={handleDelete} size="sm" variant="destructive" className="opacity-70 hover:opacity-100">Delete</Button>
@@ -217,7 +347,7 @@ export default function HomePage() {
           description: "Please select an image smaller than 2MB.",
           variant: "destructive",
         });
-        if(event.target) event.target.value = ""; // Clear the input
+        if(event.target) event.target.value = ""; 
         return;
       }
       const reader = new FileReader();
@@ -234,7 +364,6 @@ export default function HomePage() {
       }
       reader.readAsDataURL(file);
     }
-    // Clear the input value to allow re-selecting the same file after an error
     if (event.target) {
       event.target.value = "";
     }
@@ -248,7 +377,11 @@ export default function HomePage() {
         ))}
       </div>
     ) : (
-      <p className="text-muted-foreground text-center py-4 font-code text-xs">No {taskType}s logged for this cycle. Initiate new tasks to proceed.</p>
+      <p className="text-muted-foreground text-center py-4 font-code text-xs">
+        {taskType === 'daily' && "No directives logged for this cycle. Initiate new tasks to proceed."}
+        {taskType === 'ritual' && "No rituals due today or all are completed. Establish or await next due cycle."}
+        {taskType === 'protocol' && "No protocols for today. Schedule new events or check other dates."}
+      </p>
     )
   );
 
@@ -302,11 +435,11 @@ export default function HomePage() {
                 <span className="text-foreground uppercase">EXP</span>
                 <span className="text-primary">{userProfile.currentExpInSubRank} / {userProfile.expToNextSubRank}</span>
               </div>
-              <Progress value={(userProfile.currentExpInSubRank / userProfile.expToNextSubRank) * 100} className="h-2 bg-secondary" indicatorClassName="bg-primary" />
+              <Progress value={(userProfile.expToNextSubRank > 0 ? userProfile.currentExpInSubRank / userProfile.expToNextSubRank : 0) * 100} className="h-2 bg-secondary" indicatorClassName="bg-primary" />
             </div>
             <div className="flex justify-between text-xs font-code">
               <span className="text-foreground uppercase">Streak: <span className="text-primary font-bold">{userProfile.currentStreak}</span></span>
-              <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{userProfile.dailyTaskCompletionPercentage}%</span></span>
+              <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{userProfile.dailyTaskCompletionPercentage.toFixed(1)}%</span></span>
             </div>
           </CardContent>
         </Card>
@@ -343,7 +476,7 @@ export default function HomePage() {
                       <PlusCircle className="h-4 w-4 mr-2 neon-icon" /> New Directive
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] bg-card border-border">
+                  <DialogContent className="sm:max-w-md bg-card border-border">
                     <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Log New Directive</DialogTitle></DialogHeader>
                     <AddTaskForm currentTaskType="daily" onTaskAdd={() => setIsAddDailyOpen(false)} />
                   </DialogContent>
@@ -362,10 +495,10 @@ export default function HomePage() {
                  <Dialog open={isAddRitualOpen} onOpenChange={setIsAddRitualOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
-                      <PlusCircle className="h-4 w-4 mr-2 neon-icon" /> New Ritual
+                      <Repeat className="h-4 w-4 mr-2 neon-icon" /> New Ritual
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] bg-card border-border">
+                  <DialogContent className="sm:max-w-md bg-card border-border">
                     <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Establish New Ritual</DialogTitle></DialogHeader>
                     <AddTaskForm currentTaskType="ritual" onTaskAdd={() => setIsAddRitualOpen(false)} />
                   </DialogContent>
@@ -387,7 +520,7 @@ export default function HomePage() {
                       <CalendarDays className="h-4 w-4 mr-2 neon-icon" /> New Protocol
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] bg-card border-border">
+                  <DialogContent className="sm:max-w-md bg-card border-border">
                     <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Schedule New Protocol</DialogTitle></DialogHeader>
                     <AddTaskForm currentTaskType="protocol" onTaskAdd={() => setIsAddProtocolOpen(false)} />
                   </DialogContent>
@@ -403,3 +536,5 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
+
+    
