@@ -2,7 +2,7 @@
 import type { format } from 'date-fns';
 
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
-export type TaskType = 'daily' | 'ritual' | 'protocol';
+export type TaskType = 'daily' | 'ritual' | 'event'; // Changed 'protocol' to 'event'
 
 export interface Task {
   id: string;
@@ -10,25 +10,21 @@ export interface Task {
   difficulty: "Easy" | "Moderate" | "Hard";
   attribute: Attribute;
   taskType: TaskType;
-  isCompleted: boolean; // For daily/protocol: overall completion. For ritual: completed on its current due date.
-  dateAdded: string; // ISO string (creation date for all types)
+  isCompleted: boolean; 
+  dateAdded: string; 
   
-  // General completion tracking
-  dateCompleted?: string; // ISO string (general completion, for daily/protocol one-time completion)
+  dateCompleted?: string; 
   
-  // Ritual-specific fields
-  lastCompletedDate?: string; // ISO string (for rituals, marks the actual date it was last completed)
-  repeatIntervalDays?: number; // e.g., 1 for daily, 7 for weekly. Default 1.
-  nextDueDate?: string; // ISO string, calculated next date the ritual is active.
+  lastCompletedDate?: string; 
+  repeatIntervalDays?: number; 
+  nextDueDate?: string; 
 
-  // Protocol-specific fields
-  scheduledDate?: string; // ISO string (for protocol tasks, the date of the event)
-  isAllDay?: boolean; // For protocols, if true, ignore startTime/endTime
-  startTime?: string; // HH:MM format, for protocols
-  endTime?: string; // HH:MM format, for protocols
-  reminderOffsetMinutes?: number; // Minutes before startTime to remind, for protocols
+  scheduledDate?: string; // For 'event' tasks (formerly protocol)
+  isAllDay?: boolean; 
+  startTime?: string; 
+  endTime?: string; 
+  reminderOffsetMinutes?: number;
 
-  // For stats and history
   statExpGained?: number;
   attributeAffectedForStatExp?: Attribute;
 }
@@ -41,7 +37,7 @@ export interface UserStat {
 
 export interface UserProfile {
   rankName: string;
-  subRank: number; // 1-10
+  subRank: number; 
   totalExp: number;
   expToNextSubRank: number;
   currentExpInSubRank: number;
@@ -53,13 +49,13 @@ export interface UserProfile {
     charisma: UserStat;
   };
   currentStreak: number;
-  dailyTaskCompletionPercentage: number; // 0-100
+  dailyTaskCompletionPercentage: number; 
   customQuote: string;
   taskHistory: Task[];
-  journalEntries: { [date: string]: string }; // date is YYYY-MM-DD
+  journalEntries: { [date: string]: string }; 
   avatarUrl?: string;
   expGainedToday: number;
-  lastExpResetDate: string; // YYYY-MM-DD
+  lastExpResetDate: string; 
 }
 
 export interface Rival {
@@ -79,7 +75,7 @@ export interface AppSettings {
   enableAnimations: boolean;
   rivalDifficulty: "Easy" | "Normal" | "Hard";
   autoAssignStatExp: boolean;
-  enableSoundEffects: boolean; // New setting
+  enableSoundEffects: boolean; 
 }
 
 export interface PomodoroSettings {
@@ -194,7 +190,7 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
   enableAnimations: true,
   rivalDifficulty: "Normal",
   autoAssignStatExp: true,
-  enableSoundEffects: true, // Default to true
+  enableSoundEffects: true, 
 };
 
 export const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSetting[] = [];

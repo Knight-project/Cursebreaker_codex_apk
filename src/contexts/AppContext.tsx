@@ -57,7 +57,7 @@ interface AppContextType {
   completeTask: (taskId: string) => void;
   getDailyDirectives: () => Task[];
   getRituals: () => Task[];
-  getProtocolsForToday: () => Task[];
+  getEventsForToday: () => Task[]; // Renamed
   updateRivalTaunt: () => Promise<void>;
   triggerLevelUpAnimation: () => void;
   showLevelUp: boolean;
@@ -162,7 +162,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
-  // Protocol Reminders
+  // Event (formerly Protocol) Reminders
   useEffect(() => {
     if (!isInitialized) return;
     const intervalId = setInterval(() => {
@@ -171,7 +171,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       tasks.forEach(task => {
         if (
-          task.taskType === 'protocol' &&
+          task.taskType === 'event' && // Changed from 'protocol'
           task.scheduledDate === todayStr &&
           !task.isAllDay &&
           task.startTime &&
@@ -182,12 +182,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           const startTimeToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
           const reminderTime = new Date(startTimeToday.getTime() - task.reminderOffsetMinutes * 60000);
           
-          const reminderSentKey = `reminderSent_protocol_${task.id}_${task.scheduledDate}`;
+          const reminderSentKey = `reminderSent_event_${task.id}_${task.scheduledDate}`; // Changed key prefix
           const reminderAlreadySent = localStorage.getItem(reminderSentKey);
 
           if (now >= reminderTime && now < startTimeToday && !reminderAlreadySent) {
             toast({
-              title: "Protocol Reminder",
+              title: "Event Reminder", // Changed title
               description: `${task.name} is scheduled to start at ${task.startTime}.`,
             });
             playSound('notification');
@@ -321,14 +321,14 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       dateAdded: dateAdded,
       repeatIntervalDays: taskData.taskType === 'ritual' ? (taskData.repeatIntervalDays || 1) : undefined,
       nextDueDate: taskData.taskType === 'ritual' ? nextDueDateCalculated : undefined,
-      scheduledDate: taskData.taskType === 'protocol' ? taskData.scheduledDate : undefined,
-      isAllDay: taskData.taskType === 'protocol' ? taskData.isAllDay : undefined,
-      startTime: taskData.taskType === 'protocol' && !taskData.isAllDay ? taskData.startTime : undefined,
-      endTime: taskData.taskType === 'protocol' && !taskData.isAllDay ? taskData.endTime : undefined,
-      reminderOffsetMinutes: taskData.taskType === 'protocol' && !taskData.isAllDay ? taskData.reminderOffsetMinutes : undefined,
+      scheduledDate: taskData.taskType === 'event' ? taskData.scheduledDate : undefined, // Changed from 'protocol'
+      isAllDay: taskData.taskType === 'event' ? taskData.isAllDay : undefined, // Changed from 'protocol'
+      startTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.startTime : undefined, // Changed from 'protocol'
+      endTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.endTime : undefined, // Changed from 'protocol'
+      reminderOffsetMinutes: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.reminderOffsetMinutes : undefined, // Changed from 'protocol'
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
-    playSound('buttonClick'); // Assuming adding task is a "button click" like action
+    playSound('buttonClick'); 
   };
 
   const updateTask = (updatedTask: Task) => {
@@ -337,7 +337,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteTask = (taskId: string) => {
     setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
-    playSound('buttonClick'); // Or a more specific 'delete' sound
+    playSound('buttonClick'); 
   };
 
   const completeTask = useCallback((taskId: string) => {
@@ -350,10 +350,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       let task = { ...prevTasks[taskIndex] }; 
 
-      const canCompleteDailyOrProtocol = (task.taskType === 'daily' || task.taskType === 'protocol') && !task.isCompleted && (task.taskType === 'daily' || task.scheduledDate === today);
+      const canCompleteDailyOrEvent = (task.taskType === 'daily' || task.taskType === 'event') && !task.isCompleted && (task.taskType === 'daily' || task.scheduledDate === today); // Changed from 'protocol'
       const canCompleteRitual = task.taskType === 'ritual' && task.nextDueDate === today && task.lastCompletedDate !== today;
 
-      if (!canCompleteDailyOrProtocol && !canCompleteRitual) {
+      if (!canCompleteDailyOrEvent && !canCompleteRitual) {
         return prevTasks; 
       }
       
@@ -434,9 +434,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [tasks, calculateNextDueDate]);
 
-  const getProtocolsForToday = useCallback(() => {
+  const getEventsForToday = useCallback(() => { // Renamed
     const today = format(new Date(), 'yyyy-MM-dd');
-    return tasks.filter(task => task.taskType === 'protocol' && task.scheduledDate === today && !task.isCompleted);
+    return tasks.filter(task => task.taskType === 'event' && task.scheduledDate === today && !task.isCompleted); // Changed from 'protocol'
   }, [tasks]);
 
 
@@ -489,14 +489,14 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           .filter(t => t.taskType === 'daily' && t.dateAdded === previousDayForExpCalc && !t.isCompleted)
           .reduce((sum, task) => sum + calculatePotentialTaskExp(task, userProfile.rankName), 0);
         
-        const expFromUserUncompletedProtocolTasksForYesterday = tasks
-          .filter(t => t.taskType === 'protocol' && t.scheduledDate === previousDayForExpCalc && !t.isCompleted)
+        const expFromUserUncompletedEventTasksForYesterday = tasks // Changed from 'protocol'
+          .filter(t => t.taskType === 'event' && t.scheduledDate === previousDayForExpCalc && !t.isCompleted) // Changed from 'protocol'
           .reduce((sum, task) => sum + calculatePotentialTaskExp(task, userProfile.rankName), 0);
 
         let baseRivalExpGain =
             (userExpGainedForRival * RIVAL_USER_DAILY_EXP_PERCENTAGE) +
             expFromUserUncompletedDailyTasks + 
-            expFromUserUncompletedProtocolTasksForYesterday;
+            expFromUserUncompletedEventTasksForYesterday;
 
         baseRivalExpGain *= RIVAL_DIFFICULTY_MULTIPLIERS[appSettings.rivalDifficulty];
 
@@ -599,12 +599,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const relevantTasksForCompletion = tasks.filter(t =>
       (t.taskType === 'daily' && t.dateAdded === todayStr && t.isCompleted) ||
-      (t.taskType === 'protocol' && t.scheduledDate === todayStr && t.isCompleted) ||
+      (t.taskType === 'event' && t.scheduledDate === todayStr && t.isCompleted) || // Changed from 'protocol'
       (t.taskType === 'ritual' && t.nextDueDate === todayStr && t.lastCompletedDate === todayStr)
     );
     const totalRelevantTasks = tasks.filter(t =>
         (t.taskType === 'daily' && t.dateAdded === todayStr) ||
-        (t.taskType === 'protocol' && t.scheduledDate === todayStr) ||
+        (t.taskType === 'event' && t.scheduledDate === todayStr) || // Changed from 'protocol'
         (t.taskType === 'ritual' && t.nextDueDate === todayStr)
     ).length;
 
@@ -635,7 +635,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteIntervalTimerSetting = (settingId: string) => {
     setIntervalTimerSettings(prev => prev.filter(s => s.id !== settingId));
-     playSound('buttonClick'); // Or delete sound
+     playSound('buttonClick'); 
   };
 
   const addCustomGraph = (graphData: Omit<CustomGraphSetting, 'id' | 'data'>) => {
@@ -660,7 +660,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       delete newLogs[graphId];
       return newLogs;
     });
-    playSound('buttonClick'); // Or delete sound
+    playSound('buttonClick'); 
   };
 
   const logCustomGraphData = (graphId: string, variableId: string, value: number) => {
@@ -675,7 +675,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         },
       },
     }));
-    // No sound for just input typing, maybe sound on "save" if there was an explicit save
   };
 
   const commitStaleDailyLogs = useCallback(() => {
@@ -760,7 +759,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       customGraphDailyLogs, setCustomGraphDailyLogs,
       logCustomGraphData, commitStaleDailyLogs,
       addTask, updateTask, deleteTask, completeTask,
-      getDailyDirectives, getRituals, getProtocolsForToday,
+      getDailyDirectives, getRituals, getEventsForToday, // Renamed
       updateRivalTaunt,
       triggerLevelUpAnimation, showLevelUp,
       activeTab, setActiveTab,

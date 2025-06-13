@@ -87,7 +87,7 @@ export default function RivalPage() {
 
   const handleGetTaunt = async () => {
     setIsLoadingTaunt(true);
-    await updateRivalTaunt(); // updateRivalTaunt in AppContext will now play the sound
+    await updateRivalTaunt(); 
     setIsLoadingTaunt(false);
   };
 
@@ -112,7 +112,7 @@ export default function RivalPage() {
       reader.onloadend = () => {
         setRival(prev => ({ ...prev, avatarUrl: reader.result as string }));
         toast({ title: "Rival Avatar Updated!" });
-        playSound('buttonClick'); // Or a more specific 'avatarChanged' sound
+        playSound('buttonClick'); 
       };
       reader.onerror = () => {
         toast({
@@ -176,21 +176,26 @@ export default function RivalPage() {
     });
 
   }, [rival.expHistory]);
+  
+  const avatarContainerSize = "w-[120px] h-[120px] sm:w-[150px] sm:h-[150px]";
+  const avatarSize = "w-[100px] h-[100px] sm:w-[120px] sm:h-[120px]";
+  const arcBaseSize = 100; // Base for calculation, corresponds to the smaller avatar size
+  const arcSizeMultiplier = 1.25; // For sm screens
 
   return (
     <AppWrapper>
       <div className="space-y-6">
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-destructive/30">
           <CardHeader className="items-center text-center flex flex-col p-4">
-            <div className="avatar-arc-container mb-3 w-[150px] h-[150px]">
-              <div onClick={handleRivalAvatarClick} className="cursor-pointer relative group w-[120px] h-[120px] border-2 border-destructive p-0.5 rounded-full overflow-hidden">
+            <div className={`avatar-arc-container mb-3 ${avatarContainerSize}`}>
+              <div onClick={handleRivalAvatarClick} className={`cursor-pointer relative group border-2 border-destructive p-0.5 rounded-full overflow-hidden ${avatarSize}`}>
                 {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
                   <Image
                     src={rival.avatarUrl}
                     alt={`${rival.name}'s Avatar`}
-                    width={120}
-                    height={120}
-                    className="object-cover w-full h-full rounded-full"
+                    layout="fill"
+                    objectFit="cover"
+                    className="rounded-full"
                     data-ai-hint="fantasy character"
                   />
                 ) : (
@@ -199,13 +204,19 @@ export default function RivalPage() {
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                  <PlusCircle className="h-10 w-10 text-destructive neon-icon-destructive" />
+                  <PlusCircle className="h-8 w-8 sm:h-10 sm:w-10 text-destructive neon-icon-destructive" />
                 </div>
               </div>
-              <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: '128px', height: '128px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
-              <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: '138px', height: '138px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-40deg)', borderLeftColor: 'transparent', borderTopColor: 'transparent' }}></span>
-              <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '148px', height: '148px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(60deg)', borderTopColor: 'transparent',  borderRightColor: 'transparent' }}></span>
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type1" style={{ width: `calc(${arcBaseSize * 1.08}px * var(--avatar-scale, 1))`, height: `calc(${arcBaseSize * 1.08}px * var(--avatar-scale, 1))`, top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(15deg)', borderRightColor: 'transparent', borderBottomColor: 'transparent' }}></span>
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type2" style={{ width: `calc(${arcBaseSize * 1.18}px * var(--avatar-scale, 1))`, height: `calc(${arcBaseSize * 1.18}px * var(--avatar-scale, 1))`, top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-40deg)', borderLeftColor: 'transparent', borderTopColor: 'transparent' }}></span>
+              <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: `calc(${arcBaseSize * 1.28}px * var(--avatar-scale, 1))`, height: `calc(${arcBaseSize * 1.28}px * var(--avatar-scale, 1))`, top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(60deg)', borderTopColor: 'transparent',  borderRightColor: 'transparent' }}></span>
             </div>
+            <style jsx>{`
+              .avatar-arc-container { --avatar-scale: 1; }
+              @media (min-width: 640px) { /* sm breakpoint */
+                .avatar-arc-container { --avatar-scale: ${arcSizeMultiplier}; }
+              }
+            `}</style>
             <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
 
             <CardTitle className="font-headline text-2xl text-destructive uppercase tracking-wider">{rival.name}</CardTitle>

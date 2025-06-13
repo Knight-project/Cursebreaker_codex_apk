@@ -60,14 +60,14 @@ const AddTaskForm = ({
       taskType: currentTaskType,
     };
 
-    if (currentTaskType === 'protocol') {
+    if (currentTaskType === 'event') { // Changed from 'protocol'
       if (!scheduledDate) {
-        toast({ title: "Error", description: "Please select a date for protocol tasks.", variant: "destructive" });
+        toast({ title: "Error", description: "Please select a date for events.", variant: "destructive" }); // Changed message
         return;
       }
       if (!isAllDay) {
         if (!startTime) {
-            toast({ title: "Error", description: "Please enter a start time for timed protocols.", variant: "destructive" });
+            toast({ title: "Error", description: "Please enter a start time for timed events.", variant: "destructive" }); // Changed message
             return;
         }
         if (endTime && startTime >= endTime) {
@@ -106,6 +106,16 @@ const AddTaskForm = ({
     toast({ title: "Success", description: `${currentTaskType.charAt(0).toUpperCase() + currentTaskType.slice(1)} added!` });
     onTaskAdd(); 
   };
+  
+  const getTaskTypeSpecificPlaceholder = () => {
+    switch(currentTaskType) {
+      case 'daily': return "e.g., Review project notes";
+      case 'ritual': return "e.g., Morning Meditation";
+      case 'event': return "e.g., Team Sync Meeting"; // Changed from 'protocol'
+      default: return "Enter task name";
+    }
+  }
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
@@ -115,16 +125,12 @@ const AddTaskForm = ({
           id="taskName"
           value={taskName}
           onChange={(e) => setTaskName(e.target.value)}
-          placeholder={
-            currentTaskType === 'daily' ? "e.g., Review project notes" :
-            currentTaskType === 'ritual' ? "e.g., Morning Meditation" :
-            "e.g., Team Sync Meeting"
-          }
+          placeholder={getTaskTypeSpecificPlaceholder()}
           className="mt-1 bg-input/50 focus:bg-input"
         />
       </div>
 
-      {currentTaskType === 'protocol' && (
+      {currentTaskType === 'event' && ( // Changed from 'protocol'
         <>
           <div>
             <Label htmlFor="scheduledDate" className="font-headline">Scheduled Date</Label>
@@ -132,7 +138,7 @@ const AddTaskForm = ({
               mode="single"
               selected={scheduledDate}
               onSelect={setScheduledDate}
-              className="rounded-md border mt-1 bg-popover"
+              className="rounded-md border mt-1 bg-popover/90 backdrop-blur-sm" // Adjusted bg
               disabled={(date) => date < startOfDay(new Date())} 
             />
           </div>
@@ -230,7 +236,7 @@ const TaskItem = ({ task }: { task: Task }) => {
     isTaskEffectivelyCompleted = task.lastCompletedDate === today && !!task.nextDueDate && isBefore(startOfDay(new Date()), parseISO(task.nextDueDate));
     descriptionText = `Due: ${task.nextDueDate ? format(parseISO(task.nextDueDate), "MMM d") : "N/A"}. Repeats every ${task.repeatIntervalDays} day(s). ${task.difficulty} - ${task.attribute}`;
     isDueToday = task.nextDueDate === today;
-  } else if (task.taskType === 'protocol') {
+  } else if (task.taskType === 'event') { // Changed from 'protocol'
     isTaskEffectivelyCompleted = task.isCompleted;
     let timeInfo = "";
     if (!task.isAllDay && task.startTime) {
@@ -247,7 +253,7 @@ const TaskItem = ({ task }: { task: Task }) => {
   }
   
   const canComplete = (task.taskType === 'ritual' && isDueToday && !isTaskEffectivelyCompleted) || 
-                      ((task.taskType === 'daily' || task.taskType === 'protocol') && !task.isCompleted && isDueToday);
+                      ((task.taskType === 'daily' || task.taskType === 'event') && !task.isCompleted && isDueToday); // Changed from 'protocol'
 
 
   const handleComplete = () => {
@@ -270,7 +276,7 @@ const TaskItem = ({ task }: { task: Task }) => {
     }
   };
   
-  const isPastDue = (task.taskType === 'protocol' && task.scheduledDate && isBefore(parseISO(task.scheduledDate), startOfDay(new Date())) && !task.isCompleted) ||
+  const isPastDue = (task.taskType === 'event' && task.scheduledDate && isBefore(parseISO(task.scheduledDate), startOfDay(new Date())) && !task.isCompleted) || // Changed from 'protocol'
                      (task.taskType === 'ritual' && task.nextDueDate && isBefore(parseISO(task.nextDueDate), startOfDay(new Date())) && task.lastCompletedDate !== task.nextDueDate && task.lastCompletedDate !== today && !task.isCompleted);
 
 
@@ -282,6 +288,7 @@ const TaskItem = ({ task }: { task: Task }) => {
       <div className="flex-1 min-w-0">
          <div className="flex items-center">
           {task.taskType === 'ritual' && <Repeat className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />}
+          {task.taskType === 'event' && <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />} 
           {isPastDue && <AlertTriangle className="h-4 w-4 mr-2 text-destructive flex-shrink-0" />}
           <p className={`font-medium font-body truncate ${isTaskEffectivelyCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
         </div>
@@ -317,10 +324,10 @@ const CyberpunkAvatarPlaceholder = () => (
 
 
 export default function HomePage() {
-  const { userProfile, getDailyDirectives, getRituals, getProtocolsForToday, setUserProfile, setActiveTab } = useApp();
+  const { userProfile, getDailyDirectives, getRituals, getEventsForToday, setUserProfile, setActiveTab } = useApp(); // Renamed getProtocolsForToday
   const [isAddDailyOpen, setIsAddDailyOpen] = useState(false);
   const [isAddRitualOpen, setIsAddRitualOpen] = useState(false);
-  const [isAddProtocolOpen, setIsAddProtocolOpen] = useState(false);
+  const [isAddEventOpen, setIsAddEventOpen] = useState(false); // Changed from isAddProtocolOpen
 
   const { toast } = useToast();
   const userImageInputRef = useRef<HTMLInputElement>(null);
@@ -331,7 +338,7 @@ export default function HomePage() {
 
   const dailyDirectives = getDailyDirectives();
   const rituals = getRituals();
-  const protocolsForToday = getProtocolsForToday();
+  const eventsForToday = getEventsForToday(); // Renamed
 
   const handleUserAvatarClick = () => {
     userImageInputRef.current?.click();
@@ -381,7 +388,7 @@ export default function HomePage() {
       <p className="text-muted-foreground text-center py-4 font-code text-xs">
         {taskType === 'daily' && "No directives logged for this cycle. Initiate new tasks to proceed."}
         {taskType === 'ritual' && "No rituals due today or all are completed. Establish or await next due cycle."}
-        {taskType === 'protocol' && "No protocols for today. Schedule new events or check other dates."}
+        {taskType === 'event' && "No events for today. Schedule new events or check other dates."} 
       </p>
     )
   );
@@ -464,7 +471,7 @@ export default function HomePage() {
           <TabsList className="grid w-full grid-cols-3 bg-card/80 backdrop-blur-sm border-border">
             <TabsTrigger value="daily" className="font-headline" onClick={() => playSound('buttonClick')}>Directives</TabsTrigger>
             <TabsTrigger value="rituals" className="font-headline" onClick={() => playSound('buttonClick')}>Rituals</TabsTrigger>
-            <TabsTrigger value="protocols" className="font-headline" onClick={() => playSound('buttonClick')}>Protocols</TabsTrigger>
+            <TabsTrigger value="events" className="font-headline" onClick={() => playSound('buttonClick')}>Events</TabsTrigger> 
           </TabsList>
 
           <TabsContent value="daily">
@@ -511,24 +518,24 @@ export default function HomePage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="protocols">
+          <TabsContent value="events"> 
             <Card className="bg-card/80 backdrop-blur-sm shadow-lg mt-2">
               <CardHeader className="p-4 flex flex-row items-center justify-between">
-                <CardTitle className="font-headline text-lg text-primary uppercase">Today's Protocols</CardTitle>
-                <Dialog open={isAddProtocolOpen} onOpenChange={setIsAddProtocolOpen}>
+                <CardTitle className="font-headline text-lg text-primary uppercase">Today's Events</CardTitle> 
+                <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}> 
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" onClick={() => playSound('buttonClick')}>
-                      <CalendarDays className="h-4 w-4 mr-2 neon-icon" /> New Protocol
+                      <CalendarDays className="h-4 w-4 mr-2 neon-icon" /> New Event 
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md bg-card border-border">
-                    <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Schedule New Protocol</DialogTitle></DialogHeader>
-                    <AddTaskForm currentTaskType="protocol" onTaskAdd={() => setIsAddProtocolOpen(false)} />
+                    <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Schedule New Event</DialogTitle></DialogHeader> 
+                    <AddTaskForm currentTaskType="event" onTaskAdd={() => setIsAddEventOpen(false)} /> 
                   </DialogContent>
                 </Dialog>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                {renderTaskList(protocolsForToday, 'protocol')}
+                {renderTaskList(eventsForToday, 'event')} 
               </CardContent>
             </Card>
           </TabsContent>
