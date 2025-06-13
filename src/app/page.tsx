@@ -415,13 +415,8 @@ export default function HomePage() {
   };
 
   const saveName = () => {
-    if (editingName.trim() === "") {
-      toast({ title: "Invalid Name", description: "Name cannot be empty.", variant: "destructive" });
-      setEditingName(userProfile.userName); // Revert to original if empty
-    } else {
-      setUserProfile(prev => ({ ...prev, userName: editingName.trim() }));
-      toast({ title: "Name Updated!" });
-    }
+    setUserProfile(prev => ({ ...prev, userName: editingName.trim() }));
+    toast({ title: "Name Updated!" });
     setIsEditingName(false);
   };
 
@@ -521,10 +516,10 @@ export default function HomePage() {
             ) : (
               <h2 
                 onDoubleClick={handleNameDoubleClick} 
-                className="text-2xl font-bold text-primary mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors"
+                className="text-2xl font-bold text-primary mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px]"
                 title="Double-click to edit name"
               >
-                {userProfile.userName}
+                {userProfile.userName.trim() || "Double-click to set name"}
               </h2>
             )}
 
@@ -549,7 +544,7 @@ export default function HomePage() {
                 className="text-muted-foreground mt-1 text-xs font-code italic cursor-pointer hover:bg-muted/30 rounded-md p-1 transition-colors min-h-[20px]"
                 title="Double-click to edit quote"
               >
-                {userProfile.customQuote || "No quote set. Double-click to add one."}
+                {userProfile.customQuote.trim() || "No quote set. Double-click to add one."}
               </CardDescription>
             )}
 

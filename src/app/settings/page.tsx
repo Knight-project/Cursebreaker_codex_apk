@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { RIVAL_NAMES_POOL } from '@/lib/constants';
@@ -19,9 +19,23 @@ export default function SettingsPage() {
   const { appSettings, setAppSettings, userProfile, setUserProfile, rival, setRival, setActiveTab } = useApp();
   const { toast } = useToast();
 
+  // Local state for debounced input might be useful for performance if direct context updates are too frequent.
+  // For now, direct updates are used for simplicity, similar to Home page editing.
+  const [currentUserName, setCurrentUserName] = useState(userProfile.userName);
+  const [currentCustomQuote, setCurrentCustomQuote] = useState(userProfile.customQuote);
+
   useEffect(() => {
     setActiveTab('settings');
   }, [setActiveTab]);
+
+  useEffect(() => {
+    setCurrentUserName(userProfile.userName);
+  }, [userProfile.userName]);
+
+  useEffect(() => {
+    setCurrentCustomQuote(userProfile.customQuote);
+  }, [userProfile.customQuote]);
+
 
   const handleSettingsChange = (key: keyof typeof appSettings, value: any) => {
     setAppSettings(prev => ({ ...prev, [key]: value }));
@@ -34,10 +48,74 @@ export default function SettingsPage() {
     toast({ title: "Rival Name Updated!", description: `Your rival is now known as ${newName}.` });
     playSound('buttonClick');
   };
+  
+  const handleUserNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = event.target.value;
+    setCurrentUserName(newName);
+    setUserProfile(prev => ({ ...prev, userName: newName.trim() }));
+    // Debounce or save on blur could be added here if needed
+  };
+
+  const handleUserNameBlur = () => {
+    if (userProfile.userName !== currentUserName.trim()) { // Only toast if changed
+        toast({ title: "Username Updated!"});
+    }
+  }
+
+  const handleCustomQuoteChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuote = event.target.value;
+    setCurrentCustomQuote(newQuote);
+    setUserProfile(prev => ({ ...prev, customQuote: newQuote }));
+  };
+  
+  const handleCustomQuoteBlur = () => {
+     if (userProfile.customQuote !== currentCustomQuote) {
+        toast({ title: "Quote Updated!" });
+     }
+  }
+
 
   return (
     <AppWrapper>
       <div className="space-y-8">
+        <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl text-primary">User Profile</CardTitle>
+            <CardDescription>Customize your displayed name and motivational quote.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 rounded-md border bg-background/30 space-y-2">
+              <Label htmlFor="userNameInput" className="text-lg font-medium">Username</Label>
+              <Input
+                id="userNameInput"
+                type="text"
+                value={currentUserName}
+                onChange={handleUserNameChange}
+                onBlur={handleUserNameBlur}
+                placeholder="Enter your codename"
+                className="bg-input/50 focus:bg-input"
+                maxLength={30}
+              />
+              <p className="text-xs text-muted-foreground">This name is displayed on your profile card.</p>
+            </div>
+
+            <div className="p-4 rounded-md border bg-background/30 space-y-2">
+              <Label htmlFor="customQuoteInput" className="text-lg font-medium">Your Motivational Quote</Label>
+              <Input
+                id="customQuoteInput"
+                type="text"
+                value={currentCustomQuote}
+                onChange={handleCustomQuoteChange}
+                onBlur={handleCustomQuoteBlur}
+                placeholder="Enter your guiding principle"
+                className="bg-input/50 focus:bg-input"
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">This quote appears below your rank.</p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
           <CardHeader>
             <CardTitle className="font-headline text-2xl text-primary">Application Settings</CardTitle>
