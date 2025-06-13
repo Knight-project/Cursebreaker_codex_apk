@@ -514,19 +514,19 @@ export default function HomePage() {
                 onChange={handleNameChange}
                 onBlur={saveName}
                 onKeyDown={handleNameKeyDown}
-                className="text-2xl font-bold text-center bg-input/50 focus:bg-input border-accent text-accent mb-1 p-1 max-w-[250px]"
+                className="text-2xl font-headline text-center bg-input/50 focus:bg-input border-accent text-accent mb-1 p-1 max-w-[250px]"
                 maxLength={30}
               />
             ) : (
               <h2 
                 onDoubleClick={handleNameDoubleClick} 
-                className="text-2xl font-bold text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px]"
+                className="text-2xl font-headline text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px]"
                 title="Double-click to edit name"
               >
                 {(userProfile.userName || "").trim() || "Double-click to set name"}
               </h2>
             )}
-
+            <div className="h-0.5 w-2/3 my-2 bg-accent" /> {/* Orange Accent Line */}
             <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">
               <RankDisplay rankName={userProfile.rankName} subRank={userProfile.subRank} />
             </CardTitle>
