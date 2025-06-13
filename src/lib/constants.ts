@@ -16,7 +16,7 @@ export const RANK_NAMES_LIST: RankName[] = [
 ];
 
 export const MAX_SUB_RANKS = 10;
-export const BASE_EXP_PER_SUBRANK = 100;
+export const BASE_EXP_PER_SUBRANK = 300; // Changed from 100 to 300
 export const EXP_SCALING_FACTOR = 1.5;
 
 export const TASK_DIFFICULTY_EXP_MULTIPLIER = {
@@ -54,3 +54,4 @@ export const RIVAL_DIFFICULTY_MULTIPLIERS = {
 };
 export const RIVAL_CATCH_UP_EXP_DIFFERENCE = 1000; // If rival is this much EXP behind user
 export const RIVAL_CATCH_UP_BOOST_MULTIPLIER = 1.5; // They get a 1.5x boost on their daily gain
+

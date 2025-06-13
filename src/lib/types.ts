@@ -36,7 +36,7 @@ export interface UserStat {
 }
 
 export interface UserProfile {
-  userName: string; // Added userName
+  userName: string;
   rankName: string;
   subRank: number; 
   totalExp: number;
@@ -149,11 +149,11 @@ export const DEFAULT_USER_STAT: UserStat = {
 };
 
 export const INITIAL_USER_PROFILE: UserProfile = {
-  userName: "Codex User", // Added default userName
+  userName: "Codex User", 
   rankName: RANK_NAMES[0],
   subRank: 1,
   totalExp: 0,
-  expToNextSubRank: 100,
+  expToNextSubRank: 300, // Changed from 100 to 300
   currentExpInSubRank: 0,
   stats: {
     strength: { ...DEFAULT_USER_STAT },
@@ -181,7 +181,7 @@ export const INITIAL_RIVAL: Rival = {
   rankName: RANK_NAMES[0],
   subRank: 1,
   totalExp: 0,
-  expToNextSubRank: 100,
+  expToNextSubRank: 300, // Changed from 100 to 300
   currentExpInSubRank: 0,
   avatarUrl: `https://placehold.co/120x120.png`,
   expHistory: [],
@@ -218,3 +218,4 @@ export const REMINDER_OPTIONS = [
   { label: "30 minutes before", value: 30 },
   { label: "1 hour before", value: 60 },
 ];
+
