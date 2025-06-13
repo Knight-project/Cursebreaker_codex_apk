@@ -4,7 +4,7 @@
 import AppWrapper from '@/components/layout/AppWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Settings2, PlusCircle, Trash2, Edit3, BellRing, BellOff, BarChartBig, Palette, Timer as TimerIcon, Save } from 'lucide-react'; // Added TimerIcon and Save
+import { Play, Pause, RotateCcw, Settings2, PlusCircle, Trash2, Edit3, BellRing, BellOff, BarChartBig, Palette, Timer as TimerIcon, Save, ChevronDown } from 'lucide-react'; // Added TimerIcon, Save, ChevronDown
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Progress } from '@/components/ui/progress';
@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { CartesianGrid, XAxis, YAxis, Line, LineChart as RechartsLineChart, ResponsiveContainer } from 'recharts';
 import { format, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachWeekOfInterval, startOfYear, endOfYear, parseISO, isValid } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 
 const PomodoroTimer = () => {
@@ -888,6 +889,8 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
   const { customGraphDailyLogs, logCustomGraphData } = useApp();
   const [todayInputs, setTodayInputs] = useState<{[variableId: string]: string}>({});
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const [isLoggingOpen, setIsLoggingOpen] = useState(false);
+
 
   useEffect(() => {
     const initialInputs: {[variableId: string]: string} = {};
@@ -1008,22 +1011,34 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
           )}
       </CardContent>
       <CardFooter className="flex flex-col space-y-3 items-start p-4 pt-0">
-        <Label className="text-sm font-medium">Log Today's Values ({format(new Date(), 'MMM d, yyyy')}):</Label>
-        {graph.variables.map(variable => (
-          <div key={variable.id} className="flex items-center space-x-2 w-full mb-1 last:mb-0">
-            <Label htmlFor={`input-${graph.id}-${variable.id}`} className="text-sm min-w-[120px] truncate" title={variable.name}>
-              {variable.name}:
-            </Label>
-            <Input
-              id={`input-${graph.id}-${variable.id}`}
-              type="number"
-              value={todayInputs[variable.id] || ""}
-              onChange={(e) => handleTodayInputChange(variable.id, e.target.value)}
-              placeholder="Enter value"
-              className="h-9 text-sm flex-grow"
-            />
+        <div 
+          onClick={() => setIsLoggingOpen(!isLoggingOpen)} 
+          className="flex items-center justify-between w-full cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
+          role="button"
+          aria-expanded={isLoggingOpen}
+        >
+          <Label className="text-sm font-medium cursor-pointer">Log Today's Values ({format(new Date(), 'MMM d, yyyy')}):</Label>
+          <ChevronDown className={cn("h-4 w-4 transition-transform", isLoggingOpen && "rotate-180")} />
+        </div>
+        {isLoggingOpen && (
+          <div className="w-full pl-2 pr-2 space-y-2 pt-1">
+            {graph.variables.map(variable => (
+              <div key={variable.id} className="flex items-center space-x-2 w-full mb-1 last:mb-0">
+                <Label htmlFor={`input-${graph.id}-${variable.id}`} className="text-sm min-w-[100px] truncate" title={variable.name}>
+                  {variable.name}:
+                </Label>
+                <Input
+                  id={`input-${graph.id}-${variable.id}`}
+                  type="number"
+                  value={todayInputs[variable.id] || ""}
+                  onChange={(e) => handleTodayInputChange(variable.id, e.target.value)}
+                  placeholder="Enter value"
+                  className="h-9 text-sm flex-grow"
+                />
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </CardFooter>
     </Card>
   );
