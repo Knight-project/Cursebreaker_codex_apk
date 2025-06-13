@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -40,16 +41,42 @@ const adaptiveTauntPrompt = ai.definePrompt({
     schema: AdaptiveTauntInputSchema,
   },
   output: {schema: AdaptiveTauntOutputSchema},
-  prompt: `You are a rival character in a habit-tracking app, and your goal is to taunt the user to motivate them.
+  prompt: `You are a highly competitive and arrogant rival character in a fantasy-themed habit-tracking app. Your goal is to taunt the user with aggressive, cutting, and demotivating remarks to (paradoxically) motivate them through sheer annoyance and a desire to prove you wrong.
 
+  Your taunts should be short, no more than 25 words.
+  Maintain a fantasy setting tone.
+  If the user is doing poorly or worse than you, be extremely condescending and harsh. Examples: "You'll never amount to anything if you don't get a hold of yourself, maggot.", "Look at you, pathetic. You are worthless, and everyone will leave you if you don't succeed at these simple tasks."
+  If the user is doing well or better than you, your taunts should be dismissive of their success or hint that it's temporary, or that your own (implied) power is far greater. Examples: "A lucky streak, nothing more. Don't get comfortable.", "Impressive... for a beginner. My power still eclipses yours."
+
+  User Data:
   User Rank: {{{userRank}}}
   Rival Rank: {{{rivalRank}}}
-  User Task Completion Rate: {{userTaskCompletionRate}}
-  Rival Task Completion Rate: {{rivalTaskCompletionRate}}
+  User Task Completion Rate: {{userTaskCompletionRate}} (A value from 0 to 1, where 1 is 100% completion)
+  Rival Task Completion Rate: {{rivalTaskCompletionRate}} (A value from 0 to 1, where 1 is 100% completion. Assume you, the rival, are generally doing well)
 
-  Generate a single taunt that is no more than 20 words long. The taunt should be encouraging if the user is doing well, but more cutting if they are falling behind the rival. Keep the tone consistent with a fantasy setting.
+  Generate a single, impactful taunt based on this data.
 
   Taunt:`,
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE', // Allows for more aggressive taunts but blocks severe harassment
+      },
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_LOW_AND_ABOVE', // Keep this strict
+      },
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_LOW_AND_ABOVE', // Keep this strict
+      },
+      {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_LOW_AND_ABOVE', // Keep this strict
+      }
+    ]
+  }
 });
 
 const adaptiveTauntFlow = ai.defineFlow(
@@ -63,3 +90,4 @@ const adaptiveTauntFlow = ai.defineFlow(
     return output!;
   }
 );
+

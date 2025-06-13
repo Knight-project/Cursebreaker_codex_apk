@@ -51,6 +51,7 @@ export interface Rival {
   avatarUrl?: string;
   lastTaunt?: string;
   expHistory: Array<{ date: string; expGained: number; totalExp: number }>;
+  nextExpGainTime?: string; // ISO string for the next scheduled EXP gain
 }
 
 export interface AppSettings {
@@ -155,6 +156,10 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   avatarUrl: '',
 };
 
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+tomorrow.setHours(0, 0, 0, 0); // Set to midnight
+
 export const INITIAL_RIVAL: Rival = {
   name: "Kairos",
   rankName: RANK_NAMES[0],
@@ -164,6 +169,7 @@ export const INITIAL_RIVAL: Rival = {
   currentExpInSubRank: 0,
   avatarUrl: `https://placehold.co/120x120.png`,
   expHistory: [],
+  nextExpGainTime: tomorrow.toISOString(),
 };
 
 export const INITIAL_APP_SETTINGS: AppSettings = {
@@ -187,3 +193,4 @@ export const CHART_COLOR_OPTIONS = [
   { label: 'Chart Color 7 (Pink)', value: 'hsl(var(--chart-7))', key: 'chart-7' },
   { label: 'Chart Color 8 (Teal)', value: 'hsl(var(--chart-8))', key: 'chart-8' },
 ];
+

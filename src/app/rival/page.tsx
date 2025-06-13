@@ -6,42 +6,39 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect, useState, useRef, type ChangeEvent, useMemo } from 'react';
+import React, { useEffect, useState, useRef, type ChangeEvent, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import { Swords, PlusCircle, TrendingUp } from 'lucide-react';
+import { Swords, PlusCircle, TrendingUp, TimerIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
-import { format, subDays, eachDayOfInterval } from 'date-fns';
+import { format, subDays, eachDayOfInterval, differenceInSeconds, isValid as dateIsValid } from 'date-fns';
 
 const CyberpunkRivalPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
     <defs>
       <linearGradient id="cyberRivalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.4}} />
-        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.2}} />
+        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.5}} />
+        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.3}} />
       </linearGradient>
-       <clipPath id="rivalHeadClip">
-        <circle cx="50" cy="40" r="22"/>
-      </clipPath>
     </defs>
-    {/* Base head shape */}
-    <circle cx="50" cy="40" r="22" stroke="hsl(var(--destructive))" strokeWidth="2.5" fill="url(#cyberRivalGrad)" />
+    {/* Base head shape with sharper top */}
+    <path d="M50 15 C 30 15, 20 30, 20 45 C 20 70, 35 85, 50 85 C 65 85, 80 70, 80 45 C 80 30, 70 15, 50 15 Z" stroke="hsl(var(--destructive))" strokeWidth="2.5" fill="url(#cyberRivalGrad)" />
     
-    {/* Aggressive "Horns" or "Crest" */}
-    <path d="M40 18 Q50 10 60 18 L55 25 Q50 20 45 25 Z" fill="hsl(var(--destructive) / 0.7)" stroke="hsl(var(--destructive))" strokeWidth="1.5" />
+    {/* Aggressive "Horns" or "Crest" - more pronounced */}
+    <path d="M38 22 Q50 12 62 22 L57 30 Q50 23 43 30 Z" fill="hsl(var(--destructive) / 0.8)" stroke="hsl(var(--destructive))" strokeWidth="2" />
 
-    {/* Sharper "Eyes" - more angular */}
-    <path d="M35 42 L48 38 L45 46 Z" fill="hsl(var(--accent) / 0.8)" stroke="hsl(var(--accent))" strokeWidth="1"/>
-    <path d="M65 42 L52 38 L55 46 Z" fill="hsl(var(--accent) / 0.8)" stroke="hsl(var(--accent))" strokeWidth="1"/>
+    {/* Sharper, downward-angled "Eyes" */}
+    <path d="M33 45 L48 40 L44 50 Z" fill="hsl(var(--accent) / 0.9)" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
+    <path d="M67 45 L52 40 L56 50 Z" fill="hsl(var(--accent) / 0.9)" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
 
-    {/* More angular "Chin guard" or "Jawline" */}
-    <path d="M30 70 L50 85 L70 70 L65 75 L50 90 L35 75 Z" stroke="hsl(var(--destructive))" strokeWidth="2" fill="hsl(var(--destructive) / 0.3)" />
+    {/* More angular and prominent "Jawline" or "Mandibles" */}
+    <path d="M28 65 L50 88 L72 65 L68 78 L50 92 L32 78 Z" stroke="hsl(var(--destructive) / 0.7)" strokeWidth="2.5" fill="hsl(var(--destructive) / 0.4)" />
     
-    {/* Extra "Tech" detail, slightly menacing */}
-     <rect x="25" y="50" width="8" height="4" fill="hsl(var(--border))" opacity="0.6" transform="rotate(-15 25 50)"/>
-     <rect x="67" y="50" width="8" height="4" fill="hsl(var(--border))" opacity="0.6" transform="rotate(15 67 50)"/>
-      <line x1="50" y1="58" x2="50" y2="68" stroke="hsl(var(--border))" strokeWidth="1.5" opacity="0.7"/>
+    {/* Tech detail: lines/vents */}
+     <line x1="45" y1="25" x2="40" y2="35" stroke="hsl(var(--border) / 0.5)" strokeWidth="1"/>
+     <line x1="55" y1="25" x2="60" y2="35" stroke="hsl(var(--border) / 0.5)" strokeWidth="1"/>
+     <rect x="48" y="60" width="4" height="8" fill="hsl(var(--border) / 0.4)" transform="rotate(10 50 60)" />
   </svg>
 );
 
@@ -58,6 +55,7 @@ export default function RivalPage() {
   const [isLoadingTaunt, setIsLoadingTaunt] = useState(false);
   const rivalImageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [timeLeftForExpGain, setTimeLeftForExpGain] = useState("Calculating...");
 
   useEffect(() => {
     setActiveTab('rival');
@@ -66,6 +64,36 @@ export default function RivalPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setActiveTab]);
+
+  const formatTimeLeft = useCallback((totalSeconds: number) => {
+    if (totalSeconds < 0) return "Processing EXP Gain...";
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, []);
+
+  useEffect(() => {
+    if (!rival.nextExpGainTime) {
+      setTimeLeftForExpGain("Not scheduled");
+      return;
+    }
+
+    const calculateTime = () => {
+      const nextGainDate = new Date(rival.nextExpGainTime!);
+      if (!dateIsValid(nextGainDate)) {
+         setTimeLeftForExpGain("Invalid date");
+         return;
+      }
+      const secondsRemaining = differenceInSeconds(nextGainDate, new Date());
+      setTimeLeftForExpGain(formatTimeLeft(secondsRemaining));
+    };
+
+    calculateTime();
+    const intervalId = setInterval(calculateTime, 1000);
+    return () => clearInterval(intervalId);
+  }, [rival.nextExpGainTime, formatTimeLeft]);
+
 
   const handleGetTaunt = async () => {
     setIsLoadingTaunt(true);
@@ -142,8 +170,9 @@ export default function RivalPage() {
       const dayString = format(day, 'yyyy-MM-dd');
       const entriesForThisDay = history.filter(h => h.date === dayString);
       if (entriesForThisDay.length > 0) {
-          runningTotal = entriesForThisDay[entriesForThisDay.length - 1].totalExp;
-      }
+          // Find the entry with the highest totalExp for that day, in case of multiple entries (shouldn't happen with daily logic)
+          runningTotal = Math.max(...entriesForThisDay.map(e => e.totalExp));
+      } // If no entry for this day, runningTotal remains from the previous day
       cumulativeStatsByDay[dayString] = runningTotal;
     });
     
@@ -192,17 +221,32 @@ export default function RivalPage() {
             <CardDescription className="text-muted-foreground text-xs font-code">{rival.rankName} - {rival.subRank}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-center pt-2 pb-4 px-4">
-            <div className="px-0 sm:px-4"> {/* Adjusted padding for progress bar container */}
+            <div className="px-0 sm:px-4">
               <div className="flex justify-between text-xs mb-1 font-code">
                 <span className="text-foreground uppercase">Rival EXP</span>
                 <span className="text-destructive">{rival.currentExpInSubRank} / {rival.expToNextSubRank}</span>
               </div>
               <Progress
-                value={(rival.currentExpInSubRank / rival.expToNextSubRank) * 100}
-                className="h-2 bg-secondary" /* Removed mx-4, parent div handles padding */
+                value={(rival.expToNextSubRank > 0 ? (rival.currentExpInSubRank / rival.expToNextSubRank) : 0) * 100}
+                className="h-2 bg-secondary" 
                 indicatorClassName="bg-destructive"
               />
             </div>
+            
+            <Card className="bg-background/30 border-border/50 mt-4 rounded-md shadow-inner">
+              <CardHeader className="p-2">
+                 <CardTitle className="text-xs font-medium text-center text-muted-foreground uppercase font-headline tracking-wider flex items-center justify-center">
+                    <TimerIcon className="mr-2 h-4 w-4 text-destructive/70"/>
+                    Next EXP Surge In
+                 </CardTitle>
+              </CardHeader>
+              <CardContent className="p-2 pt-0">
+                 <p className="text-xl font-mono font-bold text-destructive text-center tabular-nums">
+                    {timeLeftForExpGain}
+                  </p>
+              </CardContent>
+            </Card>
+
 
             <Card className="bg-background/50 border-border mt-4 rounded-md">
               <CardHeader className="p-3">
@@ -229,7 +273,7 @@ export default function RivalPage() {
             <CardDescription>Cumulative EXP gained by your rival (over the past 14 days).</CardDescription>
           </CardHeader>
           <CardContent>
-            {rivalExpGrowthData.length > 1 ? ( // Require at least 2 points to draw a line
+            {rivalExpGrowthData.length > 1 ? ( 
               <ChartContainer config={chartConfigRival} className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={rivalExpGrowthData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
@@ -253,3 +297,4 @@ export default function RivalPage() {
     </AppWrapper>
   );
 }
+

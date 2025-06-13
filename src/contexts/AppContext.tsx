@@ -18,7 +18,7 @@ import {
 } from '@/lib/constants';
 import { getAdaptiveTaunt } from '@/ai/flows/adaptive-taunts';
 import type { AdaptiveTauntInput } from '@/ai/flows/adaptive-taunts';
-import { format, isBefore, startOfDay } from 'date-fns';
+import { format, isBefore, startOfDay, addHours, differenceInSeconds } from 'date-fns';
 
 
 interface AppContextType {
@@ -105,9 +105,15 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
      if (!rival.expHistory) {
       setRival(prev => ({ ...prev, expHistory: [] }));
     }
+     if (!rival.nextExpGainTime || isBefore(new Date(rival.nextExpGainTime), new Date())) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0); // Set to next midnight
+      setRival(prev => ({ ...prev, nextExpGainTime: tomorrow.toISOString() }));
+    }
     setIsInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile.customQuote, rival.name, rival.expHistory]);
+  }, [userProfile.customQuote, rival.name, rival.expHistory, rival.nextExpGainTime]);
 
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
@@ -282,7 +288,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateRivalTaunt = useCallback(async () => {
     if (!isInitialized) return;
     try {
-      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; // Rival is doing okay
+      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; 
       const input: AdaptiveTauntInput = {
         userTaskCompletionRate: userProfile.dailyTaskCompletionPercentage / 100,
         rivalTaskCompletionRate: rivalTaskCompletionRate,
@@ -290,59 +296,76 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         rivalRank: `${rival.rankName} (Sub-Rank ${rival.subRank})`,
       };
       const result = await getAdaptiveTaunt(input);
-      
-      // Simulate rival EXP gain
-      const expGainedByRival = Math.floor(Math.random() * (appSettings.rivalDifficulty === "Hard" ? 45 : appSettings.rivalDifficulty === "Normal" ? 30 : 20)) + 
-                               (appSettings.rivalDifficulty === "Hard" ? 15 : appSettings.rivalDifficulty === "Normal" ? 10 : 5);
-
-
-      setRival(prev => {
-        let newCurrentExp = prev.currentExpInSubRank + expGainedByRival;
-        let newSubRank = prev.subRank;
-        let newRankName = prev.rankName;
-        let newExpToNext = prev.expToNextSubRank;
-        let newTotalExp = prev.totalExp + expGainedByRival;
-
-        while (newCurrentExp >= newExpToNext) {
-          newCurrentExp -= newExpToNext;
-          newSubRank++;
-          if (newSubRank > MAX_SUB_RANKS) {
-            newSubRank = 1;
-            const currentRankIndex = RANK_NAMES_TYPED_ARRAY.indexOf(newRankName as typeof RANK_NAMES_TYPED_ARRAY[number]);
-            if (currentRankIndex < RANK_NAMES_TYPED_ARRAY.length - 1) {
-              newRankName = RANK_NAMES_TYPED_ARRAY[currentRankIndex + 1];
-            } else { // Max rank
-              newSubRank = MAX_SUB_RANKS;
-              newCurrentExp = newExpToNext; // Cap EXP at max
-            }
-          }
-          newExpToNext = calculateExpForNextSubRank(newRankName, newSubRank);
-        }
-
-        const newHistoryEntry = {
-          date: new Date().toISOString().split('T')[0],
-          expGained: expGainedByRival,
-          totalExp: newTotalExp,
-        };
-        const updatedExpHistory = [...(prev.expHistory || []), newHistoryEntry].slice(-30); // Keep last 30
-
-        return {
-          ...prev,
-          lastTaunt: result.taunt,
-          currentExpInSubRank: newCurrentExp,
-          subRank: newSubRank,
-          rankName: newRankName,
-          expToNextSubRank: newExpToNext,
-          totalExp: newTotalExp,
-          expHistory: updatedExpHistory,
-        };
-      });
+      setRival(prev => ({ ...prev, lastTaunt: result.taunt }));
 
     } catch (error) {
       console.error("Failed to get rival taunt:", error);
-      setRival(prev => ({ ...prev, lastTaunt: "Hmph. Thinking..." }));
+      setRival(prev => ({ ...prev, lastTaunt: "Hmph. My systems are... momentarily indisposed." }));
     }
-  }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized, appSettings.rivalDifficulty, calculateExpForNextSubRank]);
+  }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized]);
+
+
+  // Effect for scheduled Rival EXP gain
+  useEffect(() => {
+    if (!isInitialized || !rival.nextExpGainTime) return;
+
+    const checkRivalExpGain = () => {
+      if (new Date().toISOString() >= rival.nextExpGainTime!) {
+        const expGainedByRival = Math.floor(Math.random() * (appSettings.rivalDifficulty === "Hard" ? 45 : appSettings.rivalDifficulty === "Normal" ? 30 : 20)) + 
+                                 (appSettings.rivalDifficulty === "Hard" ? 15 : appSettings.rivalDifficulty === "Normal" ? 10 : 5);
+        
+        setRival(prev => {
+          let newCurrentExp = prev.currentExpInSubRank + expGainedByRival;
+          let newSubRank = prev.subRank;
+          let newRankName = prev.rankName;
+          let newExpToNext = prev.expToNextSubRank;
+          let newTotalExp = prev.totalExp + expGainedByRival;
+
+          while (newCurrentExp >= newExpToNext) {
+            newCurrentExp -= newExpToNext;
+            newSubRank++;
+            if (newSubRank > MAX_SUB_RANKS) {
+              newSubRank = 1;
+              const currentRankIndex = RANK_NAMES_TYPED_ARRAY.indexOf(newRankName as typeof RANK_NAMES_TYPED_ARRAY[number]);
+              if (currentRankIndex < RANK_NAMES_TYPED_ARRAY.length - 1) {
+                newRankName = RANK_NAMES_TYPED_ARRAY[currentRankIndex + 1];
+              } else { 
+                newSubRank = MAX_SUB_RANKS;
+                newCurrentExp = newExpToNext; 
+              }
+            }
+            newExpToNext = calculateExpForNextSubRank(newRankName, newSubRank);
+          }
+
+          const newHistoryEntry = {
+            date: new Date().toISOString().split('T')[0],
+            expGained: expGainedByRival,
+            totalExp: newTotalExp,
+          };
+          const updatedExpHistory = [...(prev.expHistory || []), newHistoryEntry].slice(-30);
+          
+          const nextGain = addHours(new Date(prev.nextExpGainTime!), 24);
+
+          return {
+            ...prev,
+            currentExpInSubRank: newCurrentExp,
+            subRank: newSubRank,
+            rankName: newRankName,
+            expToNextSubRank: newExpToNext,
+            totalExp: newTotalExp,
+            expHistory: updatedExpHistory,
+            nextExpGainTime: nextGain.toISOString(),
+          };
+        });
+      }
+    };
+
+    const intervalId = setInterval(checkRivalExpGain, 60000); // Check every minute
+    checkRivalExpGain(); // Initial check
+
+    return () => clearInterval(intervalId);
+  }, [isInitialized, rival.nextExpGainTime, rival.name, appSettings.rivalDifficulty, setRival, calculateExpForNextSubRank]);
+
 
   useEffect(() => {
     if (!isInitialized) return;
