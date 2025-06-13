@@ -330,9 +330,9 @@ export default function HomePage() {
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editingName, setEditingName] = useState(userProfile.userName);
+  const [editingName, setEditingName] = useState(userProfile.userName || "");
   const [isEditingQuote, setIsEditingQuote] = useState(false);
-  const [editingQuote, setEditingQuote] = useState(userProfile.customQuote);
+  const [editingQuote, setEditingQuote] = useState(userProfile.customQuote || "");
 
   const { toast } = useToast();
   const userImageInputRef = useRef<HTMLInputElement>(null);
@@ -344,11 +344,11 @@ export default function HomePage() {
   }, [setActiveTab]);
 
   useEffect(() => {
-    setEditingName(userProfile.userName);
+    setEditingName(userProfile.userName || "");
   }, [userProfile.userName]);
 
   useEffect(() => {
-    setEditingQuote(userProfile.customQuote);
+    setEditingQuote(userProfile.customQuote || "");
   }, [userProfile.customQuote]);
   
   useEffect(() => {
@@ -415,7 +415,7 @@ export default function HomePage() {
   };
 
   const saveName = () => {
-    setUserProfile(prev => ({ ...prev, userName: editingName.trim() }));
+    setUserProfile(prev => ({ ...prev, userName: editingName }));
     if ((userProfile.userName || "").trim() !== editingName.trim()) {
         toast({ title: "Name Updated!" });
     }
@@ -514,13 +514,13 @@ export default function HomePage() {
                 onChange={handleNameChange}
                 onBlur={saveName}
                 onKeyDown={handleNameKeyDown}
-                className="text-2xl font-bold text-center bg-input/50 focus:bg-input border-primary text-primary mb-1 p-1 max-w-[250px]"
+                className="text-2xl font-bold text-center bg-input/50 focus:bg-input border-accent text-accent mb-1 p-1 max-w-[250px]"
                 maxLength={30}
               />
             ) : (
               <h2 
                 onDoubleClick={handleNameDoubleClick} 
-                className="text-2xl font-bold text-primary mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px]"
+                className="text-2xl font-bold text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px]"
                 title="Double-click to edit name"
               >
                 {(userProfile.userName || "").trim() || "Double-click to set name"}
@@ -667,5 +667,7 @@ export default function HomePage() {
   );
 }
 
+
+    
 
     
