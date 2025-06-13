@@ -415,8 +415,10 @@ export default function HomePage() {
   };
 
   const saveName = () => {
-    setUserProfile(prev => ({ ...prev, userName: editingName }));
-    if ((userProfile.userName || "").trim() !== editingName.trim()) {
+    // Save the name as the user typed it (case-sensitive)
+    const nameToSave = editingName.trim();
+    setUserProfile(prev => ({ ...prev, userName: nameToSave }));
+    if ((userProfile.userName || "").trim() !== nameToSave) {
         toast({ title: "Name Updated!" });
     }
     setIsEditingName(false);
@@ -514,16 +516,16 @@ export default function HomePage() {
                 onChange={handleNameChange}
                 onBlur={saveName}
                 onKeyDown={handleNameKeyDown}
-                className="text-2xl font-headline text-center bg-input/50 focus:bg-input border-accent text-accent mb-1 p-1 max-w-[250px]"
+                className="text-2xl font-headline text-center bg-input/50 focus:bg-input border-accent text-accent mb-1 p-1 max-w-[250px] uppercase"
                 maxLength={30}
               />
             ) : (
               <h2 
                 onDoubleClick={handleNameDoubleClick} 
-                className="text-2xl font-headline text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px]"
+                className="text-2xl font-headline text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px] uppercase"
                 title="Double-click to edit name"
               >
-                {(userProfile.userName || "").trim() || "Double-click to set name"}
+                {((userProfile.userName || "").trim().toUpperCase()) || "NAME"}
               </h2>
             )}
             <div className="h-0.5 w-2/3 my-2 bg-accent" /> {/* Orange Accent Line */}
@@ -671,3 +673,4 @@ export default function HomePage() {
     
 
     
+
