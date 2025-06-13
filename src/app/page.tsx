@@ -60,14 +60,14 @@ const AddTaskForm = ({
       taskType: currentTaskType,
     };
 
-    if (currentTaskType === 'event') { // Changed from 'protocol'
+    if (currentTaskType === 'event') {
       if (!scheduledDate) {
-        toast({ title: "Error", description: "Please select a date for events.", variant: "destructive" }); // Changed message
+        toast({ title: "Error", description: "Please select a date for events.", variant: "destructive" });
         return;
       }
       if (!isAllDay) {
         if (!startTime) {
-            toast({ title: "Error", description: "Please enter a start time for timed events.", variant: "destructive" }); // Changed message
+            toast({ title: "Error", description: "Please enter a start time for timed events.", variant: "destructive" });
             return;
         }
         if (endTime && startTime >= endTime) {
@@ -111,7 +111,7 @@ const AddTaskForm = ({
     switch(currentTaskType) {
       case 'daily': return "e.g., Review project notes";
       case 'ritual': return "e.g., Morning Meditation";
-      case 'event': return "e.g., Team Sync Meeting"; // Changed from 'protocol'
+      case 'event': return "e.g., Team Sync Meeting";
       default: return "Enter task name";
     }
   }
@@ -130,7 +130,7 @@ const AddTaskForm = ({
         />
       </div>
 
-      {currentTaskType === 'event' && ( // Changed from 'protocol'
+      {currentTaskType === 'event' && (
         <>
           <div>
             <Label htmlFor="scheduledDate" className="font-headline">Scheduled Date</Label>
@@ -138,7 +138,7 @@ const AddTaskForm = ({
               mode="single"
               selected={scheduledDate}
               onSelect={setScheduledDate}
-              className="rounded-md border mt-1 bg-popover/90 backdrop-blur-sm" // Adjusted bg
+              className="rounded-md mt-1 bg-popover/90 backdrop-blur-sm" 
               disabled={(date) => date < startOfDay(new Date())} 
             />
           </div>
@@ -236,7 +236,7 @@ const TaskItem = ({ task }: { task: Task }) => {
     isTaskEffectivelyCompleted = task.lastCompletedDate === today && !!task.nextDueDate && isBefore(startOfDay(new Date()), parseISO(task.nextDueDate));
     descriptionText = `Due: ${task.nextDueDate ? format(parseISO(task.nextDueDate), "MMM d") : "N/A"}. Repeats every ${task.repeatIntervalDays} day(s). ${task.difficulty} - ${task.attribute}`;
     isDueToday = task.nextDueDate === today;
-  } else if (task.taskType === 'event') { // Changed from 'protocol'
+  } else if (task.taskType === 'event') {
     isTaskEffectivelyCompleted = task.isCompleted;
     let timeInfo = "";
     if (!task.isAllDay && task.startTime) {
@@ -253,7 +253,7 @@ const TaskItem = ({ task }: { task: Task }) => {
   }
   
   const canComplete = (task.taskType === 'ritual' && isDueToday && !isTaskEffectivelyCompleted) || 
-                      ((task.taskType === 'daily' || task.taskType === 'event') && !task.isCompleted && isDueToday); // Changed from 'protocol'
+                      ((task.taskType === 'daily' || task.taskType === 'event') && !task.isCompleted && (task.taskType === 'daily' || (task.taskType === 'event' && isDueToday)) );
 
 
   const handleComplete = () => {
@@ -262,7 +262,7 @@ const TaskItem = ({ task }: { task: Task }) => {
       toast({ title: `${task.taskType.charAt(0).toUpperCase() + task.taskType.slice(1)} Completed!`, description: `+EXP for ${task.name}`});
     } else if (task.taskType === 'ritual' && task.lastCompletedDate === today) {
         toast({ title: "Ritual Already Done", description: "This ritual has already been completed today.", variant: "default" });
-    } else if (!isDueToday) {
+    } else if (!isDueToday && (task.taskType === 'event' || task.taskType === 'ritual')) {
         toast({ title: "Not Due Yet", description: "This task is not scheduled for today.", variant: "default" });
     } else if (isTaskEffectivelyCompleted) {
        toast({ title: "Already Completed", description: "This task is already marked as complete.", variant: "default" });
@@ -276,7 +276,7 @@ const TaskItem = ({ task }: { task: Task }) => {
     }
   };
   
-  const isPastDue = (task.taskType === 'event' && task.scheduledDate && isBefore(parseISO(task.scheduledDate), startOfDay(new Date())) && !task.isCompleted) || // Changed from 'protocol'
+  const isPastDue = (task.taskType === 'event' && task.scheduledDate && isBefore(parseISO(task.scheduledDate), startOfDay(new Date())) && !task.isCompleted) ||
                      (task.taskType === 'ritual' && task.nextDueDate && isBefore(parseISO(task.nextDueDate), startOfDay(new Date())) && task.lastCompletedDate !== task.nextDueDate && task.lastCompletedDate !== today && !task.isCompleted);
 
 
@@ -324,10 +324,10 @@ const CyberpunkAvatarPlaceholder = () => (
 
 
 export default function HomePage() {
-  const { userProfile, getDailyDirectives, getRituals, getEventsForToday, setUserProfile, setActiveTab } = useApp(); // Renamed getProtocolsForToday
+  const { userProfile, getDailyDirectives, getRituals, getEventsForToday, setUserProfile, setActiveTab } = useApp();
   const [isAddDailyOpen, setIsAddDailyOpen] = useState(false);
   const [isAddRitualOpen, setIsAddRitualOpen] = useState(false);
-  const [isAddEventOpen, setIsAddEventOpen] = useState(false); // Changed from isAddProtocolOpen
+  const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 
   const { toast } = useToast();
   const userImageInputRef = useRef<HTMLInputElement>(null);
@@ -338,7 +338,7 @@ export default function HomePage() {
 
   const dailyDirectives = getDailyDirectives();
   const rituals = getRituals();
-  const eventsForToday = getEventsForToday(); // Renamed
+  const eventsForToday = getEventsForToday();
 
   const handleUserAvatarClick = () => {
     userImageInputRef.current?.click();
@@ -544,3 +544,4 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
+
