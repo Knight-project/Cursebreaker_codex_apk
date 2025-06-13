@@ -56,13 +56,17 @@ const BottomNavigationBar = () => {
               onClick={() => setActiveTab(item.key)}
               className={cn(
                 "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200 group relative",
-                active ? "text-primary" : "text-muted-foreground hover:text-foreground",
-                index < navItems.length - 1 ? "border-r border-border/30" : "", // Divider
-                active ? "border-t-2 border-accent" : "border-t-2 border-transparent" // Active tab accent border
+                "border-2", // Base: all tabs have a 2px border width defined
+                active
+                  ? "text-primary border-accent" // Active: all sides get accent color
+                  : [
+                      "text-muted-foreground hover:text-foreground border-transparent", // Non-active: all sides get transparent color initially
+                      (index < navItems.length - 1) ? "border-r-border/30" : "" // If non-active and needs divider, set 2px right border color
+                    ]
               )}
             >
               <div className={cn(
-                "flex flex-col items-center justify-center transition-transform duration-200 h-full", // Ensure inner div also takes height for centering
+                "flex flex-col items-center justify-center transition-transform duration-200 h-full", 
                 active ? "scale-110" : "scale-90 group-hover:scale-100"
               )}>
                 <div className={cn("mb-0.5 flex items-center justify-center h-8")}>
@@ -74,7 +78,6 @@ const BottomNavigationBar = () => {
                     <Icon className={cn("h-6 w-6 text-muted-foreground group-hover:text-foreground")} />
                   )}
                 </div>
-                {/* <span className="text-xs truncate">{item.label}</span> Removed label text as per visual, can be re-added if needed */}
               </div>
             </Link>
           );
@@ -85,3 +88,4 @@ const BottomNavigationBar = () => {
 };
 
 export default BottomNavigationBar;
+
