@@ -4,7 +4,7 @@
 import AppWrapper from '@/components/layout/AppWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Settings2, PlusCircle, Trash2, Edit3, BellRing, BellOff, BarChartBig, Palette, Timer as TimerIcon, Save, ChevronDown } from 'lucide-react'; // Added TimerIcon, Save, ChevronDown
+import { Play, Pause, RotateCcw, Settings2, PlusCircle, Trash2, Edit3, BellRing, BellOff, BarChartBig, Palette, Timer as TimerIcon, Save, ChevronDown } from 'lucide-react'; 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Progress } from '@/components/ui/progress';
@@ -29,6 +29,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { CartesianGrid, XAxis, YAxis, Line, LineChart as RechartsLineChart, ResponsiveContainer } from 'recharts';
 import { format, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachWeekOfInterval, startOfYear, endOfYear, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { playSound } from '@/lib/soundManager';
 
 
 const PomodoroTimer = () => {
@@ -61,28 +62,34 @@ const PomodoroTimer = () => {
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft(prevTime => prevTime - 1);
+        // Optionally play tick sound for last few seconds
+        // if (timeLeft <= 5 && timeLeft > 0) playSound('timerTick');
       }, 1000);
     } else if (isActive && timeLeft === 0) {
       setIsActive(false);
       if (mode === 'focus') {
         const expGained = appSettings.enableAnimations ? Math.floor(pomodoroSettings.focusDuration / 5) : 0;
         if (expGained > 0) {
-          grantExp(expGained);
+          grantExp(expGained); // grantExp handles level up sound
           toast({ title: "Focus Session Complete!", description: `You earned ${expGained} EXP!` });
         } else {
            toast({ title: "Focus Session Complete!"});
         }
+        playSound('pomodoroFocusStart'); // Or a specific "focus session end" sound
         
         const newSessionsCompleted = sessionsCompleted + 1;
         setSessionsCompleted(newSessionsCompleted);
         if (newSessionsCompleted % pomodoroSettings.sessionsBeforeLongBreak === 0) {
           setMode('longBreak');
+          playSound('pomodoroBreakStart');
         } else {
           setMode('shortBreak');
+          playSound('pomodoroBreakStart');
         }
       } else { 
         toast({ title: "Break Over!", description: "Time to focus again." });
         setMode('focus');
+        playSound('pomodoroFocusStart');
       }
     }
     return () => {
@@ -90,13 +97,21 @@ const PomodoroTimer = () => {
     };
   }, [isActive, timeLeft, mode, sessionsCompleted, pomodoroSettings, grantExp, toast, appSettings.enableAnimations]);
 
-  const toggleTimer = () => setIsActive(!isActive);
+  const toggleTimer = () => {
+    setIsActive(!isActive);
+    playSound('buttonClick');
+    if (!isActive && timeLeft > 0) { // Starting timer
+        if(mode === 'focus') playSound('pomodoroFocusStart');
+        else playSound('pomodoroBreakStart');
+    }
+  };
 
   const resetTimer = () => {
     setIsActive(false);
     setMode('focus');
     setTimeLeft(pomodoroSettings.focusDuration * 60);
     setSessionsCompleted(0);
+    playSound('buttonClick');
   };
   
   const handleSettingsSave = () => {
@@ -105,6 +120,7 @@ const PomodoroTimer = () => {
     setIsActive(false);
     setTimeLeft(calculateTimeForMode(mode)); 
     toast({ title: "Pomodoro settings updated!" });
+    playSound('buttonClick');
   };
 
   const formatTime = (seconds: number) => {
@@ -124,7 +140,7 @@ const PomodoroTimer = () => {
         </CardTitle>
          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="icon"><Settings2 className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => playSound('buttonClick')}><Settings2 className="h-5 w-5" /></Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -149,7 +165,7 @@ const PomodoroTimer = () => {
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+              <DialogClose asChild><Button variant="outline" onClick={() => playSound('buttonClick')}>Cancel</Button></DialogClose>
               <Button onClick={handleSettingsSave}>Save</Button>
             </DialogFooter>
           </DialogContent>
@@ -284,11 +300,11 @@ const IntervalTimerForm = ({
             className="mt-1 flex space-x-4"
         >
             <div className="flex items-center space-x-2">
-                <RadioGroupItem value="windowed" id="modeWindowed" />
+                <RadioGroupItem value="windowed" id="modeWindowed" onClick={() => playSound('buttonClick')}/>
                 <Label htmlFor="modeWindowed">Windowed</Label>
             </div>
             <div className="flex items-center space-x-2">
-                <RadioGroupItem value="duration" id="modeDuration" />
+                <RadioGroupItem value="duration" id="modeDuration" onClick={() => playSound('buttonClick')}/>
                 <Label htmlFor="modeDuration">Duration</Label>
             </div>
         </RadioGroup>
@@ -326,12 +342,12 @@ const IntervalTimerForm = ({
       </div>
 
       <div className="flex items-center space-x-2 pt-2">
-        <Switch id="intervalEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleChange('isEnabled', checked)} />
+        <Switch id="intervalEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => {handleChange('isEnabled', checked); playSound('buttonClick');}} />
         <Label htmlFor="intervalEnabled">Enable Timer</Label>
       </div>
       <DialogFooter className="pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit">Save Timer</Button>
+        <Button type="button" variant="outline" onClick={() => {onClose(); playSound('buttonClick');}}>Cancel</Button>
+        <Button type="submit" onClick={() => playSound('buttonClick')}>Save Timer</Button>
       </DialogFooter>
     </form>
   );
@@ -423,7 +439,7 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
             setStatusMessage("Window ended for today.");
           }
         }
-      } else { // Duration mode
+      } else { 
         if (!timer.startTime) {
           setStatusMessage("Timer enabled, awaiting start...");
           setTimeLeftForNotification(null);
@@ -439,7 +455,6 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
           setStatusMessage("Duration complete.");
           setTimeLeftForNotification(null);
           setTimeLeftForDuration(0);
-          // The AppContext will handle disabling the timer
           return;
         }
 
@@ -498,7 +513,7 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
           <CardTitle className="text-lg font-medium text-foreground">{timer.taskName}</CardTitle>
           <Switch
             checked={timer.isEnabled}
-            onCheckedChange={(checked) => onToggleEnable(timer, checked)}
+            onCheckedChange={(checked) => {onToggleEnable(timer, checked); playSound('buttonClick');}}
             aria-label={`Toggle timer ${timer.taskName}`}
           />
         </div>
@@ -512,10 +527,10 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
         </p>
       </CardContent>
       <CardFooter className="flex justify-end space-x-2 pb-3 pt-0">
-        <Button variant="ghost" size="icon" onClick={() => onEdit(timer)}>
+        <Button variant="ghost" size="icon" onClick={() => {onEdit(timer); playSound('buttonClick');}}>
           <Edit3 className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => onDelete(timer.id)} className="text-destructive hover:text-destructive">
+        <Button variant="ghost" size="icon" onClick={() => {onDelete(timer.id); playSound('buttonClick');}} className="text-destructive hover:text-destructive">
           <Trash2 className="h-4 w-4" />
         </Button>
       </CardFooter>
@@ -572,7 +587,7 @@ const IntervalTimersManager = () => {
             }
 
 
-        } else { // Duration Mode
+        } else { 
             if (!setting.startTime || (!setting.durationHours && !setting.durationMinutes)) return;
             
             const startDate = new Date(setting.startTime);
@@ -582,15 +597,14 @@ const IntervalTimersManager = () => {
             const endDate = new Date(startDate.getTime() + totalDurationSeconds * 1000);
 
             if (now.getTime() >= endDate.getTime()) {
-                // Timer duration has completed
                 updateIntervalTimerSetting({ ...setting, isEnabled: false, startTime: undefined });
                 toast({ title: "Timer Finished", description: `${setting.taskName} duration has completed.` });
+                playSound('notification'); // Or a specific "timer end" sound
                 localStorage.removeItem(lastNotifiedTimestampKey); 
                 localStorage.removeItem(lastNotifiedMinuteMarkerKey);
-                return; // Stop further processing for this timer
+                return; 
             }
             
-            // Check for repeat interval notification within the active duration
             let baseTimeForNotificationCheck = startDate;
             if(lastNotifiedTimestamp){
                 const lastNotifiedDate = new Date(parseInt(lastNotifiedTimestamp));
@@ -613,12 +627,13 @@ const IntervalTimersManager = () => {
           const lastNotifiedMinuteMarker = localStorage.getItem(lastNotifiedMinuteMarkerKey);
           if (lastNotifiedMinuteMarker !== currentMinuteMarker) {
               toast({ title: "Interval Reminder", description: setting.taskName });
+              playSound('notification');
               localStorage.setItem(lastNotifiedTimestampKey, now.getTime().toString());
               localStorage.setItem(lastNotifiedMinuteMarkerKey, currentMinuteMarker);
           }
         }
       });
-    }, 60000); // Check every minute
+    }, 60000); 
 
     return () => clearInterval(timerId);
   }, [intervalTimerSettings, toast, updateIntervalTimerSetting]);
@@ -647,18 +662,13 @@ const IntervalTimersManager = () => {
     const updatedTimer = { ...timer, isEnabled: newEnabledState };
     if (timer.timerMode === 'duration') {
       if (newEnabledState && !timer.startTime) { 
-        // Only set startTime if it's not already set (e.g. re-enabling a paused timer)
          const existingTimer = intervalTimerSettings.find(t => t.id === timer.id);
          if (!existingTimer?.startTime) {
             updatedTimer.startTime = new Date().toISOString();
          } else {
-            updatedTimer.startTime = existingTimer.startTime; // Retain original start if just paused
+            updatedTimer.startTime = existingTimer.startTime; 
          }
       } else if (!newEnabledState) { 
-        // When disabling a duration timer, we might want to pause it rather than reset startTime.
-        // For now, clearing startTime effectively resets its current run if re-enabled later.
-        // To implement pause, we'd need to store elapsed time.
-        // updatedTimer.startTime = undefined; // Decided to keep startTime to allow "resume" if re-enabled same day. Manager clears if day passes.
         localStorage.removeItem(`lastNotified_${timer.id}_timestamp`); 
         localStorage.removeItem(`lastNotified_${timer.id}_minuteMarker`);
       }
@@ -684,7 +694,7 @@ const IntervalTimersManager = () => {
         </CardTitle>
         <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTimer(undefined); }}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" onClick={() => { setEditingTimer(undefined); setIsFormOpen(true); }}>
+            <Button variant="outline" size="sm" onClick={() => { setEditingTimer(undefined); setIsFormOpen(true); playSound('buttonClick');}}>
               <PlusCircle className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Add Timer</span>
             </Button>
@@ -696,7 +706,7 @@ const IntervalTimersManager = () => {
             <IntervalTimerForm 
               onSave={handleSaveTimer} 
               initialData={editingTimer} 
-              onClose={() => { setIsFormOpen(false); setEditingTimer(undefined); }}
+              onClose={() => { setIsFormOpen(false); setEditingTimer(undefined); playSound('buttonClick'); }}
             />
           </DialogContent>
         </Dialog>
@@ -710,7 +720,7 @@ const IntervalTimersManager = () => {
             key={timer.id}
             timer={timer}
             onDelete={handleDeleteTimer}
-            onEdit={(t) => { setEditingTimer(t); setIsFormOpen(true); }}
+            onEdit={(t) => { setEditingTimer(t); setIsFormOpen(true); playSound('buttonClick'); }}
             onToggleEnable={handleToggleEnable}
           />
         ))}
@@ -738,7 +748,7 @@ const CustomGraphForm = ({
     { 
       name: initialData.name,
       timeView: initialData.timeView,
-      variables: initialData.variables.map(v => ({ ...v, tempId: v.id })), // Use actual id as tempId for existing
+      variables: initialData.variables.map(v => ({ ...v, tempId: v.id })), 
     } : 
     { 
       name: '', 
@@ -759,6 +769,7 @@ const CustomGraphForm = ({
   };
 
   const addVariable = () => {
+    playSound('buttonClick');
     const nextColorIndex = formData.variables.length % CHART_COLOR_OPTIONS.length;
     setFormData(prev => ({
       ...prev,
@@ -771,6 +782,7 @@ const CustomGraphForm = ({
   };
 
   const removeVariable = (tempId: string) => {
+    playSound('buttonClick');
     if (formData.variables.length <= 1) {
       toast({ title: "Cannot Remove", description: "A graph must have at least one variable.", variant: "destructive" });
       return;
@@ -814,14 +826,14 @@ const CustomGraphForm = ({
       <div>
         <Label htmlFor="graphTimeView">Default Time View</Label>
         <Select value={formData.timeView} onValueChange={(value) => handleGraphChange('timeView', value as TimeView)}>
-          <SelectTrigger id="graphTimeView" className="mt-1">
+          <SelectTrigger id="graphTimeView" className="mt-1" onClick={() => playSound('buttonClick')}>
             <SelectValue placeholder="Select time view" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="weekly">Weekly</SelectItem>
-            <SelectItem value="monthly">Monthly</SelectItem>
-            <SelectItem value="yearly">Yearly</SelectItem>
-            <SelectItem value="alltime">All Time (Max 2 Years)</SelectItem>
+            <SelectItem value="weekly" onClick={() => playSound('buttonClick')}>Weekly</SelectItem>
+            <SelectItem value="monthly" onClick={() => playSound('buttonClick')}>Monthly</SelectItem>
+            <SelectItem value="yearly" onClick={() => playSound('buttonClick')}>Yearly</SelectItem>
+            <SelectItem value="alltime" onClick={() => playSound('buttonClick')}>All Time (Max 2 Years)</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -845,12 +857,12 @@ const CustomGraphForm = ({
               <div>
                 <Label htmlFor={`varColor-${variable.tempId}`}>Color</Label>
                 <Select value={variable.color} onValueChange={(value) => handleVariableChange(variable.tempId, 'color', value)}>
-                  <SelectTrigger id={`varColor-${variable.tempId}`}>
+                  <SelectTrigger id={`varColor-${variable.tempId}`} onClick={() => playSound('buttonClick')}>
                     <SelectValue placeholder="Select color" />
                   </SelectTrigger>
                   <SelectContent>
                     {CHART_COLOR_OPTIONS.map(opt => (
-                      <SelectItem key={opt.key} value={opt.value}>
+                      <SelectItem key={opt.key} value={opt.value} onClick={() => playSound('buttonClick')}>
                         <div className="flex items-center">
                            <Palette className="mr-2 h-4 w-4" style={{ color: opt.value }} />
                            {opt.label}
@@ -868,8 +880,8 @@ const CustomGraphForm = ({
         </Button>
       </div>
       <DialogFooter className="pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit">Save Graph</Button>
+        <Button type="button" variant="outline" onClick={() => {onClose(); playSound('buttonClick');}}>Cancel</Button>
+        <Button type="submit" onClick={() => playSound('buttonClick')}>Save Graph</Button>
       </DialogFooter>
     </form>
   );
@@ -926,7 +938,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
   const chartData = useMemo(() => {
     let dates: Date[] = [];
     const now = new Date();
-    switch (currentDisplayTimeView) { // Use local state for time view
+    switch (currentDisplayTimeView) { 
       case 'weekly':
         dates = eachDayOfInterval({ start: subDays(now, 6), end: now });
         break;
@@ -956,7 +968,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
       });
       return entry;
     });
-  }, [graph, customGraphDailyLogs, currentDisplayTimeView]); // Added currentDisplayTimeView to dependencies
+  }, [graph, customGraphDailyLogs, currentDisplayTimeView]); 
 
   const timeViewOptions: {value: TimeView, label: string}[] = [
     { value: 'weekly', label: 'Weekly View' },
@@ -971,21 +983,21 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
         <div className="flex justify-between items-center mb-1">
           <CardTitle className="text-lg font-medium text-foreground">{graph.name}</CardTitle>
            <div className="flex space-x-1">
-            <Button variant="ghost" size="icon" onClick={() => onEdit(graph)} className="h-7 w-7">
+            <Button variant="ghost" size="icon" onClick={() => {onEdit(graph); playSound('buttonClick');}} className="h-7 w-7">
               <Edit3 className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(graph.id)} className="text-destructive hover:text-destructive h-7 w-7">
+            <Button variant="ghost" size="icon" onClick={() => {onDelete(graph.id); playSound('buttonClick');}} className="text-destructive hover:text-destructive h-7 w-7">
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
-         <Select value={currentDisplayTimeView} onValueChange={(value: TimeView) => setCurrentDisplayTimeView(value)}>
+         <Select value={currentDisplayTimeView} onValueChange={(value: TimeView) => {setCurrentDisplayTimeView(value); playSound('buttonClick');}}>
             <SelectTrigger className="w-[180px] h-8 text-xs bg-input/30 focus:bg-input">
               <SelectValue placeholder="Select time view" />
             </SelectTrigger>
             <SelectContent>
               {timeViewOptions.map(opt => (
-                <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                <SelectItem key={opt.value} value={opt.value} className="text-xs" onClick={() => playSound('buttonClick')}>
                   {opt.label}
                 </SelectItem>
               ))}
@@ -1023,7 +1035,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
       </CardContent>
       <CardFooter className="flex flex-col space-y-3 items-start p-4 pt-0">
         <div 
-          onClick={() => setIsLoggingOpen(!isLoggingOpen)} 
+          onClick={() => {setIsLoggingOpen(!isLoggingOpen); playSound('buttonClick');}} 
           className="flex items-center justify-between w-full cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
           role="button"
           tabIndex={0}
@@ -1098,7 +1110,7 @@ const GraphsManager = () => {
         </CardTitle>
         <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingGraph(undefined); }}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" onClick={() => { setEditingGraph(undefined); setIsFormOpen(true); }}>
+            <Button variant="outline" size="sm" onClick={() => { setEditingGraph(undefined); setIsFormOpen(true); playSound('buttonClick'); }}>
               <PlusCircle className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Add Graph</span>
             </Button>
@@ -1110,7 +1122,7 @@ const GraphsManager = () => {
             <CustomGraphForm 
               onSave={handleSaveGraph} 
               initialData={editingGraph} 
-              onClose={() => { setIsFormOpen(false); setEditingGraph(undefined); }}
+              onClose={() => { setIsFormOpen(false); setEditingGraph(undefined); playSound('buttonClick');}}
             />
           </DialogContent>
         </Dialog>
@@ -1125,7 +1137,7 @@ const GraphsManager = () => {
               key={graph.id}
               graph={graph}
               onDelete={handleDeleteGraph}
-              onEdit={(g) => { setEditingGraph(g); setIsFormOpen(true); }}
+              onEdit={(g) => { setEditingGraph(g); setIsFormOpen(true); playSound('buttonClick'); }}
             />
           ))}
         </div>
@@ -1151,4 +1163,3 @@ export default function TimersPage() {
     </AppWrapper>
   );
 }
-

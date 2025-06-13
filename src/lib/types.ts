@@ -79,6 +79,7 @@ export interface AppSettings {
   enableAnimations: boolean;
   rivalDifficulty: "Easy" | "Normal" | "Hard";
   autoAssignStatExp: boolean;
+  enableSoundEffects: boolean; // New setting
 }
 
 export interface PomodoroSettings {
@@ -193,6 +194,7 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
   enableAnimations: true,
   rivalDifficulty: "Normal",
   autoAssignStatExp: true,
+  enableSoundEffects: true, // Default to true
 };
 
 export const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSetting[] = [];
@@ -218,5 +220,3 @@ export const REMINDER_OPTIONS = [
   { label: "30 minutes before", value: 30 },
   { label: "1 hour before", value: 60 },
 ];
-
-    

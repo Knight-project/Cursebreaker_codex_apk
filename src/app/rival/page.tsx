@@ -14,6 +14,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
 import { format, subDays, eachDayOfInterval, differenceInSeconds, isValid as dateIsValid } from 'date-fns';
 import RankDisplay from '@/components/shared/RankDisplay';
+import { playSound } from '@/lib/soundManager';
 
 const CyberpunkRivalPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
@@ -86,12 +87,13 @@ export default function RivalPage() {
 
   const handleGetTaunt = async () => {
     setIsLoadingTaunt(true);
-    await updateRivalTaunt();
+    await updateRivalTaunt(); // updateRivalTaunt in AppContext will now play the sound
     setIsLoadingTaunt(false);
   };
 
   const handleRivalAvatarClick = () => {
     rivalImageInputRef.current?.click();
+    playSound('buttonClick');
   };
 
   const handleRivalAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +112,7 @@ export default function RivalPage() {
       reader.onloadend = () => {
         setRival(prev => ({ ...prev, avatarUrl: reader.result as string }));
         toast({ title: "Rival Avatar Updated!" });
+        playSound('buttonClick'); // Or a more specific 'avatarChanged' sound
       };
       reader.onerror = () => {
         toast({

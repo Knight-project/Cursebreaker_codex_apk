@@ -21,6 +21,7 @@ import RankDisplay from '@/components/shared/RankDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, parseISO, startOfDay, isBefore } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
+import { playSound } from '@/lib/soundManager';
 
 
 const AddTaskForm = ({
@@ -34,14 +35,12 @@ const AddTaskForm = ({
   const [difficulty, setDifficulty] = useState<'Easy' | 'Moderate' | 'Hard'>('Moderate');
   const [attribute, setAttribute] = useState<Attribute>('None');
   
-  // Protocol specific
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(new Date());
   const [isAllDay, setIsAllDay] = useState(true);
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
   const [reminderOffsetMinutes, setReminderOffsetMinutes] = useState<number>(0);
 
-  // Ritual specific
   const [repeatIntervalDays, setRepeatIntervalDays] = useState<number>(1);
 
   const { addTask } = useApp();
@@ -90,15 +89,13 @@ const AddTaskForm = ({
         return;
       }
       addTask({ ...baseTaskData, repeatIntervalDays });
-    } else { // Daily
+    } else { 
       addTask(baseTaskData);
     }
 
-    // Reset common fields
     setTaskName('');
     setDifficulty('Moderate');
     setAttribute('None');
-    // Reset specific fields
     setScheduledDate(new Date());
     setIsAllDay(true);
     setStartTime('09:00');
@@ -107,7 +104,7 @@ const AddTaskForm = ({
     setRepeatIntervalDays(1);
     
     toast({ title: "Success", description: `${currentTaskType.charAt(0).toUpperCase() + currentTaskType.slice(1)} added!` });
-    onTaskAdd(); // Close dialog
+    onTaskAdd(); 
   };
 
   return (
@@ -227,10 +224,10 @@ const TaskItem = ({ task }: { task: Task }) => {
 
   let isTaskEffectivelyCompleted = false;
   let descriptionText = `${task.difficulty} - ${task.attribute}`;
-  let isDueToday = true; // Assume due today unless specified otherwise
+  let isDueToday = true; 
 
   if (task.taskType === 'ritual') {
-    isTaskEffectivelyCompleted = task.lastCompletedDate === today && task.nextDueDate === today;
+    isTaskEffectivelyCompleted = task.lastCompletedDate === today && !!task.nextDueDate && isBefore(startOfDay(new Date()), parseISO(task.nextDueDate));
     descriptionText = `Due: ${task.nextDueDate ? format(parseISO(task.nextDueDate), "MMM d") : "N/A"}. Repeats every ${task.repeatIntervalDays} day(s). ${task.difficulty} - ${task.attribute}`;
     isDueToday = task.nextDueDate === today;
   } else if (task.taskType === 'protocol') {
@@ -245,7 +242,7 @@ const TaskItem = ({ task }: { task: Task }) => {
     descriptionText = `Scheduled: ${task.scheduledDate ? format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d") : "N/A"}${timeInfo}. ${task.difficulty} - ${task.attribute}`;
     isDueToday = task.scheduledDate === today;
 
-  } else { // Daily
+  } else { 
     isTaskEffectivelyCompleted = task.isCompleted;
   }
   
@@ -261,6 +258,8 @@ const TaskItem = ({ task }: { task: Task }) => {
         toast({ title: "Ritual Already Done", description: "This ritual has already been completed today.", variant: "default" });
     } else if (!isDueToday) {
         toast({ title: "Not Due Yet", description: "This task is not scheduled for today.", variant: "default" });
+    } else if (isTaskEffectivelyCompleted) {
+       toast({ title: "Already Completed", description: "This task is already marked as complete.", variant: "default" });
     }
   };
 
@@ -272,7 +271,7 @@ const TaskItem = ({ task }: { task: Task }) => {
   };
   
   const isPastDue = (task.taskType === 'protocol' && task.scheduledDate && isBefore(parseISO(task.scheduledDate), startOfDay(new Date())) && !task.isCompleted) ||
-                     (task.taskType === 'ritual' && task.nextDueDate && isBefore(parseISO(task.nextDueDate), startOfDay(new Date())) && task.lastCompletedDate !== task.nextDueDate && task.lastCompletedDate !== today);
+                     (task.taskType === 'ritual' && task.nextDueDate && isBefore(parseISO(task.nextDueDate), startOfDay(new Date())) && task.lastCompletedDate !== task.nextDueDate && task.lastCompletedDate !== today && !task.isCompleted);
 
 
   return (
@@ -336,12 +335,13 @@ export default function HomePage() {
 
   const handleUserAvatarClick = () => {
     userImageInputRef.current?.click();
+    playSound('buttonClick');
   };
 
   const handleUserAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 2 * 1024 * 1024) { 
         toast({
           title: "Image too large",
           description: "Please select an image smaller than 2MB.",
@@ -354,6 +354,7 @@ export default function HomePage() {
       reader.onloadend = () => {
         setUserProfile(prev => ({ ...prev, avatarUrl: reader.result as string }));
         toast({ title: "Avatar Updated!" });
+        playSound('buttonClick');
       };
       reader.onerror = () => {
         toast({
@@ -423,7 +424,7 @@ export default function HomePage() {
             <CardDescription className="text-muted-foreground mt-1 text-xs font-code italic">{userProfile.customQuote}</CardDescription>
 
             <Link href="/stats" passHref className="mt-3 w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4">
+              <Button variant="outline" className="w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4" onClick={() => playSound('buttonClick')}>
                 <User className="mr-2 h-4 w-4" />
                 Status Report
               </Button>
@@ -446,13 +447,13 @@ export default function HomePage() {
 
         <div className="grid grid-cols-2 gap-3">
           <Link href="/graphs" passHref>
-            <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-muted-foreground/50 text-muted-foreground hover:bg-muted hover:text-foreground font-headline uppercase text-xs">
+            <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-muted-foreground/50 text-muted-foreground hover:bg-muted hover:text-foreground font-headline uppercase text-xs" onClick={() => playSound('buttonClick')}>
               <BarChart2 className="h-6 w-6 mb-1" />
               <span>Data Logs</span>
             </Button>
           </Link>
           <Link href="/journal" passHref>
-            <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-muted-foreground/50 text-muted-foreground hover:bg-muted hover:text-foreground font-headline uppercase text-xs">
+            <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center border-muted-foreground/50 text-muted-foreground hover:bg-muted hover:text-foreground font-headline uppercase text-xs" onClick={() => playSound('buttonClick')}>
               <BookOpen className="h-6 w-6 mb-1" />
               <span>Chronicles</span>
             </Button>
@@ -461,9 +462,9 @@ export default function HomePage() {
 
         <Tabs defaultValue="daily" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-card/80 backdrop-blur-sm border-border">
-            <TabsTrigger value="daily" className="font-headline">Directives</TabsTrigger>
-            <TabsTrigger value="rituals" className="font-headline">Rituals</TabsTrigger>
-            <TabsTrigger value="protocols" className="font-headline">Protocols</TabsTrigger>
+            <TabsTrigger value="daily" className="font-headline" onClick={() => playSound('buttonClick')}>Directives</TabsTrigger>
+            <TabsTrigger value="rituals" className="font-headline" onClick={() => playSound('buttonClick')}>Rituals</TabsTrigger>
+            <TabsTrigger value="protocols" className="font-headline" onClick={() => playSound('buttonClick')}>Protocols</TabsTrigger>
           </TabsList>
 
           <TabsContent value="daily">
@@ -472,7 +473,7 @@ export default function HomePage() {
                 <CardTitle className="font-headline text-lg text-primary uppercase">Daily Directives</CardTitle>
                 <Dialog open={isAddDailyOpen} onOpenChange={setIsAddDailyOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
+                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" onClick={() => playSound('buttonClick')}>
                       <PlusCircle className="h-4 w-4 mr-2 neon-icon" /> New Directive
                     </Button>
                   </DialogTrigger>
@@ -494,7 +495,7 @@ export default function HomePage() {
                 <CardTitle className="font-headline text-lg text-primary uppercase">Active Rituals</CardTitle>
                  <Dialog open={isAddRitualOpen} onOpenChange={setIsAddRitualOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
+                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" onClick={() => playSound('buttonClick')}>
                       <Repeat className="h-4 w-4 mr-2 neon-icon" /> New Ritual
                     </Button>
                   </DialogTrigger>
@@ -516,7 +517,7 @@ export default function HomePage() {
                 <CardTitle className="font-headline text-lg text-primary uppercase">Today's Protocols</CardTitle>
                 <Dialog open={isAddProtocolOpen} onOpenChange={setIsAddProtocolOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
+                    <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" onClick={() => playSound('buttonClick')}>
                       <CalendarDays className="h-4 w-4 mr-2 neon-icon" /> New Protocol
                     </Button>
                   </DialogTrigger>
@@ -536,5 +537,3 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
-
-    

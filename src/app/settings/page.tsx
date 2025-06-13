@@ -13,6 +13,7 @@ import React, { useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { RIVAL_NAMES_POOL } from '@/lib/constants';
+import { playSound } from '@/lib/soundManager';
 
 export default function SettingsPage() {
   const { appSettings, setAppSettings, userProfile, setUserProfile, rival, setRival, setActiveTab } = useApp();
@@ -25,6 +26,7 @@ export default function SettingsPage() {
   const handleSettingsChange = (key: keyof typeof appSettings, value: any) => {
     setAppSettings(prev => ({ ...prev, [key]: value }));
     toast({ title: "Settings Updated", description: `${String(key).replace(/([A-Z])/g, ' $1').trim()} setting changed.` });
+    playSound('buttonClick');
   };
 
   const handleQuoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,11 +35,13 @@ export default function SettingsPage() {
 
   const handleSaveQuote = () => {
      toast({ title: "Quote Updated", description: "Your motivational quote has been saved." });
+     playSound('buttonClick');
   };
 
   const handleRivalNameChange = (newName: string) => {
     setRival(prev => ({ ...prev, name: newName }));
     toast({ title: "Rival Name Updated!", description: `Your rival is now known as ${newName}.` });
+    playSound('buttonClick');
   };
 
   return (
@@ -57,6 +61,16 @@ export default function SettingsPage() {
                 checked={appSettings.enableAnimations}
                 onCheckedChange={(checked) => handleSettingsChange('enableAnimations', checked)}
                 aria-label="Toggle animations"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between p-4 rounded-md border bg-background/30">
+              <Label htmlFor="enableSoundEffects" className="text-lg font-medium">Enable Sound Effects</Label>
+              <Switch
+                id="enableSoundEffects"
+                checked={appSettings.enableSoundEffects}
+                onCheckedChange={(checked) => handleSettingsChange('enableSoundEffects', checked)}
+                aria-label="Toggle sound effects"
               />
             </div>
 
