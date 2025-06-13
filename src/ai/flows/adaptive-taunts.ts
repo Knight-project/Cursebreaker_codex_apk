@@ -2,15 +2,15 @@
 'use server';
 
 /**
- * @fileOverview Provides adaptive taunts based on the user's and rival's performance.
+ * @fileOverview Provides rival taunts. Now uses a pre-generated list.
  *
- * - getAdaptiveTaunt - A function that generates a taunt based on performance metrics.
- * - AdaptiveTauntInput - The input type for the getAdaptiveTaunt function.
+ * - getAdaptiveTaunt - A function that returns a pre-generated taunt.
+ * - AdaptiveTauntInput - The input type for the getAdaptiveTaunt function (now ignored for generation).
  * - AdaptiveTauntOutput - The return type for the getAdaptiveTaunt function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'genkit'; // Retained for schema exports
+import { PREGENERATED_RIVAL_TAUNTS } from '@/lib/rival-taunts';
 
 const AdaptiveTauntInputSchema = z.object({
   userTaskCompletionRate: z
@@ -32,62 +32,11 @@ const AdaptiveTauntOutputSchema = z.object({
 export type AdaptiveTauntOutput = z.infer<typeof AdaptiveTauntOutputSchema>;
 
 export async function getAdaptiveTaunt(input: AdaptiveTauntInput): Promise<AdaptiveTauntOutput> {
-  return adaptiveTauntFlow(input);
+  // Input is ignored; taunt is selected randomly from the pre-generated list.
+  if (PREGENERATED_RIVAL_TAUNTS.length === 0) {
+    return { taunt: "Hmph. Words are beneath me today." }; // Fallback for empty list
+  }
+  const randomIndex = Math.floor(Math.random() * PREGENERATED_RIVAL_TAUNTS.length);
+  const selectedTaunt = PREGENERATED_RIVAL_TAUNTS[randomIndex];
+  return { taunt: selectedTaunt };
 }
-
-const adaptiveTauntPrompt = ai.definePrompt({
-  name: 'adaptiveTauntPrompt',
-  input: {
-    schema: AdaptiveTauntInputSchema,
-  },
-  output: {schema: AdaptiveTauntOutputSchema},
-  prompt: `You are a highly competitive and arrogant rival character in a fantasy-themed habit-tracking app. Your goal is to taunt the user with aggressive, cutting, and demotivating remarks to (paradoxically) motivate them through sheer annoyance and a desire to prove you wrong.
-
-  Your taunts should be short, no more than 25 words.
-  Maintain a fantasy setting tone.
-  If the user is doing poorly or worse than you, be extremely condescending and harsh. Examples: "You'll never amount to anything if you don't get a hold of yourself, maggot.", "Look at you, pathetic. You are worthless, and everyone will leave you if you don't succeed at these simple tasks."
-  If the user is doing well or better than you, your taunts should be dismissive of their success or hint that it's temporary, or that your own (implied) power is far greater. Examples: "A lucky streak, nothing more. Don't get comfortable.", "Impressive... for a beginner. My power still eclipses yours."
-
-  User Data:
-  User Rank: {{{userRank}}}
-  Rival Rank: {{{rivalRank}}}
-  User Task Completion Rate: {{userTaskCompletionRate}} (A value from 0 to 1, where 1 is 100% completion)
-  Rival Task Completion Rate: {{rivalTaskCompletionRate}} (A value from 0 to 1, where 1 is 100% completion. Assume you, the rival, are generally doing well)
-
-  Generate a single, impactful taunt based on this data.
-
-  Taunt:`,
-  config: {
-    safetySettings: [
-      {
-        category: 'HARM_CATEGORY_HARASSMENT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE', // Allows for more aggressive taunts but blocks severe harassment
-      },
-      {
-        category: 'HARM_CATEGORY_HATE_SPEECH',
-        threshold: 'BLOCK_LOW_AND_ABOVE', // Keep this strict
-      },
-      {
-        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-        threshold: 'BLOCK_LOW_AND_ABOVE', // Keep this strict
-      },
-      {
-        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-        threshold: 'BLOCK_LOW_AND_ABOVE', // Keep this strict
-      }
-    ]
-  }
-});
-
-const adaptiveTauntFlow = ai.defineFlow(
-  {
-    name: 'adaptiveTauntFlow',
-    inputSchema: AdaptiveTauntInputSchema,
-    outputSchema: AdaptiveTauntOutputSchema,
-  },
-  async input => {
-    const {output} = await adaptiveTauntPrompt(input);
-    return output!;
-  }
-);
-
