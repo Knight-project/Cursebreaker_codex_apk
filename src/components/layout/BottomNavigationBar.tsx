@@ -45,8 +45,8 @@ const BottomNavigationBar = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border z-50">
-      <div className="container mx-auto px-0 h-16 flex justify-around items-stretch"> {/* Changed items-center to items-stretch */}
-        {navItems.map((item, index) => {
+      <div className="container mx-auto px-0 h-16 flex justify-around items-stretch">
+        {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.key);
           return (
@@ -57,8 +57,8 @@ const BottomNavigationBar = () => {
               className={cn(
                 "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200 group relative",
                 active
-                  ? "text-primary border-t-2 border-t-accent border-l-transparent border-r-transparent border-b-transparent active-nav-shadow"
-                  : "text-muted-foreground hover:text-foreground border-transparent" // Simplified: no right borders for non-active
+                  ? "text-primary border-b-2 border-b-accent border-l-transparent border-r-transparent border-t-transparent active-nav-shadow" // Changed border-t-2 to border-b-2
+                  : "text-muted-foreground hover:text-foreground border-transparent"
               )}
             >
               <div className={cn(
