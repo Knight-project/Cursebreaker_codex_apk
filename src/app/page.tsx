@@ -406,7 +406,7 @@ export default function HomePage() {
   };
 
   const handleNameDoubleClick = () => {
-    setEditingName(userProfile.userName);
+    setEditingName(userProfile.userName || "");
     setIsEditingName(true);
   };
 
@@ -416,7 +416,9 @@ export default function HomePage() {
 
   const saveName = () => {
     setUserProfile(prev => ({ ...prev, userName: editingName.trim() }));
-    toast({ title: "Name Updated!" });
+    if ((userProfile.userName || "").trim() !== editingName.trim()) {
+        toast({ title: "Name Updated!" });
+    }
     setIsEditingName(false);
   };
 
@@ -424,13 +426,13 @@ export default function HomePage() {
     if (e.key === 'Enter') {
       saveName();
     } else if (e.key === 'Escape') {
-      setEditingName(userProfile.userName);
+      setEditingName(userProfile.userName || "");
       setIsEditingName(false);
     }
   };
 
   const handleQuoteDoubleClick = () => {
-    setEditingQuote(userProfile.customQuote);
+    setEditingQuote(userProfile.customQuote || "");
     setIsEditingQuote(true);
   };
 
@@ -440,7 +442,9 @@ export default function HomePage() {
 
   const saveQuote = () => {
     setUserProfile(prev => ({ ...prev, customQuote: editingQuote }));
-    toast({ title: "Quote Updated!" });
+    if ((userProfile.customQuote || "").trim() !== editingQuote.trim()) {
+      toast({ title: "Quote Updated!" });
+    }
     setIsEditingQuote(false);
   };
   
@@ -448,7 +452,7 @@ export default function HomePage() {
     if (e.key === 'Enter') {
       saveQuote();
     } else if (e.key === 'Escape') {
-      setEditingQuote(userProfile.customQuote);
+      setEditingQuote(userProfile.customQuote || "");
       setIsEditingQuote(false);
     }
   };
@@ -519,7 +523,7 @@ export default function HomePage() {
                 className="text-2xl font-bold text-primary mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px]"
                 title="Double-click to edit name"
               >
-                {userProfile.userName.trim() || "Double-click to set name"}
+                {(userProfile.userName || "").trim() || "Double-click to set name"}
               </h2>
             )}
 
@@ -544,7 +548,7 @@ export default function HomePage() {
                 className="text-muted-foreground mt-1 text-xs font-code italic cursor-pointer hover:bg-muted/30 rounded-md p-1 transition-colors min-h-[20px]"
                 title="Double-click to edit quote"
               >
-                {userProfile.customQuote.trim() || "No quote set. Double-click to add one."}
+                {(userProfile.customQuote || "").trim() || "No quote set. Double-click to add one."}
               </CardDescription>
             )}
 
@@ -662,3 +666,6 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
+
+
+    
