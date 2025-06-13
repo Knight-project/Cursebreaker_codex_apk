@@ -39,6 +39,8 @@ export interface UserProfile {
   taskHistory: Task[]; // Stores completed tasks with details like statExpGained
   journalEntries: { [date: string]: string }; // date is YYYY-MM-DD
   avatarUrl?: string;
+  expGainedToday: number; // Tracks EXP user gained since last daily reset
+  lastExpResetDate: string; // YYYY-MM-DD, records when expGainedToday was last reset
 }
 
 export interface Rival {
@@ -154,6 +156,8 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   taskHistory: [],
   journalEntries: {},
   avatarUrl: '',
+  expGainedToday: 0,
+  lastExpResetDate: new Date().toISOString().split('T')[0],
 };
 
 const tomorrow = new Date();

@@ -1,3 +1,4 @@
+
 import type { Attribute, RankName } from './types';
 
 export const APP_NAME = "Cursebreaker_Codex";
@@ -43,3 +44,13 @@ export const LOCAL_STORAGE_POMODORO_KEY = 'cursebreakerCodexPomodoro';
 export const LOCAL_STORAGE_INTERVAL_TIMER_KEY = 'cursebreakerCodexIntervalTimer';
 
 export const RIVAL_NAMES_POOL = ["Kairos", "Zevik", "Ayen", "Lyra", "Sorin", "Vexia", "Draven"];
+
+// New constants for rival EXP calculation
+export const RIVAL_USER_DAILY_EXP_PERCENTAGE = 0.3; // Rival gets 30% of what user gained "yesterday"
+export const RIVAL_DIFFICULTY_MULTIPLIERS = {
+  Easy: 0.7,   // Rival gains 70% of the base calculated amount
+  Normal: 1.0, // Rival gains 100%
+  Hard: 1.3,   // Rival gains 130%
+};
+export const RIVAL_CATCH_UP_EXP_DIFFERENCE = 1000; // If rival is this much EXP behind user
+export const RIVAL_CATCH_UP_BOOST_MULTIPLIER = 1.5; // They get a 1.5x boost on their daily gain

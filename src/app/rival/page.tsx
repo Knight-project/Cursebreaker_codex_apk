@@ -14,33 +14,22 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
 import { format, subDays, eachDayOfInterval, differenceInSeconds, isValid as dateIsValid } from 'date-fns';
 
+// Copied from src/app/page.tsx and modified for rival
 const CyberpunkRivalPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
     <defs>
-      <linearGradient id="cyberRivalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.5}} />
+      <linearGradient id="cyberGradRival" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style={{stopColor: 'hsl(var(--destructive))', stopOpacity:0.3}} />
         <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.3}} />
       </linearGradient>
     </defs>
-    {/* Base head shape with sharper top */}
-    <path d="M50 15 C 30 15, 20 30, 20 45 C 20 70, 35 85, 50 85 C 65 85, 80 70, 80 45 C 80 30, 70 15, 50 15 Z" stroke="hsl(var(--destructive))" strokeWidth="2.5" fill="url(#cyberRivalGrad)" />
-    
-    {/* Aggressive "Horns" or "Crest" - more pronounced */}
-    <path d="M38 22 Q50 12 62 22 L57 30 Q50 23 43 30 Z" fill="hsl(var(--destructive))" fillOpacity="0.8" stroke="hsl(var(--destructive))" strokeWidth="2" />
-
-    {/* Sharper, downward-angled "Eyes" */}
-    <path d="M33 45 L48 40 L44 50 Z" fill="hsl(var(--accent))" fillOpacity="0.9" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
-    <path d="M67 45 L52 40 L56 50 Z" fill="hsl(var(--accent))" fillOpacity="0.9" stroke="hsl(var(--accent))" strokeWidth="1.5"/>
-
-    {/* More angular and prominent "Jawline" or "Mandibles" */}
-    <path d="M28 65 L50 88 L72 65 L68 78 L50 92 L32 78 Z" stroke="hsl(var(--destructive))" strokeOpacity="0.7" strokeWidth="2.5" fill="hsl(var(--destructive))" fillOpacity="0.4" />
-    
-    {/* Tech detail: lines/vents */}
-     <line x1="45" y1="25" x2="40" y2="35" stroke="hsl(var(--border))" strokeOpacity="0.5" strokeWidth="1"/>
-     <line x1="55" y1="25" x2="60" y2="35" stroke="hsl(var(--border))" strokeOpacity="0.5" strokeWidth="1"/>
-     <rect x="48" y="60" width="4" height="8" fill="hsl(var(--border))" fillOpacity="0.4" transform="rotate(10 50 60)" />
+    <circle cx="50" cy="40" r="20" stroke="hsl(var(--destructive))" strokeWidth="2" fill="url(#cyberGradRival)" />
+    <path d="M30 70 Q50 90 70 70 Q50 80 30 70" stroke="hsl(var(--destructive))" strokeWidth="1.5" fill="hsl(var(--destructive) / 0.1)" />
+    <rect x="46" y="5" width="8" height="10" fill="hsl(var(--border))" opacity="0.5"/>
+    <line x1="40" y1="42" x2="60" y2="42" stroke="hsl(var(--accent))" strokeWidth="1"/>
   </svg>
 );
+
 
 const chartConfigRival = {
   rivalExp: {
@@ -51,7 +40,7 @@ const chartConfigRival = {
 
 
 export default function RivalPage() {
-  const { rival, updateRivalTaunt, setActiveTab, setRival } = useApp();
+  const { rival, updateRivalTaunt, setActiveTab, setRival, userProfile } = useApp();
   const [isLoadingTaunt, setIsLoadingTaunt] = useState(false);
   const rivalImageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -157,10 +146,12 @@ export default function RivalPage() {
     if (lastHistoricalEntryBeforeWindow) {
         initialExpBeforeWindow = lastHistoricalEntryBeforeWindow.totalExp;
     } else {
-        const firstHistoricalEntry = sortedHistory[0];
-        if (firstHistoricalEntry) {
-             initialExpBeforeWindow = (firstHistoricalEntry.totalExp || 0) - (firstHistoricalEntry.expGained || 0);
-             if (initialExpBeforeWindow < 0) initialExpBeforeWindow = 0;
+        // If no history before the window, try to find the earliest entry in the window
+        // and subtract its expGained to estimate the value just before the window.
+        const firstEntryInOrAfterWindow = sortedHistory.find(h => h.date >= firstDayOfWindow);
+        if (firstEntryInOrAfterWindow) {
+            initialExpBeforeWindow = (firstEntryInOrAfterWindow.totalExp || 0) - (firstEntryInOrAfterWindow.expGained || 0);
+            if (initialExpBeforeWindow < 0) initialExpBeforeWindow = 0;
         }
     }
     
@@ -168,11 +159,11 @@ export default function RivalPage() {
 
     last14Days.forEach(day => {
       const dayString = format(day, 'yyyy-MM-dd');
-      const entriesForThisDay = history.filter(h => h.date === dayString);
-      if (entriesForThisDay.length > 0) {
-          // Find the entry with the highest totalExp for that day, in case of multiple entries (shouldn't happen with daily logic)
-          runningTotal = Math.max(...entriesForThisDay.map(e => e.totalExp));
-      } // If no entry for this day, runningTotal remains from the previous day
+      // Find the latest entry for this day or any day before it if no entry for this specific day
+      const relevantHistoryEntries = sortedHistory.filter(h => h.date <= dayString);
+      if (relevantHistoryEntries.length > 0) {
+          runningTotal = relevantHistoryEntries[relevantHistoryEntries.length - 1].totalExp;
+      }
       cumulativeStatsByDay[dayString] = runningTotal;
     });
     
