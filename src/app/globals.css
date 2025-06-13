@@ -217,3 +217,7 @@
   text-fill-color: transparent;
   text-shadow: 0px 1px 3px hsla(var(--primary-foreground), 0.15);
 }
+
+.active-nav-shadow {
+  filter: drop-shadow(0px 0px 18px hsl(var(--accent)));
+}

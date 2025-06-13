@@ -56,12 +56,12 @@ const BottomNavigationBar = () => {
               onClick={() => setActiveTab(item.key)}
               className={cn(
                 "flex flex-col items-center justify-center text-xs w-1/3 h-full transition-all duration-200 group relative",
-                "border-2", // Base: all tabs have a 2px border width defined
+                "border-2", 
                 active
-                  ? "text-primary border-accent" // Active: all sides get accent color
+                  ? "text-primary border-accent active-nav-shadow" 
                   : [
-                      "text-muted-foreground hover:text-foreground border-transparent", // Non-active: all sides get transparent color initially
-                      (index < navItems.length - 1) ? "border-r-border/30" : "" // If non-active and needs divider, set 2px right border color
+                      "text-muted-foreground hover:text-foreground",
+                      (index < navItems.length - 1) ? "border-r-border/30 border-transparent" : "border-transparent" 
                     ]
               )}
             >
@@ -88,4 +88,3 @@ const BottomNavigationBar = () => {
 };
 
 export default BottomNavigationBar;
-
