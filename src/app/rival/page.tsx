@@ -98,21 +98,43 @@ export default function RivalPage() {
 
   const handleRivalAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
+    const inputElement = event.target;
+
+    if (!file) {
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Image too large",
+        description: "Please select an image smaller than 2MB.",
+        variant: "destructive",
+      });
+      if (inputElement) inputElement.value = "";
+      return;
+    }
+    
+    const objectUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      if (img.naturalWidth !== img.naturalHeight) {
         toast({
-          title: "Image too large",
-          description: "Please select an image smaller than 2MB.",
+          title: "Invalid Image Shape",
+          description: "Please select a square image (width equals height).",
           variant: "destructive",
         });
-        if(event.target) event.target.value = "";
+        if (inputElement) inputElement.value = "";
         return;
       }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setRival(prev => ({ ...prev, avatarUrl: reader.result as string }));
         toast({ title: "Rival Avatar Updated!" });
         playSound('buttonClick'); 
+        if (inputElement) inputElement.value = "";
       };
       reader.onerror = () => {
         toast({
@@ -120,12 +142,21 @@ export default function RivalPage() {
           description: "Could not process the selected image.",
           variant: "destructive",
         });
+        if (inputElement) inputElement.value = "";
       };
       reader.readAsDataURL(file);
-    }
-     if (event.target) {
-      event.target.value = "";
-    }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      toast({
+        title: "Error loading image",
+        description: "Could not verify image dimensions. Please try a different image.",
+        variant: "destructive",
+      });
+      if (inputElement) inputElement.value = "";
+    };
+    img.src = objectUrl;
   };
 
   const rivalExpGrowthData = useMemo(() => {
@@ -179,8 +210,8 @@ export default function RivalPage() {
   
   const avatarContainerSize = "w-[120px] h-[120px] sm:w-[150px] sm:h-[150px]";
   const avatarSize = "w-[100px] h-[100px] sm:w-[120px] sm:h-[120px]";
-  const arcBaseSize = 100; // Base for calculation, corresponds to the smaller avatar size
-  const arcSizeMultiplier = 1.25; // For sm screens
+  const arcBaseSize = 100; 
+  const arcSizeMultiplier = 1.25; 
 
   return (
     <AppWrapper>
@@ -213,7 +244,7 @@ export default function RivalPage() {
             </div>
             <style jsx>{`
               .avatar-arc-container { --avatar-scale: 1; }
-              @media (min-width: 640px) { /* sm breakpoint */
+              @media (min-width: 640px) { 
                 .avatar-arc-container { --avatar-scale: ${arcSizeMultiplier}; }
               }
             `}</style>

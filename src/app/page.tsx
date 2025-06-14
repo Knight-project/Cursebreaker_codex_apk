@@ -251,7 +251,7 @@ const TaskItem = ({ task }: { task: Task }) => {
     descriptionText = `Scheduled: ${task.scheduledDate ? format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d") : "N/A"}${timeInfo}. ${task.difficulty} - ${task.attribute}`;
     canComplete = isDueToday && !isTaskEffectivelyCompleted;
   } else { // daily
-    isDueToday = true; // Daily tasks are filtered for today, so they are always "due today" in this context
+    isDueToday = true; 
     isTaskEffectivelyCompleted = task.isCompleted;
     descriptionText = `${task.difficulty} - ${task.attribute}`;
     canComplete = !isTaskEffectivelyCompleted;
@@ -376,21 +376,43 @@ export default function HomePage() {
 
   const handleUserAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) { 
+    const inputElement = event.target;
+
+    if (!file) {
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) { 
+      toast({
+        title: "Image too large",
+        description: "Please select an image smaller than 2MB.",
+        variant: "destructive",
+      });
+      if (inputElement) inputElement.value = ""; 
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      if (img.naturalWidth !== img.naturalHeight) {
         toast({
-          title: "Image too large",
-          description: "Please select an image smaller than 2MB.",
+          title: "Invalid Image Shape",
+          description: "Please select a square image (width equals height).",
           variant: "destructive",
         });
-        if(event.target) event.target.value = ""; 
+        if (inputElement) inputElement.value = "";
         return;
       }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setUserProfile(prev => ({ ...prev, avatarUrl: reader.result as string }));
         toast({ title: "Avatar Updated!" });
         playSound('buttonClick');
+        if (inputElement) inputElement.value = ""; 
       };
       reader.onerror = () => {
         toast({
@@ -398,12 +420,21 @@ export default function HomePage() {
           description: "Could not process the selected image.",
           variant: "destructive",
         });
-      }
+        if (inputElement) inputElement.value = "";
+      };
       reader.readAsDataURL(file);
-    }
-    if (event.target) {
-      event.target.value = "";
-    }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      toast({
+        title: "Error loading image",
+        description: "Could not verify image dimensions. Please try a different image.",
+        variant: "destructive",
+      });
+      if (inputElement) inputElement.value = "";
+    };
+    img.src = objectUrl;
   };
 
   const handleNameDoubleClick = () => {
@@ -668,11 +699,3 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
-
-
-    
-
-    
-
-
-
