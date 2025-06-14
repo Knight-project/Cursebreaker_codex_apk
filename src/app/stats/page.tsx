@@ -83,16 +83,14 @@ export default function StatsPage() {
     <AppWrapper>
       <Card className="max-w-2xl mx-auto bg-card/90 backdrop-blur-md shadow-2xl border-2 border-primary/60 font-code text-sm">
         {/* Header Bar */}
-        <div className="px-3 py-1.5 border-b-2 border-primary/60 flex justify-between items-center sm:flex-row">
+        <div className="px-3 py-1.5 border-b-2 border-primary/60 flex justify-between items-center">
           <h1 className="font-headline text-primary uppercase tracking-wider text-sm sm:text-base">
             {appSettings.enableAnimations ? "CURSEBREAKER_CODEX" : "CBR_CDX"}
           </h1>
-          <div className="text-xs text-primary/70 flex flex-col items-end sm:flex-row sm:items-center sm:w-auto">
-            {/* Status Line */}
+          <div className="text-xs text-primary/70 flex flex-col items-end sm:flex-row sm:items-center">
             <div className="flex items-center whitespace-nowrap">
               <span className="mr-1">STATUS:</span><span className="text-green-400">ONLINE</span>
             </div>
-            {/* Signal Line */}
             <div className="flex items-center whitespace-nowrap mt-0.5 sm:mt-0 sm:ml-3">
               <span className="mr-1">SIGNAL:</span>
               <div className="flex space-x-0.5">
@@ -194,7 +192,7 @@ export default function StatsPage() {
 
         {/* Footer Bar */}
         <div className="px-3 py-1.5 border-t-2 border-primary/60">
-          <p className="text-xs text-center text-primary/70 uppercase">
+          <p className="text-[10px] sm:text-xs text-center text-primary/70 uppercase">
             {appSettings.enableAnimations ? "Cursebreaker Codex" : "CBR_CDX"} :: User Profile Interface :: v2.1
           </p>
         </div>
@@ -202,3 +200,4 @@ export default function StatsPage() {
     </AppWrapper>
   );
 }
+
