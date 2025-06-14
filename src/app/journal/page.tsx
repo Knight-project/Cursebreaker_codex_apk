@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from '@/components/ui/label';
 import { useApp } from '@/contexts/AppContext';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar as CalendarIcon } from 'lucide-react';
@@ -21,18 +21,20 @@ import { playSound } from '@/lib/soundManager';
 const HOURS_OF_DAY = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 
 export default function JournalPage() {
-  const { userProfile, setUserProfile, setActiveTab } = useApp();
+  const { userProfile, setUserProfile, setActiveTab: setAppActiveTab } = useApp();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentDailyEntry, setCurrentDailyEntry] = useState('');
   const [currentHourlyNotes, setCurrentHourlyNotes] = useState<{ [hour: string]: string }>({});
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { toast } = useToast();
+  const [activeLocalTab, setActiveLocalTab] = useState('daily');
+  const hourlyInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   
   const formattedSelectedDate = useMemo(() => selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '', [selectedDate]);
 
   useEffect(() => {
-    setActiveTab('journal');
-  }, [setActiveTab]);
+    setAppActiveTab('journal');
+  }, [setAppActiveTab]);
 
   useEffect(() => {
     if (formattedSelectedDate) {
@@ -43,6 +45,19 @@ export default function JournalPage() {
       setCurrentHourlyNotes({});
     }
   }, [formattedSelectedDate, userProfile.journalEntries, userProfile.hourlyJournalEntries]);
+
+  useEffect(() => {
+    if (activeLocalTab === 'hourly' && selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
+      const currentHour = new Date().getHours();
+      const currentHourStr = `${String(currentHour).padStart(2, '0')}:00`;
+      const targetInput = hourlyInputRefs.current[currentHourStr];
+      if (targetInput) {
+        setTimeout(() => {
+          targetInput.focus();
+        }, 0);
+      }
+    }
+  }, [activeLocalTab, selectedDate]);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -71,7 +86,7 @@ export default function JournalPage() {
   };
 
   const handleSaveHourlyNote = (hour: string) => {
-    if (!formattedSelectedDate) return; // Should not happen if an hour is being edited
+    if (!formattedSelectedDate) return;
     
     const noteToSave = currentHourlyNotes[hour];
 
@@ -87,9 +102,6 @@ export default function JournalPage() {
         },
       };
     });
-    // Optional: Add a subtle toast or visual feedback for saving hourly note.
-    // For now, keeping it silent to avoid too many toasts.
-    // toast({ title: "Hourly Note Saved", description: `Note for ${hour} on ${format(selectedDate!, 'MMMM d, yyyy')} updated.` });
   };
 
 
@@ -129,10 +141,18 @@ export default function JournalPage() {
             <CardDescription>Capture your daily reflections and hourly observations.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Tabs defaultValue="daily" className="w-full">
+            <Tabs 
+              value={activeLocalTab} 
+              onValueChange={(value) => {
+                setActiveLocalTab(value);
+                playSound('buttonClick');
+              }} 
+              defaultValue="daily" 
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-2 bg-card/80 backdrop-blur-sm border-border">
-                <TabsTrigger value="daily" className="font-headline" onClick={() => playSound('buttonClick')}>Daily Entry</TabsTrigger>
-                <TabsTrigger value="hourly" className="font-headline" onClick={() => playSound('buttonClick')}>Hourly Log</TabsTrigger>
+                <TabsTrigger value="daily" className="font-headline">Daily Entry</TabsTrigger>
+                <TabsTrigger value="hourly" className="font-headline">Hourly Log</TabsTrigger>
               </TabsList>
               
               <TabsContent value="daily" className="mt-4">
@@ -156,6 +176,7 @@ export default function JournalPage() {
                         <Label htmlFor={`hourly-note-${hour}`} className="w-16 pt-2 text-sm text-muted-foreground font-mono">{hour}</Label>
                         <Textarea
                           id={`hourly-note-${hour}`}
+                          ref={(el) => (hourlyInputRefs.current[hour] = el)}
                           value={currentHourlyNotes[hour] || ''}
                           onChange={(e) => handleHourlyNoteChange(hour, e.target.value)}
                           onBlur={() => handleSaveHourlyNote(hour)}
@@ -177,3 +198,4 @@ export default function JournalPage() {
     </AppWrapper>
   );
 }
+
