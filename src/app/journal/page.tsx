@@ -8,42 +8,49 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from '@/components/ui/label';
 import { useApp } from '@/contexts/AppContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSound } from '@/lib/soundManager';
 
+const HOURS_OF_DAY = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+
 export default function JournalPage() {
   const { userProfile, setUserProfile, setActiveTab } = useApp();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [currentEntry, setCurrentEntry] = useState('');
+  const [currentDailyEntry, setCurrentDailyEntry] = useState('');
+  const [currentHourlyNotes, setCurrentHourlyNotes] = useState<{ [hour: string]: string }>({});
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { toast } = useToast();
   
-  const formattedSelectedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+  const formattedSelectedDate = useMemo(() => selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '', [selectedDate]);
 
   useEffect(() => {
     setActiveTab('journal');
   }, [setActiveTab]);
 
   useEffect(() => {
-    if (formattedSelectedDate && userProfile.journalEntries) {
-      setCurrentEntry(userProfile.journalEntries[formattedSelectedDate] || '');
+    if (formattedSelectedDate) {
+      setCurrentDailyEntry(userProfile.journalEntries?.[formattedSelectedDate] || '');
+      setCurrentHourlyNotes(userProfile.hourlyJournalEntries?.[formattedSelectedDate] || {});
     } else {
-      setCurrentEntry('');
+      setCurrentDailyEntry('');
+      setCurrentHourlyNotes({});
     }
-  }, [formattedSelectedDate, userProfile.journalEntries]);
+  }, [formattedSelectedDate, userProfile.journalEntries, userProfile.hourlyJournalEntries]);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
-    setIsCalendarOpen(false); // Close the popover on date selection
+    setIsCalendarOpen(false);
     playSound('buttonClick');
   };
 
-  const handleSaveEntry = () => {
+  const handleSaveDailyEntry = () => {
     if (!formattedSelectedDate) {
       toast({ title: "Error", description: "Please select a date.", variant: "destructive" });
       return;
@@ -52,12 +59,39 @@ export default function JournalPage() {
       ...prevProfile,
       journalEntries: {
         ...prevProfile.journalEntries,
-        [formattedSelectedDate]: currentEntry,
+        [formattedSelectedDate]: currentDailyEntry,
       },
     }));
-    toast({ title: "Journal Entry Saved!", description: `Entry for ${format(selectedDate!, 'MMMM d, yyyy')} updated.` });
+    toast({ title: "Daily Entry Saved!", description: `Entry for ${format(selectedDate!, 'MMMM d, yyyy')} updated.` });
     playSound('buttonClick');
   };
+
+  const handleHourlyNoteChange = (hour: string, text: string) => {
+    setCurrentHourlyNotes(prev => ({ ...prev, [hour]: text }));
+  };
+
+  const handleSaveHourlyNote = (hour: string) => {
+    if (!formattedSelectedDate) return; // Should not happen if an hour is being edited
+    
+    const noteToSave = currentHourlyNotes[hour];
+
+    setUserProfile(prevProfile => {
+      const dayEntries = prevProfile.hourlyJournalEntries?.[formattedSelectedDate] || {};
+      const updatedDayEntries = { ...dayEntries, [hour]: noteToSave };
+      
+      return {
+        ...prevProfile,
+        hourlyJournalEntries: {
+          ...prevProfile.hourlyJournalEntries,
+          [formattedSelectedDate]: updatedDayEntries,
+        },
+      };
+    });
+    // Optional: Add a subtle toast or visual feedback for saving hourly note.
+    // For now, keeping it silent to avoid too many toasts.
+    // toast({ title: "Hourly Note Saved", description: `Note for ${hour} on ${format(selectedDate!, 'MMMM d, yyyy')} updated.` });
+  };
+
 
   return (
     <AppWrapper>
@@ -65,7 +99,7 @@ export default function JournalPage() {
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl w-full">
           <CardHeader>
             <CardTitle className="font-headline text-xl flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="text-primary">Daily Journal -</span>
+              <span className="text-primary">Journal Archive -</span>
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -92,23 +126,54 @@ export default function JournalPage() {
                 </PopoverContent>
               </Popover>
             </CardTitle>
-            <CardDescription>Reflect on your progress, thoughts, and challenges.</CardDescription>
+            <CardDescription>Capture your daily reflections and hourly observations.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea
-              value={currentEntry}
-              onChange={(e) => setCurrentEntry(e.target.value)}
-              placeholder="Begin your entry here... What challenges did you overcome? What are your goals for tomorrow?"
-              className="min-h-[300px] bg-input/30 focus:bg-input text-base"
-              disabled={!selectedDate}
-            />
-            <Button onClick={handleSaveEntry} disabled={!selectedDate} className="w-full bg-primary hover:bg-primary/80">
-              Save Entry
-            </Button>
+            <Tabs defaultValue="daily" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-card/80 backdrop-blur-sm border-border">
+                <TabsTrigger value="daily" className="font-headline" onClick={() => playSound('buttonClick')}>Daily Entry</TabsTrigger>
+                <TabsTrigger value="hourly" className="font-headline" onClick={() => playSound('buttonClick')}>Hourly Log</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="daily" className="mt-4">
+                <Textarea
+                  value={currentDailyEntry}
+                  onChange={(e) => setCurrentDailyEntry(e.target.value)}
+                  placeholder="Begin your daily reflection here... What challenges did you overcome? What are your goals for tomorrow?"
+                  className="min-h-[300px] bg-input/30 focus:bg-input text-base"
+                  disabled={!selectedDate}
+                />
+                <Button onClick={handleSaveDailyEntry} disabled={!selectedDate} className="w-full mt-4 bg-primary hover:bg-primary/80">
+                  Save Daily Entry
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="hourly" className="mt-4">
+                {formattedSelectedDate ? (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                    {HOURS_OF_DAY.map(hour => (
+                      <div key={hour} className="flex items-start space-x-3 p-2 border-b border-border/50 last:border-b-0">
+                        <Label htmlFor={`hourly-note-${hour}`} className="w-16 pt-2 text-sm text-muted-foreground font-mono">{hour}</Label>
+                        <Textarea
+                          id={`hourly-note-${hour}`}
+                          value={currentHourlyNotes[hour] || ''}
+                          onChange={(e) => handleHourlyNoteChange(hour, e.target.value)}
+                          onBlur={() => handleSaveHourlyNote(hour)}
+                          placeholder={`Notes for ${hour}...`}
+                          className="flex-1 min-h-[60px] max-h-[120px] bg-input/30 focus:bg-input text-sm"
+                          rows={2}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">Please select a date to view or add hourly notes.</p>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
     </AppWrapper>
   );
 }
-

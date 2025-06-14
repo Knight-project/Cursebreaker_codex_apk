@@ -12,7 +12,7 @@ export interface Task {
   taskType: TaskType;
   isCompleted: boolean; 
   dateAdded: string; 
-  baseExpValue: number; // EXP value determined at task creation
+  baseExpValue: number;
   
   dateCompleted?: string; 
   
@@ -28,7 +28,7 @@ export interface Task {
 
   statExpGained?: number;
   attributeAffectedForStatExp?: Attribute;
-  expAwarded?: number; // Actual EXP awarded for a specific completion instance
+  expAwarded?: number;
 }
 
 export interface UserStat {
@@ -56,6 +56,7 @@ export interface UserProfile {
   customQuote: string;
   taskHistory: Task[];
   journalEntries: { [date: string]: string }; 
+  hourlyJournalEntries: { [date: string]: { [hour: string]: string } };
   avatarUrl?: string;
   expGainedToday: number;
   lastExpResetDate: string; 
@@ -170,6 +171,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   customQuote: "The journey of a thousand miles begins with a single step.",
   taskHistory: [],
   journalEntries: {},
+  hourlyJournalEntries: {},
   avatarUrl: '',
   expGainedToday: 0,
   lastExpResetDate: new Date().toISOString().split('T')[0],
