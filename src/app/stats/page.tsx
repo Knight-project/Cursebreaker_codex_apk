@@ -83,15 +83,21 @@ export default function StatsPage() {
     <AppWrapper>
       <Card className="max-w-2xl mx-auto bg-card/90 backdrop-blur-md shadow-2xl border-2 border-primary/60 font-code text-sm">
         {/* Header Bar */}
-        <div className="px-3 py-1.5 border-b-2 border-primary/60 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-y-1 sm:gap-y-0">
-          <h1 className="text-sm sm:text-base font-headline text-primary uppercase tracking-wider">
+        <div className="px-3 py-1.5 border-b-2 border-primary/60 flex justify-between items-center">
+          <h1 className="text-xl sm:text-base font-headline text-primary uppercase tracking-wider">
             {appSettings.enableAnimations ? "CURSEBREAKER_CODEX" : "CBR_CDX"}
           </h1>
-          <div className="text-xs text-primary/70 flex items-center self-stretch sm:self-auto justify-end">
-            <span className="mr-1 sm:mr-2 whitespace-nowrap">STATUS:</span><span className="text-green-400">ONLINE</span>
-            <span className="hidden sm:inline ml-2 sm:ml-3 mr-1 whitespace-nowrap">SIGNAL:</span>
-            <div className="hidden sm:flex space-x-0.5">
-              {[...Array(4)].map((_, i) => <div key={i} className="w-1 h-2.5 bg-green-400" />)}
+          <div className="text-xs text-primary/70 flex flex-col items-end sm:flex-row sm:items-center">
+            {/* Status Line */}
+            <div className="flex items-center whitespace-nowrap">
+              <span className="mr-1">STATUS:</span><span className="text-green-400">ONLINE</span>
+            </div>
+            {/* Signal Line */}
+            <div className="flex items-center whitespace-nowrap mt-0.5 sm:mt-0 sm:ml-3">
+              <span className="mr-1">SIGNAL:</span>
+              <div className="flex space-x-0.5">
+                {[...Array(4)].map((_, i) => <div key={i} className="w-1 h-2.5 bg-green-400" />)}
+              </div>
             </div>
           </div>
         </div>
@@ -196,3 +202,4 @@ export default function StatsPage() {
     </AppWrapper>
   );
 }
+
