@@ -116,12 +116,18 @@ export default function GraphsPage() {
             {dailyCompletionData.length > 0 ? (
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dailyCompletionData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                  <LineChart data={dailyCompletionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))"/>
                     <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, 100]} tickFormatter={(value) => `${value}%`}/>
+                    <YAxis 
+                      axisLine={{ stroke: 'hsl(var(--border))' }} 
+                      tickLine={{ stroke: 'hsl(var(--border))' }} 
+                      tickMargin={8} 
+                      domain={[0, 100]} 
+                      tickFormatter={(value) => `${value}%`}
+                    />
                     <ChartTooltip 
-                      content={<ChartTooltipContent formatter={(value, name) => [`${value}%`, name]}/>} 
+                      content={<ChartTooltipContent formatter={(value, name) => [`${value}%`, name as string]}/>} 
                     />
                     <Line type="monotone" dataKey="completion" stroke="var(--color-completion)" strokeWidth={3} dot={{ r: 4, fill: "var(--color-completion)", strokeWidth:1, stroke:"hsl(var(--background))" }} activeDot={{r:6}} name="Completion Rate"/>
                   </LineChart>
@@ -144,10 +150,14 @@ export default function GraphsPage() {
             {attributeGrowthData.length > 0 ? (
                <ChartContainer config={chartConfig} className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={attributeGrowthData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                    <LineChart data={attributeGrowthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                      <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                      <YAxis 
+                        axisLine={{ stroke: 'hsl(var(--border))' }} 
+                        tickLine={{ stroke: 'hsl(var(--border))' }} 
+                        tickMargin={8} 
+                      />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <ChartLegend content={<ChartLegendContent />} />
                       {ATTRIBUTES_LIST.filter(attr => attr !== "None").map(attr => (

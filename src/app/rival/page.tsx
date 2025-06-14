@@ -280,10 +280,15 @@ export default function RivalPage() {
             {rivalExpGrowthData.length > 1 ? (
               <ChartContainer config={chartConfigRival} className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={rivalExpGrowthData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <LineChart data={rivalExpGrowthData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))"/>
                     <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
-                    <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={10}/>
+                    <YAxis 
+                      axisLine={{ stroke: 'hsl(var(--border))' }} 
+                      tickLine={{ stroke: 'hsl(var(--border))' }} 
+                      tickMargin={8} 
+                      fontSize={10}
+                    />
                     <ChartTooltip
                       content={<ChartTooltipContent />}
                     />

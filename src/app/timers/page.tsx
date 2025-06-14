@@ -1008,10 +1008,15 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
         {chartData.length > 0 ? (
             <ChartContainer config={chartConfig} className="h-full w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <RechartsLineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <RechartsLineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                   <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
-                  <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={10}/>
+                  <YAxis 
+                    axisLine={{ stroke: 'hsl(var(--border))' }} 
+                    tickLine={{ stroke: 'hsl(var(--border))' }} 
+                    tickMargin={8} 
+                    fontSize={10}
+                  />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <ChartLegend content={<ChartLegendContent />} />
                   {graph.variables.map(variable => (
