@@ -207,19 +207,40 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         newStreak = 0;
       } else {
         const lastCompletedDateObj = parseISO(newLastDayAllTasksCompleted);
-        if (!isSameDay(lastCompletedDateObj, today) && !isSameDay(lastCompletedDateObj, yesterday)) {
+        if (!dateIsValid(lastCompletedDateObj)) {
+          newStreak = 0;
+          newLastDayAllTasksCompleted = "";
+        } else if (!isSameDay(lastCompletedDateObj, today) && !isSameDay(lastCompletedDateObj, yesterday)) {
           newStreak = 0;
         } else if (isSameDay(lastCompletedDateObj, yesterday)) {
-          const tasksContributingToStreakYesterday = tasks.filter(task =>
-            (task.taskType === 'daily' && task.dateAdded === yesterdayStr) ||
-            (task.taskType === 'ritual' && task.nextDueDate === yesterdayStr) ||
-            (task.taskType === 'event' && task.scheduledDate === yesterdayStr)
-          );
+          const tasksFromYesterday = tasks.filter(task => {
+            if (task.taskType === 'daily' && task.dateAdded === yesterdayStr) return true;
+            if (task.taskType === 'event' && task.scheduledDate === yesterdayStr) return true;
+            if (task.taskType === 'ritual') {
+               // A ritual contributed to yesterday's streak if it was completed yesterday OR
+               // if its next due date was yesterday (implying it was actionable then)
+               if (task.lastCompletedDate === yesterdayStr) return true;
 
-          if (tasksContributingToStreakYesterday.length > 0) {
-            const allYesterdayContributingTasksCompleted = tasksContributingToStreakYesterday.every(task => {
-              if (task.taskType === 'ritual') return task.lastCompletedDate === yesterdayStr;
-              return task.isCompleted && task.dateCompleted === yesterdayStr;
+               // Check if its nextDueDate was yesterday, before potential completion and advancement
+               let originalNextDueDate = task.nextDueDate;
+               if (task.lastCompletedDate === yesterdayStr && task.repeatIntervalDays) {
+                 // If completed yesterday, nextDueDate would have advanced. Revert it to check.
+                 originalNextDueDate = format(subDays(parseISO(task.nextDueDate!), task.repeatIntervalDays), 'yyyy-MM-dd');
+               }
+               if (originalNextDueDate === yesterdayStr) return true;
+            }
+            return false;
+          });
+
+          if (tasksFromYesterday.length > 0) {
+            const allYesterdayContributingTasksCompleted = tasksFromYesterday.every(task => {
+              const historyEntry = prevProfile.taskHistory.find(h => 
+                h.id === task.id && 
+                ( (h.taskType !== 'ritual' && h.dateCompleted === yesterdayStr) || 
+                  (h.taskType === 'ritual' && h.lastCompletedDate === yesterdayStr) ) &&
+                h.isCompleted 
+              );
+              return !!historyEntry;
             });
 
             if (!allYesterdayContributingTasksCompleted) {
@@ -229,8 +250,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      if (newStreak === 0 && newLastDayAllTasksCompleted && parseISO(newLastDayAllTasksCompleted) < yesterday) {
-          newLastDayAllTasksCompleted = ""; 
+      if (newStreak === 0 && newLastDayAllTasksCompleted && isBefore(parseISO(newLastDayAllTasksCompleted), yesterday)) {
+          newLastDayAllTasksCompleted = "";
       }
 
       if (newStreak !== prevProfile.currentStreak || newLastDayAllTasksCompleted !== prevProfile.lastDayAllTasksCompleted) {
@@ -238,8 +259,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       return prevProfile;
     });
-
-  }, [isInitialized, tasks, setUserProfile]); 
+  }, [isInitialized, tasks, setUserProfile, userProfile.taskHistory]);
 
 
   useEffect(() => {
@@ -467,7 +487,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
-
     let historyEntryData: Task | null = null;
 
     setTasks(prevTasks => {
@@ -485,7 +504,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const expAwardedForThisCompletion = originalTask.baseExpValue;
-      
       let statExpGainedForThisInstance: number | undefined = undefined;
       let attributeAffectedForThisInstance: Attribute | undefined = undefined;
 
@@ -521,11 +539,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       const newTasks = [...prevTasks];
       newTasks[taskIndex] = updatedTaskInMainList;
 
+      // Streak logic starts here, using newTasks to reflect current completion
       const tasksActionableToday = newTasks.filter(t =>
           (t.taskType === 'daily' && t.dateAdded === todayStr) ||
           (t.taskType === 'ritual' && (t.nextDueDate === todayStr || t.lastCompletedDate === todayStr) ) || 
           (t.taskType === 'event' && t.scheduledDate === todayStr)
       );
+
       const allTodayNowCompleted = tasksActionableToday.length > 0 && tasksActionableToday.every(t =>
           (t.taskType === 'daily' && t.isCompleted && t.dateCompleted === todayStr) ||
           (t.taskType === 'ritual' && t.lastCompletedDate === todayStr) || 
@@ -536,10 +556,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           setUserProfile(prev => {
               if (prev.lastDayAllTasksCompleted === yesterdayStr) {
                   return { ...prev, currentStreak: prev.currentStreak + 1, lastDayAllTasksCompleted: todayStr };
-              } else if (prev.lastDayAllTasksCompleted !== todayStr) { 
+              } else if (prev.lastDayAllTasksCompleted !== todayStr) { // Catches "" or older dates
                   return { ...prev, currentStreak: 1, lastDayAllTasksCompleted: todayStr };
               }
-              return prev;
+              return prev; // Already processed for today
           });
       }
       return newTasks;
@@ -575,6 +595,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const undoCompleteTask = useCallback((taskId: string) => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+
 
     const taskToUndoFromHistory = userProfile.taskHistory.find(ht => 
         ht.id === taskId && 
@@ -637,7 +659,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (prev.lastDayAllTasksCompleted === todayStr) {
          newStreak = Math.max(0, prev.currentStreak - 1); 
-         newLastDayAllTasksCompleted = format(subDays(parseISO(todayStr), 1), 'yyyy-MM-dd'); 
+         newLastDayAllTasksCompleted = yesterdayStr;
       }
 
       return {
@@ -703,21 +725,23 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       if (rival.nextExpGainTime && now.toISOString() >= rival.nextExpGainTime) {
         const previousDayForExpCalc = format(subDays(parseISO(rival.nextExpGainTime), 1), 'yyyy-MM-dd');
         
-        const previousDayHistory = userProfile.taskHistory.filter(
-            th => (th.dateCompleted === previousDayForExpCalc || th.lastCompletedDate === previousDayForExpCalc) && th.expAwarded !== undefined
-        );
-        const userExpGainedForRival = previousDayHistory.reduce((acc, currTask) => acc + (currTask.expAwarded!), 0);
+        const userExpGainedForRival = userProfile.taskHistory
+            .filter(th => (th.dateCompleted === previousDayForExpCalc || th.lastCompletedDate === previousDayForExpCalc) && th.expAwarded !== undefined)
+            .reduce((acc, currTask) => acc + (currTask.expAwarded!), 0);
         
         const expFromUserUncompletedDailyTasks = tasks
-          .filter(t => t.taskType === 'daily' && t.dateAdded === previousDayForExpCalc && !t.isCompleted)
+          .filter(t => t.taskType === 'daily' && t.dateAdded === previousDayForExpCalc && !userProfile.taskHistory.some(ht => ht.id === t.id && ht.dateCompleted === previousDayForExpCalc && ht.isCompleted))
           .reduce((sum, task) => sum + (task.baseExpValue !== undefined ? task.baseExpValue : calculatePotentialTaskExp(task, userProfile.rankName)), 0);
         
         const expFromUserUncompletedEventTasksForYesterday = tasks 
-          .filter(t => t.taskType === 'event' && t.scheduledDate === previousDayForExpCalc && !t.isCompleted) 
+          .filter(t => t.taskType === 'event' && t.scheduledDate === previousDayForExpCalc && !userProfile.taskHistory.some(ht => ht.id === t.id && ht.dateCompleted === previousDayForExpCalc && ht.isCompleted)) 
           .reduce((sum, task) => sum + (task.baseExpValue !== undefined ? task.baseExpValue : calculatePotentialTaskExp(task, userProfile.rankName)), 0);
         
         const expFromUserUncompletedRitualTasksForYesterday = tasks
-            .filter(t => t.taskType === 'ritual' && t.nextDueDate === previousDayForExpCalc && t.lastCompletedDate !== previousDayForExpCalc)
+            .filter(t => t.taskType === 'ritual' && 
+                         (t.nextDueDate === previousDayForExpCalc || (t.lastCompletedDate && format(addDays(parseISO(t.lastCompletedDate), t.repeatIntervalDays || 1),'yyyy-MM-dd') === previousDayForExpCalc ) ) && // was due yesterday
+                         !userProfile.taskHistory.some(ht => ht.id === t.id && ht.lastCompletedDate === previousDayForExpCalc && ht.isCompleted) // and not completed
+            )
             .reduce((sum,task) => sum + (task.baseExpValue !== undefined ? task.baseExpValue : calculatePotentialTaskExp(task, userProfile.rankName)), 0);
 
 
@@ -834,9 +858,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     );
 
     const relevantTasksForCompletion = tasksActionableToday.filter(t =>
-      (t.taskType === 'daily' && t.dateAdded === todayStr && t.isCompleted) ||
+      (t.taskType === 'daily' && t.isCompleted && t.dateCompleted === todayStr) ||
       (t.taskType === 'ritual' && t.lastCompletedDate === todayStr) || 
-      (t.taskType === 'event' && t.scheduledDate === todayStr && t.isCompleted)
+      (t.taskType === 'event' && t.isCompleted && t.dateCompleted === todayStr)
     );
     
     const completionPercentage = tasksActionableToday.length > 0
@@ -1002,3 +1026,4 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export default AppProvider;
+
