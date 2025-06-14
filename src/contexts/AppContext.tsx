@@ -476,6 +476,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       
       const expFromTask = calculatePotentialTaskExp(task, userProfile.rankName);
       grantExp(expFromTask);
+      task.expAwarded = expFromTask; // Store the exact EXP awarded
 
       let statExpGainedForTask: number | undefined = undefined;
       let attributeAffectedForStatExpForTask: Attribute | undefined = undefined;
@@ -489,7 +490,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       task.statExpGained = statExpGainedForTask;
       task.attributeAffectedForStatExp = attributeAffectedForStatExpForTask;
-      task.expAwarded = expFromTask; // Store the exact EXP awarded
+      
 
       if (task.taskType === 'ritual') {
         task.lastCompletedDate = todayStr;
@@ -578,8 +579,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // 1. Revoke general EXP - use stored expAwarded if available, otherwise recalculate
-    const expToRevoke = taskToUndo.expAwarded ?? calculatePotentialTaskExp(taskToUndo, userProfile.rankName);
+    // 1. Revoke general EXP - use stored expAwarded if available
+    const expToRevoke = taskToUndo.expAwarded ?? calculatePotentialTaskExp(taskToUndo, userProfile.rankName); // Fallback for older tasks
     grantExp(-expToRevoke);
 
     // 2. Revoke Stat EXP
@@ -596,7 +597,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
             isCompleted: false, 
             statExpGained: undefined, 
             attributeAffectedForStatExp: undefined,
-            expAwarded: undefined,
+            expAwarded: undefined, // Clear stored EXP
           };
           if (t.taskType === 'ritual') {
             updatedTask.lastCompletedDate = undefined;
