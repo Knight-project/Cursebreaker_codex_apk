@@ -57,6 +57,7 @@ export interface UserProfile {
   avatarUrl?: string;
   expGainedToday: number;
   lastExpResetDate: string; 
+  lastDayAllTasksCompleted: string; // Added for streak calculation
 }
 
 export interface Rival {
@@ -153,7 +154,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   rankName: RANK_NAMES[0],
   subRank: 1,
   totalExp: 0,
-  expToNextSubRank: 300, // Changed from 100 to 300
+  expToNextSubRank: 300,
   currentExpInSubRank: 0,
   stats: {
     strength: { ...DEFAULT_USER_STAT },
@@ -170,6 +171,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   avatarUrl: '',
   expGainedToday: 0,
   lastExpResetDate: new Date().toISOString().split('T')[0],
+  lastDayAllTasksCompleted: "", // Initialize new streak field
 };
 
 const tomorrow = new Date();
@@ -181,7 +183,7 @@ export const INITIAL_RIVAL: Rival = {
   rankName: RANK_NAMES[0],
   subRank: 1,
   totalExp: 0,
-  expToNextSubRank: 300, // Changed from 100 to 300
+  expToNextSubRank: 300,
   currentExpInSubRank: 0,
   avatarUrl: `https://placehold.co/120x120.png`,
   expHistory: [],

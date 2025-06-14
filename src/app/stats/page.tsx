@@ -94,7 +94,7 @@ export default function StatsPage() {
           </div>
         </div>
 
-        <CardContent className="p-3 md:p-4 space-y-3">
+        <CardContent className="p-2 sm:p-3 md:p-4 space-y-3">
           {/* Main Info Block */}
           <div className="flex flex-col md:flex-row gap-3 md:gap-4">
             <div className="w-full md:w-1/3 flex-shrink-0">
@@ -194,3 +194,4 @@ export default function StatsPage() {
     </AppWrapper>
   );
 }
+
