@@ -3,16 +3,15 @@
 'use client';
 
 import AppWrapper from '@/components/layout/AppWrapper';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
 import React, { useEffect } from 'react';
 import type { UserStat, Attribute } from '@/lib/types';
 import { ATTRIBUTES_LIST } from '@/lib/types';
-import { BarChart, Brain, Zap, Shield, Palette, Smile } from 'lucide-react';
-import RankDisplay from '@/components/shared/RankDisplay';
+import { BarChart, Brain, Zap, Shield, Palette, Smile, TrendingUp } from 'lucide-react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const attributeIcons: { [key in typeof ATTRIBUTES_LIST[number]]?: React.ElementType } = {
   Strength: BarChart,
@@ -22,25 +21,45 @@ const attributeIcons: { [key in typeof ATTRIBUTES_LIST[number]]?: React.ElementT
   Charisma: Smile,
 };
 
-// Placeholder for avatar, similar to home page
 const CyberpunkAvatarPlaceholder = () => (
-  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-primary transition-colors">
+  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary/50">
     <defs>
-      <linearGradient id="cyberGradUserStats" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style={{stopColor: 'hsl(var(--primary))', stopOpacity:0.3}} />
-        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.3}} />
+      <linearGradient id="cyberGradStatsId" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style={{stopColor: 'hsl(var(--primary))', stopOpacity:0.1}} />
+        <stop offset="100%" style={{stopColor: 'hsl(var(--accent))', stopOpacity:0.1}} />
       </linearGradient>
     </defs>
-    <circle cx="50" cy="40" r="20" stroke="hsl(var(--primary))" strokeWidth="2" fill="url(#cyberGradUserStats)" />
-    <path d="M30 70 Q50 90 70 70 Q50 80 30 70" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="hsl(var(--primary))" fillOpacity="0.1" />
-    <rect x="46" y="5" width="8" height="10" fill="hsl(var(--border))" opacity="0.5"/>
-    <line x1="40" y1="42" x2="60" y2="42" stroke="hsl(var(--accent))" strokeWidth="1"/>
+    <rect width="100" height="100" fill="hsl(var(--background))" />
+    <circle cx="50" cy="45" r="25" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="url(#cyberGradStatsId)" />
+    <path d="M30 80 Q50 100 70 80 Q50 90 30 80" stroke="hsl(var(--primary))" strokeWidth="1" fill="hsl(var(--primary))" fillOpacity="0.05" />
+    <rect x="47" y="10" width="6" height="8" fill="hsl(var(--border))" opacity="0.3"/>
+    <line x1="35" y1="47" x2="65" y2="47" stroke="hsl(var(--accent))" strokeWidth="0.5"/>
   </svg>
 );
 
+const toRoman = (num: number): string => {
+  const romanMap: { [key: number]: string } = {
+    1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V',
+    6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X',
+  };
+  return romanMap[num] || num.toString();
+};
+
+const AttributeBar = ({ value, maxValue, colorClass = 'bg-primary' }: { value: number; maxValue: number; colorClass?: string }) => {
+  const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+  return (
+    <div className="h-1.5 w-full bg-muted/30 rounded-sm overflow-hidden border border-border/50">
+      <div
+        className={cn("h-full rounded-sm transition-all duration-300", colorClass)}
+        style={{ width: `${percentage}%` }}
+      />
+    </div>
+  );
+};
+
 
 export default function StatsPage() {
-  const { userProfile, setActiveTab } = useApp();
+  const { userProfile, setActiveTab, appSettings } = useApp();
 
   useEffect(() => {
     setActiveTab('stats');
@@ -55,112 +74,123 @@ export default function StatsPage() {
     currentStreak,
     dailyTaskCompletionPercentage,
     stats,
-    taskHistory,
+    customQuote,
   } = userProfile;
 
-  const profileDetailsList = [
-    { label: 'Rank', value: <RankDisplay rankName={rankName} subRank={subRank} className="text-sm" /> },
-    { label: 'Total EXP', value: totalExp.toLocaleString() },
-    { label: 'Current Streak', value: `${currentStreak} days` },
-    { label: 'Daily Completion', value: `${dailyTaskCompletionPercentage.toFixed(1)}%` },
-  ];
-
-  // Order in which attributes should be displayed
   const attributeDisplayOrder: Attribute[] = ["Strength", "Intelligence", "Endurance", "Creativity", "Charisma"];
 
   return (
     <AppWrapper>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Left Column - Profile Card */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="bg-card/80 backdrop-blur-sm shadow-xl border-primary/30">
-            <CardContent className="p-6 flex flex-col items-center">
-              <div className="w-36 h-36 md:w-48 md:h-48 rounded-full overflow-hidden border-2 border-primary mb-4 shadow-lg relative">
+      <Card className="max-w-2xl mx-auto bg-card/90 backdrop-blur-md shadow-2xl border-2 border-primary/60 font-code text-sm">
+        {/* Header Bar */}
+        <div className="px-3 py-1.5 border-b-2 border-primary/60 flex justify-between items-center">
+          <h1 className="text-base font-headline text-primary uppercase tracking-wider">{appSettings.enableAnimations ? "CURSEBREAKER_CODEX" : "CBR_CDX"}</h1>
+          <div className="text-xs text-primary/70 flex items-center">
+            <span className="mr-2">SYSTEM STATUS:</span> <span className="text-green-400">ONLINE</span>
+            <span className="ml-3 mr-1">SIGNAL:</span>
+            <div className="flex space-x-0.5">
+              {[...Array(4)].map((_, i) => <div key={i} className="w-1 h-2.5 bg-green-400" />)}
+            </div>
+          </div>
+        </div>
+
+        <CardContent className="p-3 md:p-4 space-y-3">
+          {/* Main Info Block */}
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+            <div className="w-full md:w-1/3 flex-shrink-0">
+              <div className="aspect-square w-full border-2 border-primary/50 p-0.5 bg-background/50">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
                     alt="User Avatar"
-                    layout="fill"
-                    objectFit="cover"
-                    className="rounded-full"
+                    layout="responsive"
+                    width={200}
+                    height={200}
+                    className="object-cover w-full h-full"
                     data-ai-hint="user portrait"
                   />
                 ) : (
-                  <div className="w-full h-full bg-card flex items-center justify-center overflow-hidden rounded-full">
-                    <CyberpunkAvatarPlaceholder />
-                  </div>
+                  <CyberpunkAvatarPlaceholder />
                 )}
               </div>
-              <h2 className="text-2xl font-headline text-accent mb-4 text-center uppercase">
-                {userName.toUpperCase() || "OPERATIVE"}
-              </h2>
-              
-              <div className="w-full space-y-2.5 text-sm">
-                {profileDetailsList.map((detail, index) => (
-                  <React.Fragment key={detail.label}>
-                    <div className="flex justify-between items-baseline">
-                      <span className="font-headline text-muted-foreground uppercase text-xs tracking-wider">{detail.label}:</span>
-                      <span className="font-code text-foreground text-right">{detail.value}</span>
-                    </div>
-                    {index < profileDetailsList.length - 1 && <Separator className="my-1.5 bg-border/40" />}
-                  </React.Fragment>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
 
-        {/* Right Column - Attributes and Logs */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
-            <CardHeader>
-              <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">Core Attributes</CardTitle>
-              <CardDescription>Proficiency levels across key disciplines.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5 pt-2">
+            <div className="flex-grow space-y-1.5 text-primary/90">
+              <div>
+                <span className="text-xs text-muted-foreground block">RANK DESIGNATION:</span>
+                <span className="block text-base text-primary">{rankName}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">OPERATIVE ID:</span>
+                <span className="block text-xl text-accent font-headline uppercase tracking-wide">{userName.toUpperCase() || "N/A"}</span>
+              </div>
+              <Separator className="my-1.5 bg-border/30"/>
+              <div className="flex justify-between">
+                <div>
+                  <span className="text-xs text-muted-foreground block">CLEARANCE LVL:</span>
+                  <span className="block">{toRoman(subRank)}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block text-right">EXP TOTAL:</span>
+                  <span className="block text-right">{totalExp.toLocaleString()}</span>
+                </div>
+              </div>
+               <Separator className="my-1.5 bg-border/30"/>
+              <div>
+                <span className="text-xs text-muted-foreground block">CURRENT DIRECTIVE:</span>
+                <p className="text-xs text-foreground/80 italic leading-tight min-h-[2.5em] line-clamp-2">
+                  {customQuote || "No directive assigned."}
+                </p>
+              </div>
+               <Separator className="my-1.5 bg-border/30"/>
+               <div className="grid grid-cols-2 gap-x-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">CONSECUTIVE OPS:</span> <span className="text-primary">{currentStreak}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-muted-foreground">EFFICIENCY:</span> <span className="text-primary">{dailyTaskCompletionPercentage.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Attributes Section */}
+          <Separator className="my-3 bg-primary/60 h-0.5"/>
+          <div>
+            <h3 className="text-xs text-center text-muted-foreground uppercase mb-2 tracking-widest">FIELD ASSESSMENT // CORE ATTRIBUTES</h3>
+            <div className="space-y-2.5">
               {attributeDisplayOrder.map(attrKey => {
                 const stat = stats[attrKey.toLowerCase() as keyof typeof stats];
-                if (!stat) return null; // Should not happen with current setup
-                
-                const progress = stat.expToNextLevel > 0 ? (stat.exp / stat.expToNextLevel) * 100 : 100;
+                if (!stat) return null;
                 const Icon = attributeIcons[attrKey as typeof ATTRIBUTES_LIST[number]] || Zap;
 
                 return (
-                  <div key={attrKey} className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center">
-                        <Icon className="mr-2 h-4 w-4 text-primary flex-shrink-0" />
-                        <h3 className="text-sm font-headline text-foreground uppercase tracking-wide truncate" title={attrKey}>{attrKey}</h3>
+                  <div key={attrKey} className="text-xs">
+                    <div className="flex justify-between items-center mb-0.5">
+                      <div className="flex items-center text-primary">
+                        <Icon className="mr-1.5 h-3 w-3" />
+                        <span className="font-medium uppercase tracking-wide">{attrKey}</span>
                       </div>
-                      <span className="text-sm font-code text-primary font-semibold">Lvl {stat.level}</span>
+                      <span className="text-primary/80">LVL {stat.level}</span>
                     </div>
-                    <Progress value={progress} className="h-2 bg-secondary" indicatorClassName="bg-primary" />
-                    <p className="text-xs text-muted-foreground font-code text-right">
-                      EXP: {stat.exp.toLocaleString()} / {stat.expToNextLevel.toLocaleString()}
+                    <AttributeBar value={stat.exp} maxValue={stat.expToNextLevel} colorClass="bg-accent" />
+                    <p className="text-right text-muted-foreground mt-0.5">
+                      EXP: {stat.exp.toLocaleString()}/{stat.expToNextLevel.toLocaleString()}
                     </p>
                   </div>
                 );
               })}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </CardContent>
 
-          <Card className="bg-card/80 backdrop-blur-sm shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">Mission Log</CardTitle>
-              <CardDescription>Summary of recent operational history.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground font-code text-sm">
-                Total directives logged: <span className="text-primary font-semibold">{taskHistory.length}</span>
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground font-code">
-                (Detailed task history and notable achievements will be displayed here in future iterations.)
-              </p>
-            </CardContent>
-          </Card>
+        {/* Footer Bar */}
+        <div className="px-3 py-1.5 border-t-2 border-primary/60">
+          <p className="text-xs text-center text-primary/70 uppercase">
+            {appSettings.enableAnimations ? "Cursebreaker Codex" : "CBR_CDX"} :: User Profile Interface :: v2.1
+          </p>
         </div>
-      </div>
+      </Card>
     </AppWrapper>
   );
 }
-
