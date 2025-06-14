@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2, RotateCcw } from 'lucide-react';
+import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2, RotateCcw, Check, Trash2 } from 'lucide-react';
 import React, { useEffect, useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -249,12 +249,12 @@ const TaskItem = ({ task }: { task: Task }) => {
         timeInfo = " (All Day)";
     }
     descriptionText = `Scheduled: ${task.scheduledDate ? format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d") : "N/A"}${timeInfo}. ${task.difficulty} - ${task.attribute}`;
-    canComplete = isDueToday && !task.isCompleted ; // For events, isCompleted directly from task is fine for canComplete
+    canComplete = isDueToday && !task.isCompleted ; 
   } else { // daily
     isDueToday = true; 
     isTaskEffectivelyCompleted = task.isCompleted && task.dateCompleted === today;
     descriptionText = `${task.difficulty} - ${task.attribute}`;
-    canComplete = !task.isCompleted; // For dailies, isCompleted directly from task is fine for canComplete
+    canComplete = !task.isCompleted; 
   }
   
   const handleComplete = () => {
@@ -301,17 +301,21 @@ const TaskItem = ({ task }: { task: Task }) => {
       </div>
       <div className="flex items-center space-x-2 pl-2">
         {canComplete && (
-          <Button onClick={handleComplete} size="sm" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">Complete</Button>
+          <Button onClick={handleComplete} size="icon" variant="outline" className="h-8 w-8 border-accent text-accent hover:bg-accent hover:text-accent-foreground" title="Complete Task">
+            <Check className="h-4 w-4" />
+          </Button>
         )}
         {isTaskEffectivelyCompleted && (
            <>
             <span className="text-xs text-green-400 font-semibold">DONE</span>
-            <Button onClick={handleUndo} size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Undo">
+            <Button onClick={handleUndo} size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Undo">
               <RotateCcw className="h-4 w-4" />
             </Button>
           </>
         )}
-        <Button onClick={handleDelete} size="sm" variant="destructive" className="opacity-70 hover:opacity-100">Delete</Button>
+        <Button onClick={handleDelete} size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-70 hover:opacity-100" title="Delete Task">
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
@@ -709,3 +713,4 @@ export default function HomePage() {
   );
 }
 
+    
