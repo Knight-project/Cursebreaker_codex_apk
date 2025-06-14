@@ -191,75 +191,35 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []); 
 
 
+  // Daily Streak Check: Only breaks very old streaks.
   useEffect(() => {
-    if (!isInitialized) return;
+      if (!isInitialized) return;
 
-    setUserProfile(prevProfile => {
-      const today = new Date();
-      const todayStr = format(today, 'yyyy-MM-dd');
-      const yesterday = subDays(today, 1);
-      const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
+      setUserProfile(prevProfile => {
+          const today = new Date();
+          const yesterday = subDays(today, 1);
+          // const yesterdayStr = format(yesterday, 'yyyy-MM-dd'); // Not directly used here anymore
 
-      let newStreak = prevProfile.currentStreak;
-      let newLastDayAllTasksCompleted = prevProfile.lastDayAllTasksCompleted;
-
-      if (!newLastDayAllTasksCompleted) {
-        newStreak = 0;
-      } else {
-        const lastCompletedDateObj = parseISO(newLastDayAllTasksCompleted);
-        if (!dateIsValid(lastCompletedDateObj)) {
-          newStreak = 0;
-          newLastDayAllTasksCompleted = "";
-        } else if (!isSameDay(lastCompletedDateObj, today) && !isSameDay(lastCompletedDateObj, yesterday)) {
-          newStreak = 0;
-        } else if (isSameDay(lastCompletedDateObj, yesterday)) {
-          const tasksFromYesterday = tasks.filter(task => {
-            if (task.taskType === 'daily' && task.dateAdded === yesterdayStr) return true;
-            if (task.taskType === 'event' && task.scheduledDate === yesterdayStr) return true;
-            if (task.taskType === 'ritual') {
-               // A ritual contributed to yesterday's streak if it was completed yesterday OR
-               // if its next due date was yesterday (implying it was actionable then)
-               if (task.lastCompletedDate === yesterdayStr) return true;
-
-               // Check if its nextDueDate was yesterday, before potential completion and advancement
-               let originalNextDueDate = task.nextDueDate;
-               if (task.lastCompletedDate === yesterdayStr && task.repeatIntervalDays) {
-                 // If completed yesterday, nextDueDate would have advanced. Revert it to check.
-                 originalNextDueDate = format(subDays(parseISO(task.nextDueDate!), task.repeatIntervalDays), 'yyyy-MM-dd');
-               }
-               if (originalNextDueDate === yesterdayStr) return true;
-            }
-            return false;
-          });
-
-          if (tasksFromYesterday.length > 0) {
-            const allYesterdayContributingTasksCompleted = tasksFromYesterday.every(task => {
-              const historyEntry = prevProfile.taskHistory.find(h => 
-                h.id === task.id && 
-                ( (h.taskType !== 'ritual' && h.dateCompleted === yesterdayStr) || 
-                  (h.taskType === 'ritual' && h.lastCompletedDate === yesterdayStr) ) &&
-                h.isCompleted 
-              );
-              return !!historyEntry;
-            });
-
-            if (!allYesterdayContributingTasksCompleted) {
-              newStreak = 0;
-            }
+          if (prevProfile.lastDayAllTasksCompleted && dateIsValid(parseISO(prevProfile.lastDayAllTasksCompleted))) {
+              const lastCompletedDateObj = parseISO(prevProfile.lastDayAllTasksCompleted);
+              // If last completed day is older than yesterday, streak is broken.
+              if (isBefore(lastCompletedDateObj, yesterday)) {
+                  if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
+                      return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
+                  }
+              }
+          } else if (prevProfile.lastDayAllTasksCompleted && prevProfile.lastDayAllTasksCompleted !== "") { // Invalid date string but not empty
+              if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
+                  return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
+              }
+          } else if (!prevProfile.lastDayAllTasksCompleted && prevProfile.currentStreak !== 0) { // No completion day but streak > 0
+              return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
           }
-        }
-      }
-
-      if (newStreak === 0 && newLastDayAllTasksCompleted && isBefore(parseISO(newLastDayAllTasksCompleted), yesterday)) {
-          newLastDayAllTasksCompleted = "";
-      }
-
-      if (newStreak !== prevProfile.currentStreak || newLastDayAllTasksCompleted !== prevProfile.lastDayAllTasksCompleted) {
-        return { ...prevProfile, currentStreak: newStreak, lastDayAllTasksCompleted: newLastDayAllTasksCompleted };
-      }
-      return prevProfile;
-    });
-  }, [isInitialized, tasks, setUserProfile, userProfile.taskHistory]);
+          // If lastDayAllTasksCompleted is empty, or today, or yesterday, this effect does nothing to break the streak.
+          // Streak is either 0 (and lastDayAllTasksCompleted is ""), or being actively managed by completeTask/undoCompleteTask.
+          return prevProfile;
+      });
+  }, [isInitialized, setUserProfile]);
 
 
   useEffect(() => {
@@ -488,6 +448,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const todayStr = format(today, 'yyyy-MM-dd');
     const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
     let historyEntryData: Task | null = null;
+    let taskWasCompletedThisAction = false;
 
     setTasks(prevTasks => {
       const taskIndex = prevTasks.findIndex(t => t.id === taskId);
@@ -502,6 +463,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       if (!canCompleteDailyOrEvent && !canCompleteRitual) {
         return prevTasks;
       }
+      taskWasCompletedThisAction = true;
 
       const expAwardedForThisCompletion = originalTask.baseExpValue;
       let statExpGainedForThisInstance: number | undefined = undefined;
@@ -538,9 +500,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const newTasks = [...prevTasks];
       newTasks[taskIndex] = updatedTaskInMainList;
-
-      // Streak logic starts here, using newTasks to reflect current completion
-      const tasksActionableToday = newTasks.filter(t =>
+      
+      // Streak logic, using the `newTasks` array which reflects the current completion
+      const tasksForStreakCheck = newTasks;
+      const tasksActionableToday = tasksForStreakCheck.filter(t =>
           (t.taskType === 'daily' && t.dateAdded === todayStr) ||
           (t.taskType === 'ritual' && (t.nextDueDate === todayStr || t.lastCompletedDate === todayStr) ) || 
           (t.taskType === 'event' && t.scheduledDate === todayStr)
@@ -556,16 +519,16 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           setUserProfile(prev => {
               if (prev.lastDayAllTasksCompleted === yesterdayStr) {
                   return { ...prev, currentStreak: prev.currentStreak + 1, lastDayAllTasksCompleted: todayStr };
-              } else if (prev.lastDayAllTasksCompleted !== todayStr) { // Catches "" or older dates
+              } else if (prev.lastDayAllTasksCompleted !== todayStr) { 
                   return { ...prev, currentStreak: 1, lastDayAllTasksCompleted: todayStr };
               }
-              return prev; // Already processed for today
+              return prev; 
           });
       }
       return newTasks;
     });
 
-    if (historyEntryData) {
+    if (taskWasCompletedThisAction && historyEntryData) {
       const finalHistoryRecord = historyEntryData;
 
       if (finalHistoryRecord.expAwarded !== undefined) {
@@ -594,9 +557,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [setTasks, appSettings.autoAssignStatExp, grantExp, grantStatExp, setUserProfile]);
 
   const undoCompleteTask = useCallback((taskId: string) => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
+    let taskWasUndoneThisAction = false;
 
     const taskToUndoFromHistory = userProfile.taskHistory.find(ht => 
         ht.id === taskId && 
@@ -618,6 +582,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     
     grantExp(-(expToRevoke)); 
+    taskWasUndoneThisAction = true;
 
     if (attributeForStatRevoke && attributeForStatRevoke !== "None" && statExpToRevoke !== undefined) {
       grantStatExp(attributeForStatRevoke, -statExpToRevoke); 
@@ -654,24 +619,33 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
          !(ht.id === taskId && (ht.taskType === 'ritual' ? ht.lastCompletedDate === todayStr : ht.dateCompleted === todayStr))
       );
       
-      let newStreak = prev.currentStreak;
+      let newCurrentStreak = prev.currentStreak;
       let newLastDayAllTasksCompleted = prev.lastDayAllTasksCompleted;
 
+      // If today was previously 'all complete', undoing a task breaks that.
       if (prev.lastDayAllTasksCompleted === todayStr) {
-         newStreak = Math.max(0, prev.currentStreak - 1); 
-         newLastDayAllTasksCompleted = yesterdayStr;
+          newLastDayAllTasksCompleted = yesterdayStr; // Fallback to yesterday
+          if (prev.currentStreak === 1) { // If streak was 1 (started today)
+              newCurrentStreak = 0;
+              newLastDayAllTasksCompleted = ""; // No prior completion, so reset
+          } else if (prev.currentStreak > 1) { // If streak was > 1 (continued from yesterday)
+              newCurrentStreak = prev.currentStreak - 1;
+              // newLastDayAllTasksCompleted correctly remains yesterdayStr
+          }
       }
-
+      
       return {
           ...prev,
           taskHistory: newHistory,
-          currentStreak: newStreak,
+          currentStreak: newCurrentStreak,
           lastDayAllTasksCompleted: newLastDayAllTasksCompleted,
       };
     });
-
-    toast({ title: "Task Undone", description: `${taskToUndoFromHistory.name} reverted to incomplete.` });
-    playSound('buttonClick');
+    
+    if (taskWasUndoneThisAction) {
+      toast({ title: "Task Undone", description: `${taskToUndoFromHistory.name} reverted to incomplete.` });
+      playSound('buttonClick');
+    }
   }, [userProfile.taskHistory, grantExp, grantStatExp, setTasks, setUserProfile, toast]);
 
 
@@ -739,8 +713,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         
         const expFromUserUncompletedRitualTasksForYesterday = tasks
             .filter(t => t.taskType === 'ritual' && 
-                         (t.nextDueDate === previousDayForExpCalc || (t.lastCompletedDate && format(addDays(parseISO(t.lastCompletedDate), t.repeatIntervalDays || 1),'yyyy-MM-dd') === previousDayForExpCalc ) ) && // was due yesterday
-                         !userProfile.taskHistory.some(ht => ht.id === t.id && ht.lastCompletedDate === previousDayForExpCalc && ht.isCompleted) // and not completed
+                         (t.nextDueDate === previousDayForExpCalc || (t.lastCompletedDate && format(addDays(parseISO(t.lastCompletedDate), t.repeatIntervalDays || 1),'yyyy-MM-dd') === previousDayForExpCalc ) ) && 
+                         !userProfile.taskHistory.some(ht => ht.id === t.id && ht.lastCompletedDate === previousDayForExpCalc && ht.isCompleted) 
             )
             .reduce((sum,task) => sum + (task.baseExpValue !== undefined ? task.baseExpValue : calculatePotentialTaskExp(task, userProfile.rankName)), 0);
 
@@ -963,7 +937,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       }
-      if (Object.keys(newDailyLogsState[graphId]).length === 0) {
+      if (newDailyLogsState[graphId] && Object.keys(newDailyLogsState[graphId]).length === 0) {
         delete newDailyLogsState[graphId];
       }
     }
@@ -1027,3 +1001,5 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 export default AppProvider;
 
+
+    
