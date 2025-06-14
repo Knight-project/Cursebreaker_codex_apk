@@ -1,3 +1,4 @@
+
 // src/app/journal/page.tsx
 'use client';
 
@@ -60,44 +61,36 @@ export default function JournalPage() {
 
   return (
     <AppWrapper>
-      <div className="space-y-6 max-w-2xl mx-auto"> {/* Stack cards and limit width */}
+      <div className="space-y-6 max-w-2xl mx-auto">
         <Card className="bg-card/80 backdrop-blur-sm shadow-xl w-full">
           <CardHeader>
-            <CardTitle className="font-headline text-xl text-primary">Select Date</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal h-11",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                  onClick={() => {setIsCalendarOpen(!isCalendarOpen); playSound('buttonClick');}}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-popover border-border" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={handleDateSelect}
-                  disabled={(date) => date > new Date()} // Disable future dates
-                  initialFocus
-                  className="rounded-md border-0 bg-popover" // Removed border from calendar itself
-                />
-              </PopoverContent>
-            </Popover>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/80 backdrop-blur-sm shadow-xl w-full">
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl text-accent">
-              Daily Journal - {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'No date selected'}
+            <CardTitle className="font-headline text-xl flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="text-primary">Daily Journal -</span>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "justify-start text-left font-normal h-auto py-1 px-2.5 text-base border-accent/60 hover:bg-accent/10 focus-visible:border-accent",
+                       selectedDate ? "text-accent hover:text-accent" : "text-accent/70 italic hover:text-accent/90"
+                    )}
+                    onClick={() => {setIsCalendarOpen(!isCalendarOpen); playSound('buttonClick');}}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-popover border-border" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    disabled={(date) => date > new Date()} 
+                    initialFocus
+                    className="rounded-md border-0 bg-popover"
+                  />
+                </PopoverContent>
+              </Popover>
             </CardTitle>
             <CardDescription>Reflect on your progress, thoughts, and challenges.</CardDescription>
           </CardHeader>
@@ -118,3 +111,4 @@ export default function JournalPage() {
     </AppWrapper>
   );
 }
+
