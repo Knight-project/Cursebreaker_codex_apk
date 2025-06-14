@@ -228,15 +228,18 @@ const TaskItem = ({ task }: { task: Task }) => {
   const { toast } = useToast();
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  let isTaskEffectivelyCompleted = false;
-  let descriptionText = `${task.difficulty} - ${task.attribute}`;
-  let isDueToday = true; 
+  let isTaskEffectivelyCompleted: boolean;
+  let descriptionText: string;
+  let isDueToday: boolean;
+  let canComplete: boolean;
 
   if (task.taskType === 'ritual') {
-    isTaskEffectivelyCompleted = task.lastCompletedDate === today && !!task.nextDueDate && isBefore(startOfDay(new Date()), parseISO(task.nextDueDate));
-    descriptionText = `Due: ${task.nextDueDate ? format(parseISO(task.nextDueDate), "MMM d") : "N/A"}. Repeats every ${task.repeatIntervalDays} day(s). ${task.difficulty} - ${task.attribute}`;
     isDueToday = task.nextDueDate === today;
+    isTaskEffectivelyCompleted = task.lastCompletedDate === today;
+    descriptionText = `Due: ${task.nextDueDate ? format(parseISO(task.nextDueDate), "MMM d") : "N/A"}. Repeats every ${task.repeatIntervalDays} day(s). ${task.difficulty} - ${task.attribute}`;
+    canComplete = isDueToday && !isTaskEffectivelyCompleted;
   } else if (task.taskType === 'event') {
+    isDueToday = task.scheduledDate === today;
     isTaskEffectivelyCompleted = task.isCompleted;
     let timeInfo = "";
     if (!task.isAllDay && task.startTime) {
@@ -246,23 +249,21 @@ const TaskItem = ({ task }: { task: Task }) => {
         timeInfo = " (All Day)";
     }
     descriptionText = `Scheduled: ${task.scheduledDate ? format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d") : "N/A"}${timeInfo}. ${task.difficulty} - ${task.attribute}`;
-    isDueToday = task.scheduledDate === today;
-
-  } else { 
+    canComplete = isDueToday && !isTaskEffectivelyCompleted;
+  } else { // daily
+    isDueToday = true; // Daily tasks are filtered for today, so they are always "due today" in this context
     isTaskEffectivelyCompleted = task.isCompleted;
+    descriptionText = `${task.difficulty} - ${task.attribute}`;
+    canComplete = !isTaskEffectivelyCompleted;
   }
   
-  const canComplete = (task.taskType === 'ritual' && isDueToday && !isTaskEffectivelyCompleted) || 
-                      ((task.taskType === 'daily' || task.taskType === 'event') && !task.isCompleted && (task.taskType === 'daily' || (task.taskType === 'event' && isDueToday)) );
-
-
   const handleComplete = () => {
     if (canComplete) {
       completeTask(task.id);
       toast({ title: `${task.taskType.charAt(0).toUpperCase() + task.taskType.slice(1)} Completed!`, description: `+EXP for ${task.name}`});
     } else if (task.taskType === 'ritual' && task.lastCompletedDate === today) {
         toast({ title: "Ritual Already Done", description: "This ritual has already been completed today.", variant: "default" });
-    } else if (!isDueToday && (task.taskType === 'event' || task.taskType === 'ritual')) {
+    } else if (!isDueToday && (task.taskType === 'event' || (task.taskType === 'ritual' && task.nextDueDate !== today) )) {
         toast({ title: "Not Due Yet", description: "This task is not scheduled for today.", variant: "default" });
     } else if (isTaskEffectivelyCompleted) {
        toast({ title: "Already Completed", description: "This task is already marked as complete.", variant: "default" });
@@ -295,7 +296,7 @@ const TaskItem = ({ task }: { task: Task }) => {
         <p className="text-xs text-muted-foreground truncate">{descriptionText}</p>
       </div>
       <div className="flex items-center space-x-2 pl-2">
-        {canComplete && !isTaskEffectivelyCompleted && (
+        {canComplete && (
           <Button onClick={handleComplete} size="sm" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">Complete</Button>
         )}
         {isTaskEffectivelyCompleted && (
@@ -415,9 +416,9 @@ export default function HomePage() {
   };
 
   const saveName = () => {
-    const nameToSave = editingName; // Keep case as entered
+    const nameToSave = editingName; 
     setUserProfile(prev => ({ ...prev, userName: nameToSave }));
-    if ((userProfile.userName || "") !== nameToSave) {
+    if (((userProfile.userName || "").trim()) !== nameToSave.trim()) {
         toast({ title: "Name Updated!" });
     }
     setIsEditingName(false);
@@ -527,7 +528,7 @@ export default function HomePage() {
                 {((userProfile.userName || "").trim().toUpperCase()) || "NAME"}
               </h2>
             )}
-            <div className="h-0.5 w-2/3 my-2 bg-accent" /> {/* Orange Accent Line */}
+            <div className="h-0.5 w-2/3 my-2 bg-accent" />
             <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">
               <RankDisplay rankName={userProfile.rankName} subRank={userProfile.subRank} />
             </CardTitle>
@@ -549,7 +550,7 @@ export default function HomePage() {
                 className="text-muted-foreground mt-1 text-xs font-code italic cursor-pointer hover:bg-muted/30 rounded-md p-1 transition-colors min-h-[20px]"
                 title="Double-click to edit quote"
               >
-                {(userProfile.customQuote || "").trim() || "No quote set. Double-click to add one."}
+                {((userProfile.customQuote || "").trim()) || "No quote set. Double-click to add one."}
               </CardDescription>
             )}
 
@@ -672,5 +673,6 @@ export default function HomePage() {
     
 
     
+
 
 
