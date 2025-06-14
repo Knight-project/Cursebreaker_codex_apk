@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2 } from 'lucide-react';
+import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2, RotateCcw } from 'lucide-react';
 import React, { useEffect, useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -224,7 +224,7 @@ const AddTaskForm = ({
 };
 
 const TaskItem = ({ task }: { task: Task }) => {
-  const { completeTask, deleteTask } = useApp();
+  const { completeTask, deleteTask, undoCompleteTask } = useApp();
   const { toast } = useToast();
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -240,7 +240,7 @@ const TaskItem = ({ task }: { task: Task }) => {
     canComplete = isDueToday && !isTaskEffectivelyCompleted;
   } else if (task.taskType === 'event') {
     isDueToday = task.scheduledDate === today;
-    isTaskEffectivelyCompleted = task.isCompleted;
+    isTaskEffectivelyCompleted = task.isCompleted && task.dateCompleted === today;
     let timeInfo = "";
     if (!task.isAllDay && task.startTime) {
         timeInfo = ` at ${task.startTime}`;
@@ -249,12 +249,12 @@ const TaskItem = ({ task }: { task: Task }) => {
         timeInfo = " (All Day)";
     }
     descriptionText = `Scheduled: ${task.scheduledDate ? format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d") : "N/A"}${timeInfo}. ${task.difficulty} - ${task.attribute}`;
-    canComplete = isDueToday && !isTaskEffectivelyCompleted;
+    canComplete = isDueToday && !task.isCompleted ; // For events, isCompleted directly from task is fine for canComplete
   } else { // daily
     isDueToday = true; 
-    isTaskEffectivelyCompleted = task.isCompleted;
+    isTaskEffectivelyCompleted = task.isCompleted && task.dateCompleted === today;
     descriptionText = `${task.difficulty} - ${task.attribute}`;
-    canComplete = !isTaskEffectivelyCompleted;
+    canComplete = !task.isCompleted; // For dailies, isCompleted directly from task is fine for canComplete
   }
   
   const handleComplete = () => {
@@ -265,7 +265,7 @@ const TaskItem = ({ task }: { task: Task }) => {
         toast({ title: "Ritual Already Done", description: "This ritual has already been completed today.", variant: "default" });
     } else if (!isDueToday && (task.taskType === 'event' || (task.taskType === 'ritual' && task.nextDueDate !== today) )) {
         toast({ title: "Not Due Yet", description: "This task is not scheduled for today.", variant: "default" });
-    } else if (isTaskEffectivelyCompleted) {
+    } else if (task.isCompleted && (task.taskType === 'daily' || task.taskType === 'event')) {
        toast({ title: "Already Completed", description: "This task is already marked as complete.", variant: "default" });
     }
   };
@@ -277,6 +277,10 @@ const TaskItem = ({ task }: { task: Task }) => {
     }
   };
   
+  const handleUndo = () => {
+    undoCompleteTask(task.id);
+  };
+
   const isPastDue = (task.taskType === 'event' && task.scheduledDate && isBefore(parseISO(task.scheduledDate), startOfDay(new Date())) && !task.isCompleted) ||
                      (task.taskType === 'ritual' && task.nextDueDate && isBefore(parseISO(task.nextDueDate), startOfDay(new Date())) && task.lastCompletedDate !== task.nextDueDate && task.lastCompletedDate !== today && !task.isCompleted);
 
@@ -300,7 +304,12 @@ const TaskItem = ({ task }: { task: Task }) => {
           <Button onClick={handleComplete} size="sm" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">Complete</Button>
         )}
         {isTaskEffectivelyCompleted && (
-           <span className="text-xs text-green-400 font-semibold pr-2">DONE</span>
+           <>
+            <span className="text-xs text-green-400 font-semibold">DONE</span>
+            <Button onClick={handleUndo} size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Undo">
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </>
         )}
         <Button onClick={handleDelete} size="sm" variant="destructive" className="opacity-70 hover:opacity-100">Delete</Button>
       </div>
@@ -447,9 +456,9 @@ export default function HomePage() {
   };
 
   const saveName = () => {
-    const nameToSave = editingName; 
+    const nameToSave = editingName.trim(); 
     setUserProfile(prev => ({ ...prev, userName: nameToSave }));
-    if (((userProfile.userName || "").trim()) !== nameToSave.trim()) {
+    if (((userProfile.userName || "").trim()) !== nameToSave) {
         toast({ title: "Name Updated!" });
     }
     setIsEditingName(false);
@@ -474,7 +483,7 @@ export default function HomePage() {
   };
 
   const saveQuote = () => {
-    setUserProfile(prev => ({ ...prev, customQuote: editingQuote }));
+    setUserProfile(prev => ({ ...prev, customQuote: editingQuote.trim() }));
     if ((userProfile.customQuote || "").trim() !== editingQuote.trim()) {
       toast({ title: "Quote Updated!" });
     }
@@ -699,3 +708,4 @@ export default function HomePage() {
     </AppWrapper>
   );
 }
+

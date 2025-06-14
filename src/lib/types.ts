@@ -27,6 +27,7 @@ export interface Task {
 
   statExpGained?: number;
   attributeAffectedForStatExp?: Attribute;
+  expAwarded?: number; // To store exact EXP awarded for easier undo
 }
 
 export interface UserStat {
@@ -57,7 +58,7 @@ export interface UserProfile {
   avatarUrl?: string;
   expGainedToday: number;
   lastExpResetDate: string; 
-  lastDayAllTasksCompleted: string; // Added for streak calculation
+  lastDayAllTasksCompleted: string;
 }
 
 export interface Rival {
@@ -171,7 +172,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   avatarUrl: '',
   expGainedToday: 0,
   lastExpResetDate: new Date().toISOString().split('T')[0],
-  lastDayAllTasksCompleted: "", // Initialize new streak field
+  lastDayAllTasksCompleted: "", 
 };
 
 const tomorrow = new Date();

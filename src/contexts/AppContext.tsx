@@ -21,7 +21,7 @@ import {
 } from '@/lib/constants';
 import { getAdaptiveTaunt } from '@/ai/flows/adaptive-taunts';
 import type { AdaptiveTauntInput } from '@/ai/flows/adaptive-taunts';
-import { format, isBefore, startOfDay, addHours, subDays, parseISO, addDays, differenceInDays, isEqual, isValid as dateIsValid, isSameDay } from 'date-fns';
+import { format, isBefore, startOfDay, addHours, subDays, parseISO, addDays, differenceInDays, isEqual, isValid as dateIsValid, isSameDay, isAfter } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { playSound, updateGlobalSoundSetting } from '@/lib/soundManager';
 
@@ -55,6 +55,7 @@ interface AppContextType {
   updateTask: (updatedTask: Task) => void;
   deleteTask: (taskId: string) => void;
   completeTask: (taskId: string) => void;
+  undoCompleteTask: (taskId: string) => void;
   getDailyDirectives: () => Task[];
   getRituals: () => Task[];
   getEventsForToday: () => Task[];
@@ -161,7 +162,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           let expectedNextDueDate = task.nextDueDate ? parseISO(task.nextDueDate) : parseISO(task.dateAdded);
           
           const daysSinceAddedOrLastDue = differenceInDays(startOfDay(new Date()), task.nextDueDate ? parseISO(task.nextDueDate) : parseISO(task.dateAdded));
-          if (daysSinceAddedOrLastDue >= interval || !task.nextDueDate) { // Also update if nextDueDate is missing
+          if (daysSinceAddedOrLastDue >= interval || !task.nextDueDate) { 
             const cyclesMissed = Math.floor(daysSinceAddedOrLastDue / interval);
             expectedNextDueDate = addDays(task.nextDueDate ? parseISO(task.nextDueDate) : parseISO(task.dateAdded), cyclesMissed * interval);
           }
@@ -200,21 +201,15 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       let newLastDayAllTasksCompleted = prevProfile.lastDayAllTasksCompleted;
 
       if (!newLastDayAllTasksCompleted || newLastDayAllTasksCompleted === "") {
-        // First time initialization for streak logic
         newStreak = 0;
-        newLastDayAllTasksCompleted = yesterdayStr; // Assume yesterday wasn't a success to start fresh
+        newLastDayAllTasksCompleted = yesterdayStr; 
       } else {
         const lastDayDate = parseISO(newLastDayAllTasksCompleted);
         if (!isSameDay(lastDayDate, today) && !isSameDay(lastDayDate, yesterday)) {
-          // Missed more than one day (or last success was before yesterday)
           newStreak = 0;
         }
-        // If lastDayAllTasksCompleted was yesterday, streak is maintained (handled by completeTask)
-        // If lastDayAllTasksCompleted is today, streak already updated for today (handled by completeTask)
       }
       
-      // Additional check: If today is a new day AND yesterday was not a success day (and tasks were due)
-      // This ensures streak breaks if user *didn't* complete tasks yesterday and just opens app today.
       if (newLastDayAllTasksCompleted !== todayStr && newLastDayAllTasksCompleted !== yesterdayStr) {
           const tasksActionableYesterday = tasks.filter(task =>
               (task.taskType === 'daily' && task.dateAdded === yesterdayStr) ||
@@ -240,7 +235,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       return prevProfile;
     });
 
-  }, [isInitialized, tasks, setUserProfile]); // Rerun if tasks change to re-evaluate for yesterday if needed.
+  }, [isInitialized, tasks, setUserProfile]); 
 
 
   useEffect(() => {
@@ -305,7 +300,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       let newExpToNextSubRank = prev.expToNextSubRank;
       let leveledUp = false;
 
-      while (newCurrentExpInSubRank >= newExpToNextSubRank) {
+      while (newCurrentExpInSubRank >= newExpToNextSubRank && newExpToNextSubRank > 0) { // Ensure newExpToNextSubRank is positive
         leveledUp = true;
         newCurrentExpInSubRank -= newExpToNextSubRank;
         newSubRank++;
@@ -315,14 +310,37 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           if (currentRankIndex < RANK_NAMES_LIST.length - 1) {
             newRankName = RANK_NAMES_LIST[currentRankIndex + 1];
           } else {
-            newSubRank = MAX_SUB_RANKS;
-            newCurrentExpInSubRank = newExpToNextSubRank; 
+            newSubRank = MAX_SUB_RANKS; // Cap at max sub-rank of highest rank
+            newCurrentExpInSubRank = newExpToNextSubRank; // Cap EXP at this level
           }
         }
         newExpToNextSubRank = calculateExpForNextSubRank(newRankName, newSubRank);
       }
+      
+      // Handle EXP reduction that might de-level
+      while (newCurrentExpInSubRank < 0) {
+          newSubRank--;
+          if (newSubRank < 1) {
+              const currentRankIndex = RANK_NAMES_LIST.indexOf(newRankName as typeof RANK_NAMES_LIST[number]);
+              if (currentRankIndex > 0) {
+                  newRankName = RANK_NAMES_LIST[currentRankIndex - 1];
+                  newSubRank = MAX_SUB_RANKS;
+              } else {
+                  // Lowest possible rank and sub-rank, cannot go lower
+                  newSubRank = 1;
+                  newRankName = RANK_NAMES_LIST[0];
+                  newCurrentExpInSubRank = 0; // Floor EXP at 0 for this level
+                  newTotalExp = prev.totalExp + (newCurrentExpInSubRank - prev.currentExpInSubRank) - expGained; // Adjust totalExp based on actual change
+                  break; 
+              }
+          }
+          const expForPreviousLevel = calculateExpForNextSubRank(newRankName, newSubRank);
+          newCurrentExpInSubRank += expForPreviousLevel;
+          newExpToNextSubRank = expForPreviousLevel; // Update to the EXP needed for the *new current* sub-rank
+      }
 
-      if (leveledUp && isInitialized) { 
+
+      if (leveledUp && isInitialized && expGained > 0) { 
          triggerLevelUpAnimation();
       }
 
@@ -335,12 +353,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       return {
         ...prev,
-        totalExp: newTotalExp,
-        currentExpInSubRank: newCurrentExpInSubRank,
+        totalExp: Math.max(0, newTotalExp), // Ensure total EXP doesn't go below 0
+        currentExpInSubRank: Math.max(0, newCurrentExpInSubRank), // Ensure current sub-rank EXP doesn't go below 0
         subRank: newSubRank,
         rankName: newRankName,
         expToNextSubRank: newExpToNextSubRank,
-        expGainedToday: currentExpGainedToday,
+        expGainedToday: currentExpGainedToday, // This can be negative if a lot of EXP is revoked
         lastExpResetDate: prev.lastExpResetDate !== today ? today : prev.lastExpResetDate, 
       };
     });
@@ -357,19 +375,35 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       let newLevel = currentStat.level;
       let newExpToNext = currentStat.expToNextLevel;
 
-      while (newExp >= newExpToNext) {
-        newExp -= newExpToNext;
-        newLevel++;
-        newExpToNext = Math.floor(INITIAL_USER_PROFILE.stats.strength.expToNextLevel * Math.pow(1.2, newLevel -1));
+      if (expGainedStat > 0) { // Gaining EXP
+        while (newExp >= newExpToNext && newExpToNext > 0) {
+          newExp -= newExpToNext;
+          newLevel++;
+          newExpToNext = Math.floor(INITIAL_USER_PROFILE.stats.strength.expToNextLevel * Math.pow(1.2, newLevel -1));
+        }
+      } else { // Losing EXP
+         while (newExp < 0) {
+            newLevel--;
+            if (newLevel < 1) {
+                newLevel = 1;
+                newExp = 0; // Floor EXP at 0 for level 1
+                newExpToNext = INITIAL_USER_PROFILE.stats.strength.expToNextLevel;
+                break;
+            }
+            const expForPrevLevel = Math.floor(INITIAL_USER_PROFILE.stats.strength.expToNextLevel * Math.pow(1.2, newLevel -1));
+            newExp += expForPrevLevel;
+            newExpToNext = expForPrevLevel;
+        }
       }
+
 
       return {
         ...prev,
         stats: {
           ...prev.stats,
           [statKey]: {
-            level: newLevel,
-            exp: newExp,
+            level: Math.max(1, newLevel), // Ensure level doesn't go below 1
+            exp: Math.max(0, newExp),     // Ensure stat EXP doesn't go below 0
             expToNextLevel: newExpToNext,
           }
         }
@@ -413,6 +447,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
     playSound('buttonClick'); 
   };
+  
+  const calculatePotentialTaskExp = useCallback((taskData: Pick<Task, 'difficulty'>, userRankForCalc: string): number => {
+    const rankIndex = RANK_NAMES_LIST.indexOf(userRankForCalc as typeof RANK_NAMES_LIST[number]);
+    const difficultyMultiplier = TASK_DIFFICULTY_EXP_MULTIPLIER[taskData.difficulty];
+    const rankMultiplier = 1 + (rankIndex * RANK_EXP_SCALING_FACTOR);
+    return Math.floor(BASE_TASK_EXP * difficultyMultiplier * rankMultiplier);
+  }, []);
 
   const completeTask = useCallback((taskId: string) => {
     let completedTaskForHistory: Task | null = null;
@@ -433,10 +474,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         return prevTasks; 
       }
       
-      const rankIndex = RANK_NAMES_LIST.indexOf(userProfile.rankName as typeof RANK_NAMES_LIST[number]);
-      const difficultyMultiplier = TASK_DIFFICULTY_EXP_MULTIPLIER[task.difficulty];
-      const rankMultiplier = 1 + (rankIndex * RANK_EXP_SCALING_FACTOR);
-      const expFromTask = Math.floor(BASE_TASK_EXP * difficultyMultiplier * rankMultiplier);
+      const expFromTask = calculatePotentialTaskExp(task, userProfile.rankName);
       grantExp(expFromTask);
 
       let statExpGainedForTask: number | undefined = undefined;
@@ -451,6 +489,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       task.statExpGained = statExpGainedForTask;
       task.attributeAffectedForStatExp = attributeAffectedForStatExpForTask;
+      task.expAwarded = expFromTask; // Store the exact EXP awarded
 
       if (task.taskType === 'ritual') {
         task.lastCompletedDate = todayStr;
@@ -468,7 +507,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       const newTasks = [...prevTasks];
       newTasks[taskIndex] = task;
 
-      // After marking task complete, check if all tasks for today are done for streak
       const tasksActionableToday = newTasks.filter(t =>
           (t.taskType === 'daily' && t.dateAdded === todayStr) ||
           (t.taskType === 'ritual' && t.nextDueDate === todayStr) ||
@@ -484,9 +522,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           setUserProfile(prev => {
               if (prev.lastDayAllTasksCompleted === yesterdayStr) {
                   return { ...prev, currentStreak: prev.currentStreak + 1, lastDayAllTasksCompleted: todayStr };
-              } else {
+              } else if (prev.lastDayAllTasksCompleted !== todayStr) { // Only set to 1 if not already set today by another task
                   return { ...prev, currentStreak: 1, lastDayAllTasksCompleted: todayStr };
               }
+              return prev;
           });
       }
       return newTasks;
@@ -510,12 +549,119 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
                 newTaskHistory.push(completedTaskForHistory);
             } else if (completedTaskForHistory.taskType === 'ritual' && existingIndex > -1) {
                 newTaskHistory[existingIndex] = completedTaskForHistory; 
+            } else if (completedTaskForHistory.taskType !== 'ritual'){ // For daily/event, overwrite if re-completed on same day (should not happen with current logic)
+                const nonRitualIndex = newTaskHistory.findIndex(ht => ht.id === completedTaskForHistory!.id && ht.dateCompleted === completedTaskForHistory!.dateCompleted);
+                if(nonRitualIndex > -1) newTaskHistory[nonRitualIndex] = completedTaskForHistory;
+                else newTaskHistory.push(completedTaskForHistory);
             }
         }
         return { ...prev, taskHistory: newTaskHistory.slice(-100) }; 
       });
     }
-  }, [setTasks, userProfile.rankName, userProfile.lastDayAllTasksCompleted, grantExp, grantStatExp, appSettings.autoAssignStatExp, setUserProfile]);
+  }, [setTasks, userProfile.rankName, userProfile.lastDayAllTasksCompleted, grantExp, grantStatExp, appSettings.autoAssignStatExp, setUserProfile, calculatePotentialTaskExp]);
+
+  const undoCompleteTask = useCallback((taskId: string) => {
+    const taskToUndo = tasks.find(t => t.id === taskId);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+    let canBeUndone = false;
+    if (taskToUndo) {
+      if (taskToUndo.taskType === 'ritual') {
+        canBeUndone = taskToUndo.lastCompletedDate === todayStr;
+      } else { // daily or event
+        canBeUndone = taskToUndo.isCompleted === true && taskToUndo.dateCompleted === todayStr;
+      }
+    }
+
+    if (!taskToUndo || !canBeUndone) {
+      toast({ title: "Cannot Undo", description: "This task was not completed today or cannot be undone.", variant: "destructive" });
+      return;
+    }
+
+    // 1. Revoke general EXP - use stored expAwarded if available, otherwise recalculate
+    const expToRevoke = taskToUndo.expAwarded ?? calculatePotentialTaskExp(taskToUndo, userProfile.rankName);
+    grantExp(-expToRevoke);
+
+    // 2. Revoke Stat EXP
+    if (taskToUndo.attributeAffectedForStatExp && taskToUndo.attributeAffectedForStatExp !== "None" && taskToUndo.statExpGained) {
+      grantStatExp(taskToUndo.attributeAffectedForStatExp, -taskToUndo.statExpGained);
+    }
+
+    // 3. Update task state
+    setTasks(prevTasks =>
+      prevTasks.map(t => {
+        if (t.id === taskId) {
+          const updatedTask = { 
+            ...t, 
+            isCompleted: false, 
+            statExpGained: undefined, 
+            attributeAffectedForStatExp: undefined,
+            expAwarded: undefined,
+          };
+          if (t.taskType === 'ritual') {
+            updatedTask.lastCompletedDate = undefined;
+            updatedTask.nextDueDate = todayStr; // Ensure it's due again today
+          } else {
+            updatedTask.dateCompleted = undefined;
+          }
+          return updatedTask;
+        }
+        return t;
+      })
+    );
+
+    // 4. Update UserProfile (Streak and Task History)
+    setUserProfile(prev => {
+      const completionDateToMatch = taskToUndo.taskType === 'ritual' ? taskToUndo.lastCompletedDate : taskToUndo.dateCompleted;
+      const newTaskHistory = prev.taskHistory.filter(ht =>
+          !(ht.id === taskId &&
+           ((ht.taskType === 'ritual' && ht.lastCompletedDate === completionDateToMatch) ||
+            (ht.taskType !== 'ritual' && ht.dateCompleted === completionDateToMatch)))
+      );
+
+      let newStreak = prev.currentStreak;
+      let newLastDayAllTasksCompleted = prev.lastDayAllTasksCompleted;
+
+      if (completionDateToMatch && prev.lastDayAllTasksCompleted === completionDateToMatch) {
+        // Check if any *other* scannable tasks for that day are still complete
+        const otherTasksStillCompletedForThatDay = tasks.some(tsk => 
+            tsk.id !== taskId && (
+                (tsk.taskType === 'daily' && tsk.dateAdded === completionDateToMatch && tsk.isCompleted) ||
+                (tsk.taskType === 'ritual' && tsk.nextDueDate === completionDateToMatch && tsk.lastCompletedDate === completionDateToMatch) ||
+                (tsk.taskType === 'event' && tsk.scheduledDate === completionDateToMatch && tsk.isCompleted)
+            )
+        );
+        // Also need to check if all scannable tasks for that day were complete *before* this undo
+         const tasksActionableOnCompletionDay = tasks.filter(task =>
+            (task.taskType === 'daily' && task.dateAdded === completionDateToMatch) ||
+            (task.taskType === 'ritual' && task.nextDueDate === completionDateToMatch) ||
+            (task.taskType === 'event' && task.scheduledDate === completionDateToMatch)
+        );
+        const allWereCompleteBeforeThisUndo = tasksActionableOnCompletionDay.length > 0 && tasksActionableOnCompletionDay.every(tsku =>
+            (tsku.id === taskId) || // This task was part of the "all complete"
+            (tsku.taskType === 'daily' && tsku.isCompleted) ||
+            (tsku.taskType === 'ritual' && tsku.lastCompletedDate === completionDateToMatch) ||
+            (tsku.taskType === 'event' && tsku.isCompleted)
+        );
+
+
+        if (allWereCompleteBeforeThisUndo) { // If this task was crucial for the streak day
+            newStreak = Math.max(0, prev.currentStreak - 1);
+            newLastDayAllTasksCompleted = format(subDays(parseISO(completionDateToMatch), 1), 'yyyy-MM-dd');
+        }
+      }
+
+      return {
+          ...prev,
+          taskHistory: newTaskHistory,
+          currentStreak: newStreak,
+          lastDayAllTasksCompleted: newLastDayAllTasksCompleted,
+      };
+    });
+
+    toast({ title: "Task Undone", description: `${taskToUndo.name} reverted to incomplete.` });
+    playSound('buttonClick');
+  }, [tasks, userProfile.rankName, calculatePotentialTaskExp, grantExp, grantStatExp, setTasks, setUserProfile, toast]);
 
 
   const getDailyDirectives = useCallback(() => {
@@ -559,13 +705,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized]);
 
 
-  const calculatePotentialTaskExp = useCallback((taskData: Pick<Task, 'difficulty'>, userRankForCalc: string): number => {
-    const rankIndex = RANK_NAMES_LIST.indexOf(userRankForCalc as typeof RANK_NAMES_LIST[number]);
-    const difficultyMultiplier = TASK_DIFFICULTY_EXP_MULTIPLIER[taskData.difficulty];
-    const rankMultiplier = 1 + (rankIndex * RANK_EXP_SCALING_FACTOR);
-    return Math.floor(BASE_TASK_EXP * difficultyMultiplier * rankMultiplier);
-  }, []);
-
   useEffect(() => {
     if (!isInitialized) return;
 
@@ -584,7 +723,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
                 th => (th.dateCompleted === previousDayForExpCalc || th.lastCompletedDate === previousDayForExpCalc)
             );
             userExpGainedForRival = previousDayHistory.reduce((acc, currTask) => {
-                const rankIdx = RANK_NAMES_LIST.indexOf(userProfile.rankName as typeof RANK_NAMES_LIST[number]); // Use user's rank at time of completion
+                const rankIdx = RANK_NAMES_LIST.indexOf(userProfile.rankName as typeof RANK_NAMES_LIST[number]); 
                 const diffMultiplier = TASK_DIFFICULTY_EXP_MULTIPLIER[currTask.difficulty];
                 const rankMult = 1 + (rankIdx * RANK_EXP_SCALING_FACTOR);
                 return acc + Math.floor(BASE_TASK_EXP * diffMultiplier * rankMult);
@@ -626,7 +765,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           let newExpToNext = prev.expToNextSubRank;
           let newTotalExp = prev.totalExp + expGainedByRival;
 
-          while (newCurrentExp >= newExpToNext) {
+          while (newCurrentExp >= newExpToNext && newExpToNext > 0) {
             newCurrentExp -= newExpToNext;
             newSubRank++;
             if (newSubRank > MAX_SUB_RANKS) {
@@ -872,7 +1011,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       addCustomGraph, updateCustomGraph, deleteCustomGraph,
       customGraphDailyLogs, setCustomGraphDailyLogs,
       logCustomGraphData, commitStaleDailyLogs,
-      addTask, updateTask, deleteTask, completeTask,
+      addTask, updateTask, deleteTask, completeTask, undoCompleteTask,
       getDailyDirectives, getRituals, getEventsForToday, 
       updateRivalTaunt,
       triggerLevelUpAnimation, showLevelUp,
