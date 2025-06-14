@@ -12,6 +12,7 @@ export interface Task {
   taskType: TaskType;
   isCompleted: boolean; 
   dateAdded: string; 
+  baseExpValue: number; // EXP value determined at task creation
   
   dateCompleted?: string; 
   
@@ -27,7 +28,7 @@ export interface Task {
 
   statExpGained?: number;
   attributeAffectedForStatExp?: Attribute;
-  expAwarded?: number; // To store exact EXP awarded for easier undo
+  expAwarded?: number; // Actual EXP awarded for a specific completion instance
 }
 
 export interface UserStat {
