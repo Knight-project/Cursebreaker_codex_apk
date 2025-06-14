@@ -50,14 +50,19 @@ export default function JournalPage() {
     if (activeLocalTab === 'hourly' && selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
       const currentHour = new Date().getHours();
       const currentHourStr = `${String(currentHour).padStart(2, '0')}:00`;
-      const targetInput = hourlyInputRefs.current[currentHourStr];
-      if (targetInput) {
-        // Using a timeout to ensure the element is rendered and focusable after tab switch animations
+      
+      requestAnimationFrame(() => {
         setTimeout(() => {
-          targetInput.focus();
-          targetInput.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-        }, 100); // Increased delay to 100ms
-      }
+          const targetInput = hourlyInputRefs.current[currentHourStr];
+          if (targetInput) {
+            // Check if the element is in the document and visible
+            if (document.body.contains(targetInput) && targetInput.offsetParent !== null) {
+              targetInput.focus();
+              targetInput.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+            }
+          }
+        }, 150); // 150ms delay
+      });
     }
   }, [activeLocalTab, selectedDate]);
 
