@@ -179,7 +179,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           }
           return updatedTask;
         }
-        // Ensure new tasks have baseExpValue, or assign a default/calculated one for old tasks
         if (task.baseExpValue === undefined) {
           return { ...task, baseExpValue: calculatePotentialTaskExp(task, userProfile.rankName) };
         }
@@ -462,7 +461,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const completeTask = useCallback((taskId: string) => {
-    let completedTaskForHistory: Task | null = null;
+    let taskForHistoryRecord: Partial<Task> = {};
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
@@ -471,56 +470,57 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       const taskIndex = prevTasks.findIndex(t => t.id === taskId);
       if (taskIndex === -1) return prevTasks;
 
-      let task = { ...prevTasks[taskIndex] }; 
+      const originalTask = prevTasks[taskIndex];
+      let updatedTaskInMainList = { ...originalTask }; 
 
-      const canCompleteDailyOrEvent = (task.taskType === 'daily' || task.taskType === 'event') && !task.isCompleted && (task.taskType === 'daily' || task.scheduledDate === todayStr); 
-      const canCompleteRitual = task.taskType === 'ritual' && task.nextDueDate === todayStr && task.lastCompletedDate !== todayStr;
+      const canCompleteDailyOrEvent = (originalTask.taskType === 'daily' || originalTask.taskType === 'event') && !originalTask.isCompleted && (originalTask.taskType === 'daily' || originalTask.scheduledDate === todayStr); 
+      const canCompleteRitual = originalTask.taskType === 'ritual' && originalTask.nextDueDate === todayStr && originalTask.lastCompletedDate !== todayStr;
 
       if (!canCompleteDailyOrEvent && !canCompleteRitual) {
         return prevTasks; 
       }
       
-      let expForThisCompletion: number;
-      if (task.baseExpValue !== undefined) {
-        expForThisCompletion = task.baseExpValue;
-      } else {
-        // Fallback for older tasks that don't have baseExpValue
-        expForThisCompletion = calculatePotentialTaskExp(task, userProfile.rankName);
-        task.baseExpValue = expForThisCompletion; // Retroactively assign baseExpValue
+      const expAwardedForThisCompletion = originalTask.baseExpValue;
+      grantExp(expAwardedForThisCompletion);
+      
+      let statExpGainedForThisInstance: number | undefined = undefined;
+      let attributeAffectedForThisInstance: Attribute | undefined = undefined;
+
+      if (originalTask.attribute !== "None" && appSettings.autoAssignStatExp && ATTRIBUTES_LIST.includes(originalTask.attribute as typeof ATTRIBUTES_LIST[number])) {
+        const statExp = Math.floor(expAwardedForThisCompletion * 0.5); 
+        grantStatExp(originalTask.attribute as Attribute, statExp);
+        statExpGainedForThisInstance = statExp;
+        attributeAffectedForThisInstance = originalTask.attribute;
       }
       
-      grantExp(expForThisCompletion);
-      task.expAwarded = expForThisCompletion; 
-
-      let statExpGainedForTask: number | undefined = undefined;
-      let attributeAffectedForStatExpForTask: Attribute | undefined = undefined;
-
-      if (task.attribute !== "None" && appSettings.autoAssignStatExp && ATTRIBUTES_LIST.includes(task.attribute as typeof ATTRIBUTES_LIST[number])) {
-        const statExp = Math.floor(expForThisCompletion * 0.5); 
-        grantStatExp(task.attribute as Attribute, statExp);
-        statExpGainedForTask = statExp;
-        attributeAffectedForStatExpForTask = task.attribute;
-      }
-
-      task.statExpGained = statExpGainedForTask;
-      task.attributeAffectedForStatExp = attributeAffectedForStatExpForTask;
+      // Prepare the specific record for task history
+      taskForHistoryRecord = {
+        id: originalTask.id,
+        name: originalTask.name,
+        difficulty: originalTask.difficulty,
+        attribute: originalTask.attribute,
+        taskType: originalTask.taskType,
+        baseExpValue: originalTask.baseExpValue,
+        expAwarded: expAwardedForThisCompletion,
+        statExpGained: statExpGainedForThisInstance,
+        attributeAffectedForStatExp: attributeAffectedForThisInstance,
+      };
       
-
-      if (task.taskType === 'ritual') {
-        task.lastCompletedDate = todayStr;
-        task.isCompleted = true; 
-        const currentDueDate = task.nextDueDate ? parseISO(task.nextDueDate) : parseISO(task.dateAdded);
-        task.nextDueDate = format(addDays(currentDueDate, task.repeatIntervalDays || 1), 'yyyy-MM-dd');
-
+      // Update the task in the main list
+      if (originalTask.taskType === 'ritual') {
+        updatedTaskInMainList.lastCompletedDate = todayStr;
+        updatedTaskInMainList.isCompleted = true; 
+        const currentDueDate = originalTask.nextDueDate ? parseISO(originalTask.nextDueDate) : parseISO(originalTask.dateAdded);
+        updatedTaskInMainList.nextDueDate = format(addDays(currentDueDate, originalTask.repeatIntervalDays || 1), 'yyyy-MM-dd');
+        taskForHistoryRecord.lastCompletedDate = todayStr; // Add to history record
       } else { 
-        task.isCompleted = true;
-        task.dateCompleted = todayStr;
+        updatedTaskInMainList.isCompleted = true;
+        updatedTaskInMainList.dateCompleted = todayStr;
+        taskForHistoryRecord.dateCompleted = todayStr; // Add to history record
       }
       
-      completedTaskForHistory = { ...task }; 
-
       const newTasks = [...prevTasks];
-      newTasks[taskIndex] = task;
+      newTasks[taskIndex] = updatedTaskInMainList;
 
       const tasksActionableToday = newTasks.filter(t =>
           (t.taskType === 'daily' && t.dateAdded === todayStr) ||
@@ -546,28 +546,25 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       return newTasks;
     });
 
-    if (completedTaskForHistory) {
+    if (Object.keys(taskForHistoryRecord).length > 0) {
       playSound('taskComplete');
       setUserProfile(prev => {
+        const castedHistoryRecord = taskForHistoryRecord as Task; // Cast to Task for history
         const isAlreadyInHistory = prev.taskHistory.some(ht => 
-          ht.id === completedTaskForHistory!.id && 
-          ( (ht.taskType !== 'ritual' && ht.dateCompleted === completedTaskForHistory!.dateCompleted) || 
-            (ht.taskType === 'ritual' && ht.lastCompletedDate === completedTaskForHistory!.lastCompletedDate) )
+          ht.id === castedHistoryRecord.id && 
+          ( (ht.taskType !== 'ritual' && ht.dateCompleted === castedHistoryRecord.dateCompleted) || 
+            (ht.taskType === 'ritual' && ht.lastCompletedDate === castedHistoryRecord.lastCompletedDate) )
         );
         
         let newTaskHistory = [...prev.taskHistory];
         if (!isAlreadyInHistory) {
-            newTaskHistory.push(completedTaskForHistory!);
+            newTaskHistory.push(castedHistoryRecord);
         } else {
-            const existingIndex = newTaskHistory.findIndex(ht => ht.id === completedTaskForHistory!.id && ht.lastCompletedDate === completedTaskForHistory!.lastCompletedDate);
-            if(completedTaskForHistory.taskType === 'ritual' && existingIndex === -1){
-                newTaskHistory.push(completedTaskForHistory);
-            } else if (completedTaskForHistory.taskType === 'ritual' && existingIndex > -1) {
-                newTaskHistory[existingIndex] = completedTaskForHistory; 
-            } else if (completedTaskForHistory.taskType !== 'ritual'){ 
-                const nonRitualIndex = newTaskHistory.findIndex(ht => ht.id === completedTaskForHistory!.id && ht.dateCompleted === completedTaskForHistory!.dateCompleted);
-                if(nonRitualIndex > -1) newTaskHistory[nonRitualIndex] = completedTaskForHistory;
-                else newTaskHistory.push(completedTaskForHistory);
+            const existingIndex = newTaskHistory.findIndex(ht => ht.id === castedHistoryRecord.id && (ht.taskType !== 'ritual' ? ht.dateCompleted === castedHistoryRecord.dateCompleted : ht.lastCompletedDate === castedHistoryRecord.lastCompletedDate));
+            if(existingIndex > -1){
+                 newTaskHistory[existingIndex] = castedHistoryRecord;
+            } else {
+                 newTaskHistory.push(castedHistoryRecord); // Fallback, should not be needed if isAlreadyInHistory is true
             }
         }
         return { ...prev, taskHistory: newTaskHistory.slice(-100) }; 
@@ -609,12 +606,14 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           const updatedTask = { 
             ...t, 
             isCompleted: false, 
+            // Clear instance-specific fields from the main task list item
+            expAwarded: undefined,
             statExpGained: undefined, 
             attributeAffectedForStatExp: undefined,
-            expAwarded: undefined, // Clear expAwarded from the task in the main list
           };
           if (t.taskType === 'ritual') {
             updatedTask.lastCompletedDate = undefined;
+            // Reset nextDueDate to today if it was advanced beyond today
             if (t.nextDueDate && isAfter(parseISO(t.nextDueDate), startOfDay(new Date()))) {
                 updatedTask.nextDueDate = todayStr; 
             } else if (!t.nextDueDate) { 
@@ -652,7 +651,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     toast({ title: "Task Undone", description: `${taskToUndoFromHistory.name} reverted to incomplete.` });
     playSound('buttonClick');
-  }, [userProfile, grantExp, grantStatExp, setTasks, setUserProfile, toast]);
+  }, [userProfile.taskHistory, grantExp, grantStatExp, setTasks, setUserProfile, toast]);
 
 
   const getDailyDirectives = useCallback(() => {
