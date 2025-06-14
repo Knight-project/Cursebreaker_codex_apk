@@ -52,9 +52,11 @@ export default function JournalPage() {
       const currentHourStr = `${String(currentHour).padStart(2, '0')}:00`;
       const targetInput = hourlyInputRefs.current[currentHourStr];
       if (targetInput) {
+        // Using a timeout to ensure the element is rendered and focusable after tab switch animations
         setTimeout(() => {
           targetInput.focus();
-        }, 0);
+          targetInput.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }, 100); // Increased delay to 100ms
       }
     }
   }, [activeLocalTab, selectedDate]);
