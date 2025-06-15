@@ -102,11 +102,11 @@ const TargetForm: React.FC<TargetFormProps> = ({ initialData, onSave, onClose })
           </PopoverContent>
         </Popover>
       </div>
-      <DialogFooter className="pt-3 space-y-3 sm:space-y-0">
+      <DialogFooter className="pt-3">
         <DialogClose asChild>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </DialogClose>
-        <Button type="submit" className="bg-primary hover:bg-primary/90">
+        <Button type="submit" className="bg-primary hover:bg-primary/90 mb-2 sm:mb-0">
           {initialData ? "Save Changes" : "Set Target"}
         </Button>
       </DialogFooter>
@@ -254,7 +254,7 @@ export default function GoalsPage() {
   }, [setActiveTab]);
 
   const handleAddTarget = (data: Omit<Goal, 'id' | 'linkedTaskIds' | 'status' | 'createdAt'>) => {
-    addGoal(data); // AppContext still uses 'addGoal' internally
+    addGoal(data);
     setIsAddTargetOpen(false);
     toast({title: "Target Set!", description: `New objective "${data.name}" created.`});
     playSound('buttonClick');
