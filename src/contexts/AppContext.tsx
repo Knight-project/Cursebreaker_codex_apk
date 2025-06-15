@@ -222,32 +222,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [hasMounted]); // Depend on hasMounted
 
 
-  useEffect(() => {
-    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
-
-    const today = new Date();
-    const yesterday = subDays(today, 1);
-
-    setUserProfile(prevProfile => {
-        if (prevProfile.lastDayAllTasksCompleted) {
-            if (!dateIsValid(parseISO(prevProfile.lastDayAllTasksCompleted))) {
-                if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
-                    return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
-                }
-            } else {
-                const lastCompletedDateObj = parseISO(prevProfile.lastDayAllTasksCompleted);
-                if (isBefore(lastCompletedDateObj, yesterday)) {
-                    if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
-                        return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
-                    }
-                }
-            }
-        } else if (prevProfile.currentStreak !== 0) {
-            return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
-        }
-        return prevProfile;
-    });
-  }, [isInitialized, setUserProfile, hasMounted]);
+  // useEffect(() => {
+  //   if (!isInitialized || !hasMounted) return; // Also check hasMounted here
+  //   // This useEffect related to resetting streak based on lastDayAllTasksCompleted is removed for the new "Consecutive Ops" logic.
+  // }, [isInitialized, setUserProfile, hasMounted]);
 
 
   useEffect(() => {
@@ -475,11 +453,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const completeTask = useCallback((taskId: string) => {
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     let historyEntryData: Task | null = null;
     let taskWasCompletedThisAction = false;
+    let streakIncremented = false;
 
     setTasks(prevTasks => {
       const taskIndex = prevTasks.findIndex(t => t.id === taskId);
@@ -495,6 +472,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         return prevTasks;
       }
       taskWasCompletedThisAction = true;
+      streakIncremented = true; // For new "Consecutive Ops" logic
 
       const expAwardedForThisCompletion = originalTask.baseExpValue;
       let statExpGainedForThisInstance: number | undefined = undefined;
@@ -518,43 +496,19 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (originalTask.taskType === 'ritual') {
         updatedTaskInMainList.lastCompletedDate = todayStr;
-        updatedTaskInMainList.isCompleted = true;
+        updatedTaskInMainList.isCompleted = true; // Ritual is considered completed for the day
         const currentDueDate = originalTask.nextDueDate ? parseISO(originalTask.nextDueDate) : parseISO(originalTask.dateAdded);
         updatedTaskInMainList.nextDueDate = format(addDays(currentDueDate, originalTask.repeatIntervalDays || 1), 'yyyy-MM-dd');
       } else {
         updatedTaskInMainList.isCompleted = true;
         updatedTaskInMainList.dateCompleted = todayStr;
       }
-      updatedTaskInMainList.expAwarded = undefined;
+      updatedTaskInMainList.expAwarded = undefined; // Clear these from main task list
       updatedTaskInMainList.statExpGained = undefined;
       updatedTaskInMainList.attributeAffectedForStatExp = undefined;
 
       const newTasks = [...prevTasks];
       newTasks[taskIndex] = updatedTaskInMainList;
-
-      const tasksForStreakCheck = newTasks;
-      const tasksActionableToday = tasksForStreakCheck.filter(t =>
-          (t.taskType === 'daily' && t.dateAdded === todayStr) ||
-          (t.taskType === 'ritual' && (t.nextDueDate === todayStr || t.lastCompletedDate === todayStr) ) ||
-          (t.taskType === 'event' && t.scheduledDate === todayStr)
-      );
-
-      const allTodayNowCompleted = tasksActionableToday.length > 0 && tasksActionableToday.every(t =>
-          (t.taskType === 'daily' && t.isCompleted && t.dateCompleted === todayStr) ||
-          (t.taskType === 'ritual' && t.lastCompletedDate === todayStr) ||
-          (t.taskType === 'event' && t.isCompleted && t.dateCompleted === todayStr)
-      );
-
-      if (allTodayNowCompleted) {
-          setUserProfile(prev => {
-              if (prev.lastDayAllTasksCompleted === yesterdayStr) {
-                  return { ...prev, currentStreak: prev.currentStreak + 1, lastDayAllTasksCompleted: todayStr };
-              } else if (prev.lastDayAllTasksCompleted !== todayStr) {
-                  return { ...prev, currentStreak: 1, lastDayAllTasksCompleted: todayStr };
-              }
-              return prev;
-          });
-      }
       return newTasks;
     });
 
@@ -566,6 +520,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       if (finalHistoryRecord.attributeAffectedForStatExp && finalHistoryRecord.attributeAffectedForStatExp !== "None" && finalHistoryRecord.statExpGained !== undefined) {
         grantStatExp(finalHistoryRecord.attributeAffectedForStatExp, finalHistoryRecord.statExpGained);
+      }
+      
+      if (streakIncremented) {
+        setUserProfile(prev => ({ ...prev, currentStreak: prev.currentStreak + 1 }));
       }
 
       playSound('taskComplete');
@@ -587,10 +545,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [setTasks, appSettings.autoAssignStatExp, grantExp, grantStatExp, setUserProfile]);
 
   const undoCompleteTask = useCallback((taskId: string) => {
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     let taskWasUndoneThisAction = false;
+    let streakDecremented = false;
 
     const taskToUndoFromHistory = userProfile.taskHistory.find(ht =>
         ht.id === taskId &&
@@ -613,6 +570,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     grantExp(-(expToRevoke));
     taskWasUndoneThisAction = true;
+    streakDecremented = true; // For new "Consecutive Ops" logic
 
     if (attributeForStatRevoke && attributeForStatRevoke !== "None" && statExpToRevoke !== undefined) {
       grantStatExp(attributeForStatRevoke, -statExpToRevoke);
@@ -630,9 +588,11 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           };
           if (t.taskType === 'ritual') {
             updatedTask.lastCompletedDate = undefined;
+            // If nextDueDate was pushed forward, pull it back to today if appropriate
             if (t.nextDueDate && isAfter(parseISO(t.nextDueDate), startOfDay(new Date()))) {
                 updatedTask.nextDueDate = todayStr;
             } else if (!t.nextDueDate || isBefore(parseISO(t.nextDueDate), startOfDay(new Date())) ) {
+                // If next due date was invalid or in past, set to today
                 updatedTask.nextDueDate = todayStr;
             }
           } else {
@@ -648,25 +608,16 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       const newHistory = prev.taskHistory.filter(ht =>
          !(ht.id === taskId && (ht.taskType === 'ritual' ? ht.lastCompletedDate === todayStr : ht.dateCompleted === todayStr))
       );
-
-      let newCurrentStreak = prev.currentStreak;
-      let newLastDayAllTasksCompleted = prev.lastDayAllTasksCompleted;
-
-      if (prev.lastDayAllTasksCompleted === todayStr) {
-          newLastDayAllTasksCompleted = yesterdayStr;
-          if (prev.currentStreak === 1) {
-              newCurrentStreak = 0;
-              newLastDayAllTasksCompleted = "";
-          } else if (prev.currentStreak > 1) {
-              newCurrentStreak = prev.currentStreak - 1;
-          }
+      
+      let newStreak = prev.currentStreak;
+      if (streakDecremented && newStreak > 0) {
+        newStreak--;
       }
 
       return {
           ...prev,
           taskHistory: newHistory,
-          currentStreak: newCurrentStreak,
-          lastDayAllTasksCompleted: newLastDayAllTasksCompleted,
+          currentStreak: newStreak
       };
     });
 
@@ -686,6 +637,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const today = format(new Date(), 'yyyy-MM-dd');
     return tasks.filter(task => {
       if (task.taskType !== 'ritual') return false;
+      // Show ritual if it's due today OR it was completed today (to allow undo)
       return task.nextDueDate === today || task.lastCompletedDate === today;
     });
   }, [tasks]);

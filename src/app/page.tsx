@@ -19,6 +19,7 @@ import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, REMINDER_OPTIONS } from '@/lib/t
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
+// CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
 import RankDisplay from '@/components/shared/RankDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, parseISO, startOfDay, isBefore } from 'date-fns';
@@ -350,9 +351,9 @@ export default function HomePage() {
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editingName, setEditingName] = useState(userProfile.userName);
+  const [editingName, setEditingName] = useState('');
   const [isEditingQuote, setIsEditingQuote] = useState(false);
-  const [editingQuote, setEditingQuote] = useState(userProfile.customQuote);
+  const [editingQuote, setEditingQuote] = useState('');
 
   const { toast } = useToast();
   // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
@@ -370,14 +371,9 @@ export default function HomePage() {
   useEffect(() => {
     if (hasMounted) {
       setEditingName(userProfile.userName);
-    }
-  }, [userProfile.userName, hasMounted]);
-
-  useEffect(() => {
-    if (hasMounted) {
       setEditingQuote(userProfile.customQuote);
     }
-  }, [userProfile.customQuote, hasMounted]);
+  }, [userProfile.userName, userProfile.customQuote, hasMounted]);
   
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
@@ -471,8 +467,10 @@ export default function HomePage() {
   };
 
   const handleNameDoubleClick = () => {
-    setEditingName(userProfile.userName);
-    setIsEditingName(true);
+    if (hasMounted) {
+      setEditingName(userProfile.userName);
+      setIsEditingName(true);
+    }
   };
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -498,8 +496,10 @@ export default function HomePage() {
   };
 
   const handleQuoteDoubleClick = () => {
-    setEditingQuote(userProfile.customQuote);
-    setIsEditingQuote(true);
+    if (hasMounted) {
+      setEditingQuote(userProfile.customQuote);
+      setIsEditingQuote(true);
+    }
   };
 
   const handleQuoteChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -541,8 +541,6 @@ export default function HomePage() {
   };
 
   const profileToDisplay = hasMounted ? userProfile : INITIAL_USER_PROFILE;
-  const displayedName = hasMounted ? userProfile.userName : INITIAL_USER_PROFILE.userName;
-  const displayedQuote = hasMounted ? userProfile.customQuote : INITIAL_USER_PROFILE.customQuote;
 
   if (!hasMounted) {
     return (
@@ -601,7 +599,7 @@ export default function HomePage() {
                 className="text-2xl font-headline text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px] uppercase"
                 title="Double-click to edit name"
               >
-                {(displayedName || "").trim().toUpperCase() || INITIAL_USER_PROFILE.userName.toUpperCase()}
+                {profileToDisplay.userName.toUpperCase() || INITIAL_USER_PROFILE.userName.toUpperCase()}
               </h2>
             )}
             <div className="h-0.5 w-2/3 my-2 bg-accent" />
@@ -629,7 +627,7 @@ export default function HomePage() {
                 className="text-muted-foreground mt-1 text-xs font-code italic cursor-pointer hover:bg-muted/30 rounded-md p-1 transition-colors min-h-[20px]"
                 title="Double-click to edit quote"
               >
-                {(displayedQuote || "").trim() || INITIAL_USER_PROFILE.customQuote}
+                {profileToDisplay.customQuote || INITIAL_USER_PROFILE.customQuote}
               </CardDescription>
             )}
 
@@ -656,7 +654,7 @@ export default function HomePage() {
               />
             </div>
             <div className="flex justify-between text-xs font-code">
-              <span className="text-foreground uppercase">Streak: <span className="text-primary font-bold">{profileToDisplay.currentStreak}</span></span>
+              <span className="text-foreground uppercase">Consecutive Ops: <span className="text-primary font-bold">{profileToDisplay.currentStreak}</span></span>
               <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{profileToDisplay.dailyTaskCompletionPercentage.toFixed(1)}%</span></span>
             </div>
           </CardContent>
