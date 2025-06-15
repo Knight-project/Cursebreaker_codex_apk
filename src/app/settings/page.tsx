@@ -26,7 +26,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { INITIAL_APP_SETTINGS } from '@/lib/types';
 
 export default function SettingsPage() {
   const { 
@@ -42,27 +41,18 @@ export default function SettingsPage() {
   const [currentCustomQuote, setCurrentCustomQuote] = useState(userProfile.customQuote);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
+  
   useEffect(() => {
     setActiveTab('settings');
   }, [setActiveTab]);
 
   useEffect(() => {
-    if (hasMounted) {
-      setCurrentUserName(userProfile.userName);
-    }
-  }, [userProfile.userName, hasMounted]);
+    setCurrentUserName(userProfile.userName);
+  }, [userProfile.userName]);
 
   useEffect(() => {
-    if (hasMounted) {
-      setCurrentCustomQuote(userProfile.customQuote);
-    }
-  }, [userProfile.customQuote, hasMounted]);
+    setCurrentCustomQuote(userProfile.customQuote);
+  }, [userProfile.customQuote]);
 
 
   const handleSettingsChange = (key: keyof typeof appSettings, value: any) => {
@@ -121,11 +111,9 @@ export default function SettingsPage() {
     const file = event.target.files?.[0];
     if (file) {
       setPendingImportFile(file);
-      // AlertDialog will be controlled by its trigger, so we don't directly open it here
-      // The AlertDialogTrigger button for import will handle opening the dialog.
     }
      if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Reset to allow same file selection
+        fileInputRef.current.value = ""; 
     }
   };
 
@@ -142,17 +130,12 @@ export default function SettingsPage() {
         }
         const importedData = JSON.parse(text);
         if (loadAllSaveData(importedData)) {
-          // Success toast is handled in loadAllSaveData
-          // Consider a page reload or specific state reset if necessary
-          // window.location.reload(); // Or navigate to home, etc.
-        } else {
-          // Failure toast handled in loadAllSaveData
         }
       } catch (error) {
         console.error("Error importing data:", error);
         toast({ title: "Import Failed", description: "Invalid JSON file or structure.", variant: "destructive" });
       } finally {
-        setPendingImportFile(null); // Clear pending file after processing
+        setPendingImportFile(null); 
       }
     };
     reader.readAsText(pendingImportFile);
@@ -174,7 +157,7 @@ export default function SettingsPage() {
               <Input
                 id="userNameInput"
                 type="text"
-                value={hasMounted ? currentUserName : INITIAL_USER_PROFILE.userName}
+                value={currentUserName}
                 onChange={handleUserNameChange}
                 onBlur={handleUserNameBlur}
                 placeholder="Enter your codename"
@@ -189,7 +172,7 @@ export default function SettingsPage() {
               <Input
                 id="customQuoteInput"
                 type="text"
-                value={hasMounted ? currentCustomQuote : INITIAL_USER_PROFILE.customQuote}
+                value={currentCustomQuote}
                 onChange={handleCustomQuoteChange}
                 onBlur={handleCustomQuoteBlur}
                 placeholder="Enter your guiding principle"
@@ -212,7 +195,7 @@ export default function SettingsPage() {
               <Label htmlFor="enableAnimations" className="text-lg font-medium">Enable Animations</Label>
               <Switch
                 id="enableAnimations"
-                checked={hasMounted ? appSettings.enableAnimations : INITIAL_APP_SETTINGS.enableAnimations}
+                checked={appSettings.enableAnimations}
                 onCheckedChange={(checked) => handleSettingsChange('enableAnimations', checked)}
                 aria-label="Toggle animations"
               />
@@ -222,7 +205,7 @@ export default function SettingsPage() {
               <Label htmlFor="enableSoundEffects" className="text-lg font-medium">Enable Sound Effects</Label>
               <Switch
                 id="enableSoundEffects"
-                checked={hasMounted ? appSettings.enableSoundEffects : INITIAL_APP_SETTINGS.enableSoundEffects}
+                checked={appSettings.enableSoundEffects}
                 onCheckedChange={(checked) => handleSettingsChange('enableSoundEffects', checked)}
                 aria-label="Toggle sound effects"
               />
@@ -231,7 +214,7 @@ export default function SettingsPage() {
             <div className="p-4 rounded-md border bg-background/30 space-y-2">
               <Label htmlFor="rivalName" className="text-lg font-medium">Rival Name</Label>
               <Select
-                value={hasMounted ? rival.name : INITIAL_APP_SETTINGS.rivalName || RIVAL_NAMES_POOL[0]}
+                value={rival.name || RIVAL_NAMES_POOL[0]}
                 onValueChange={handleRivalNameChange}
               >
                 <SelectTrigger id="rivalName" className="w-full bg-input/50 focus:bg-input">
@@ -249,7 +232,7 @@ export default function SettingsPage() {
             <div className="p-4 rounded-md border bg-background/30 space-y-2">
               <Label htmlFor="rivalDifficulty" className="text-lg font-medium">Rival Difficulty</Label>
               <Select
-                value={hasMounted ? appSettings.rivalDifficulty : INITIAL_APP_SETTINGS.rivalDifficulty}
+                value={appSettings.rivalDifficulty}
                 onValueChange={(value) => handleSettingsChange('rivalDifficulty', value as "Easy" | "Normal" | "Hard")}
               >
                 <SelectTrigger id="rivalDifficulty" className="w-full bg-input/50 focus:bg-input">
@@ -268,7 +251,7 @@ export default function SettingsPage() {
               <Label htmlFor="autoAssignStatExp" className="text-lg font-medium">Auto-Assign Stat XP</Label>
               <Switch
                 id="autoAssignStatExp"
-                checked={hasMounted ? appSettings.autoAssignStatExp : INITIAL_APP_SETTINGS.autoAssignStatExp}
+                checked={appSettings.autoAssignStatExp}
                 onCheckedChange={(checked) => handleSettingsChange('autoAssignStatExp', checked)}
                 aria-label="Toggle automatic stat experience assignment"
               />

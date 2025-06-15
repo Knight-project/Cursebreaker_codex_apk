@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Task, TaskType, Attribute } from '@/lib/types';
-import { ATTRIBUTES_LIST, REMINDER_OPTIONS, INITIAL_USER_PROFILE } from '@/lib/types';
+import { ATTRIBUTES_LIST, REMINDER_OPTIONS } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
@@ -344,11 +344,9 @@ export default function HomePage() {
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editingName, setEditingName] = useState(userProfile.userName || "");
+  const [editingName, setEditingName] = useState(userProfile.userName);
   const [isEditingQuote, setIsEditingQuote] = useState(false);
-  const [editingQuote, setEditingQuote] = useState(userProfile.customQuote || "");
-
-  const [hasMounted, setHasMounted] = useState(false);
+  const [editingQuote, setEditingQuote] = useState(userProfile.customQuote);
 
   const { toast } = useToast();
   const userImageInputRef = useRef<HTMLInputElement>(null);
@@ -356,24 +354,16 @@ export default function HomePage() {
   const quoteInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  useEffect(() => {
     setActiveTab('home');
   }, [setActiveTab]);
 
   useEffect(() => {
-    if (hasMounted) {
-      setEditingName(userProfile.userName || "");
-    }
-  }, [userProfile.userName, hasMounted]);
+    setEditingName(userProfile.userName);
+  }, [userProfile.userName]);
 
   useEffect(() => {
-    if (hasMounted) {
-      setEditingQuote(userProfile.customQuote || "");
-    }
-  }, [userProfile.customQuote, hasMounted]);
+    setEditingQuote(userProfile.customQuote);
+  }, [userProfile.customQuote]);
   
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
@@ -461,7 +451,7 @@ export default function HomePage() {
   };
 
   const handleNameDoubleClick = () => {
-    setEditingName(userProfile.userName || "");
+    setEditingName(userProfile.userName);
     setIsEditingName(true);
   };
 
@@ -472,7 +462,7 @@ export default function HomePage() {
   const saveName = () => {
     const nameToSave = editingName.trim(); 
     setUserProfile(prev => ({ ...prev, userName: nameToSave }));
-    if (((userProfile.userName || "").trim()) !== nameToSave) {
+    if (userProfile.userName.trim() !== nameToSave) {
         toast({ title: "Name Updated!" });
     }
     setIsEditingName(false);
@@ -482,13 +472,13 @@ export default function HomePage() {
     if (e.key === 'Enter') {
       saveName();
     } else if (e.key === 'Escape') {
-      setEditingName(userProfile.userName || "");
+      setEditingName(userProfile.userName);
       setIsEditingName(false);
     }
   };
 
   const handleQuoteDoubleClick = () => {
-    setEditingQuote(userProfile.customQuote || "");
+    setEditingQuote(userProfile.customQuote);
     setIsEditingQuote(true);
   };
 
@@ -498,7 +488,7 @@ export default function HomePage() {
 
   const saveQuote = () => {
     setUserProfile(prev => ({ ...prev, customQuote: editingQuote.trim() }));
-    if ((userProfile.customQuote || "").trim() !== editingQuote.trim()) {
+    if (userProfile.customQuote.trim() !== editingQuote.trim()) {
       toast({ title: "Quote Updated!" });
     }
     setIsEditingQuote(false);
@@ -508,7 +498,7 @@ export default function HomePage() {
     if (e.key === 'Enter') {
       saveQuote();
     } else if (e.key === 'Escape') {
-      setEditingQuote(userProfile.customQuote || "");
+      setEditingQuote(userProfile.customQuote);
       setIsEditingQuote(false);
     }
   };
@@ -538,18 +528,9 @@ export default function HomePage() {
           <CardHeader className="items-center text-center flex flex-col p-4">
              <div className="avatar-arc-container mb-3 w-[120px] h-[120px]">
                 <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden">
-                    {hasMounted && userProfile.avatarUrl ? (
+                    {userProfile.avatarUrl ? (
                     <Image
                         src={userProfile.avatarUrl}
-                        alt="Your Avatar"
-                        width={100}
-                        height={100}
-                        className="object-cover w-full h-full rounded-full"
-                        data-ai-hint="user avatar"
-                    />
-                    ) : !hasMounted && INITIAL_USER_PROFILE.avatarUrl ? (
-                     <Image
-                        src={INITIAL_USER_PROFILE.avatarUrl}
                         alt="Your Avatar"
                         width={100}
                         height={100}
@@ -588,17 +569,14 @@ export default function HomePage() {
                 className="text-2xl font-headline text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px] uppercase"
                 title="Double-click to edit name"
               >
-                {hasMounted
-                  ? (((userProfile.userName || "").trim().toUpperCase()) || "NAME")
-                  : (((INITIAL_USER_PROFILE.userName || "").trim().toUpperCase()) || "NAME")
-                }
+                {userProfile.userName.trim().toUpperCase() || "NAME"}
               </h2>
             )}
             <div className="h-0.5 w-2/3 my-2 bg-accent" />
             <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">
               <RankDisplay 
-                rankName={hasMounted ? userProfile.rankName : INITIAL_USER_PROFILE.rankName} 
-                subRank={hasMounted ? userProfile.subRank : INITIAL_USER_PROFILE.subRank} 
+                rankName={userProfile.rankName} 
+                subRank={userProfile.subRank} 
               />
             </CardTitle>
 
@@ -619,10 +597,7 @@ export default function HomePage() {
                 className="text-muted-foreground mt-1 text-xs font-code italic cursor-pointer hover:bg-muted/30 rounded-md p-1 transition-colors min-h-[20px]"
                 title="Double-click to edit quote"
               >
-                {hasMounted
-                  ? (((userProfile.customQuote || "").trim()) || "No quote set. Double-click to add one.")
-                  : (((INITIAL_USER_PROFILE.customQuote || "").trim()) || "No quote set. Double-click to add one.")
-                }
+                {userProfile.customQuote.trim() || "No quote set. Double-click to add one."}
               </CardDescription>
             )}
 
@@ -638,21 +613,19 @@ export default function HomePage() {
               <div className="flex justify-between text-xs mb-1 font-code">
                 <span className="text-foreground uppercase">EXP</span>
                 <span className="text-primary">
-                  {hasMounted ? userProfile.currentExpInSubRank : INITIAL_USER_PROFILE.currentExpInSubRank} / {hasMounted ? userProfile.expToNextSubRank : INITIAL_USER_PROFILE.expToNextSubRank}
+                  {userProfile.currentExpInSubRank} / {userProfile.expToNextSubRank}
                 </span>
               </div>
               <Progress 
                 value={
-                  hasMounted 
-                  ? (userProfile.expToNextSubRank > 0 ? userProfile.currentExpInSubRank / userProfile.expToNextSubRank : 0) * 100 
-                  : (INITIAL_USER_PROFILE.expToNextSubRank > 0 ? INITIAL_USER_PROFILE.currentExpInSubRank / INITIAL_USER_PROFILE.expToNextSubRank : 0) * 100
+                  (userProfile.expToNextSubRank > 0 ? userProfile.currentExpInSubRank / userProfile.expToNextSubRank : 0) * 100 
                 } 
                 className="h-2 bg-secondary" indicatorClassName="bg-primary" 
               />
             </div>
             <div className="flex justify-between text-xs font-code">
-              <span className="text-foreground uppercase">Streak: <span className="text-primary font-bold">{hasMounted ? userProfile.currentStreak : INITIAL_USER_PROFILE.currentStreak}</span></span>
-              <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{(hasMounted ? userProfile.dailyTaskCompletionPercentage : INITIAL_USER_PROFILE.dailyTaskCompletionPercentage).toFixed(1)}%</span></span>
+              <span className="text-foreground uppercase">Streak: <span className="text-primary font-bold">{userProfile.currentStreak}</span></span>
+              <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{userProfile.dailyTaskCompletionPercentage.toFixed(1)}%</span></span>
             </div>
           </CardContent>
         </Card>

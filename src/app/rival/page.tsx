@@ -15,7 +15,6 @@ import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } fro
 import { format, subDays, eachDayOfInterval, differenceInSeconds, isValid as dateIsValid } from 'date-fns';
 import RankDisplay from '@/components/shared/RankDisplay';
 import { playSound } from '@/lib/soundManager';
-import { INITIAL_RIVAL } from '@/lib/types';
 
 const CyberpunkRivalPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
@@ -42,24 +41,19 @@ const chartConfigRival = {
 
 
 export default function RivalPage() {
-  const { rival, updateRivalTaunt, setActiveTab, setRival, userProfile } = useApp();
+  const { rival, updateRivalTaunt, setActiveTab, setRival } = useApp();
   const [isLoadingTaunt, setIsLoadingTaunt] = useState(false);
   const rivalImageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [timeLeftForExpGain, setTimeLeftForExpGain] = useState("Calculating...");
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
 
   useEffect(() => {
     setActiveTab('rival');
-    if (hasMounted && !rival.lastTaunt) {
+    if (!rival.lastTaunt) {
       handleGetTaunt();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setActiveTab, hasMounted]);
+  }, [setActiveTab]);
 
   const formatTimeLeft = useCallback((totalSeconds: number) => {
     if (totalSeconds < 0) return "Processing EXP Gain...";
@@ -70,7 +64,7 @@ export default function RivalPage() {
   }, []);
 
   useEffect(() => {
-    if (!hasMounted || !rival.nextExpGainTime) {
+    if (!rival.nextExpGainTime) {
       setTimeLeftForExpGain("Not scheduled");
       return;
     }
@@ -88,7 +82,7 @@ export default function RivalPage() {
     calculateTime();
     const intervalId = setInterval(calculateTime, 1000);
     return () => clearInterval(intervalId);
-  }, [rival.nextExpGainTime, formatTimeLeft, hasMounted]);
+  }, [rival.nextExpGainTime, formatTimeLeft]);
 
 
   const handleGetTaunt = async () => {
@@ -166,7 +160,6 @@ export default function RivalPage() {
   };
 
   const rivalExpGrowthData = useMemo(() => {
-    if (!hasMounted) return [];
     const history = rival.expHistory || [];
 
     const last14Days = eachDayOfInterval({
@@ -213,14 +206,12 @@ export default function RivalPage() {
       };
     });
 
-  }, [rival.expHistory, hasMounted]);
+  }, [rival.expHistory]);
   
   const avatarContainerSize = "w-[120px] h-[120px] sm:w-[150px] sm:h-[150px]";
   const avatarSize = "w-[100px] h-[100px] sm:w-[120px] sm:h-[120px]";
   const arcBaseSize = 100; 
   const arcSizeMultiplier = 1.25; 
-
-  const currentRival = hasMounted ? rival : INITIAL_RIVAL;
 
   return (
     <AppWrapper>
@@ -229,10 +220,10 @@ export default function RivalPage() {
           <CardHeader className="items-center text-center flex flex-col p-4">
             <div className={`avatar-arc-container mb-3 ${avatarContainerSize}`}>
               <div onClick={handleRivalAvatarClick} className={`cursor-pointer relative group border-2 border-destructive p-0.5 rounded-full overflow-hidden ${avatarSize}`}>
-                {currentRival.avatarUrl && currentRival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
+                {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
                   <Image
-                    src={currentRival.avatarUrl}
-                    alt={`${currentRival.name}'s Avatar`}
+                    src={rival.avatarUrl}
+                    alt={`${rival.name}'s Avatar`}
                     layout="fill"
                     objectFit="cover"
                     className="rounded-full"
@@ -259,19 +250,19 @@ export default function RivalPage() {
             `}</style>
             <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
 
-            <CardTitle className="font-headline text-2xl text-destructive uppercase tracking-wider">{currentRival.name}</CardTitle>
+            <CardTitle className="font-headline text-2xl text-destructive uppercase tracking-wider">{rival.name}</CardTitle>
             <CardDescription className="text-xs font-code">
-              <RankDisplay rankName={currentRival.rankName} subRank={currentRival.subRank} isRival className="text-muted-foreground" />
+              <RankDisplay rankName={rival.rankName} subRank={rival.subRank} isRival className="text-muted-foreground" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-center pt-2 pb-4 px-4">
             <div className="px-0 sm:px-4">
               <div className="flex justify-between text-xs mb-1 font-code">
                 <span className="text-foreground uppercase">Rival EXP</span>
-                <span className="text-destructive">{currentRival.currentExpInSubRank} / {currentRival.expToNextSubRank}</span>
+                <span className="text-destructive">{rival.currentExpInSubRank} / {rival.expToNextSubRank}</span>
               </div>
               <Progress
-                value={(currentRival.expToNextSubRank > 0 ? (currentRival.currentExpInSubRank / currentRival.expToNextSubRank) : 0) * 100}
+                value={(rival.expToNextSubRank > 0 ? (rival.currentExpInSubRank / rival.expToNextSubRank) : 0) * 100}
                 className="h-2 bg-secondary"
                 indicatorClassName="bg-destructive"
               />
@@ -298,7 +289,7 @@ export default function RivalPage() {
               </CardHeader>
               <CardContent className="p-3 pt-0">
                 <p className="text-base italic text-center text-foreground min-h-[40px] flex items-center justify-center font-code">
-                  {currentRival.lastTaunt || "Static..."}
+                  {rival.lastTaunt || "Static..."}
                 </p>
                 <Button onClick={handleGetTaunt} disabled={isLoadingTaunt} className="mt-3 w-full bg-destructive hover:bg-destructive/90 font-headline uppercase text-xs py-2">
                   <Swords className="mr-2 h-3 w-3" />
