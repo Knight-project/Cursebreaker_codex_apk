@@ -2,6 +2,7 @@
 'use client';
 
 import AppWrapper from '@/components/layout/AppWrapper';
+import LoadingScreen from '@/components/layout/LoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -26,7 +27,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { INITIAL_APP_SETTINGS, INITIAL_USER_PROFILE, INITIAL_RIVAL } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function SettingsPage() {
@@ -100,7 +100,7 @@ export default function SettingsPage() {
   }
 
   const handleExportData = () => {
-    if (!hasMounted) return; // Prevent action if not mounted
+    if (!hasMounted) return; 
     const saveData = getAllSaveData();
     const jsonString = JSON.stringify(saveData, null, 2);
     const blob = new Blob([jsonString], { type: "application/json" });
@@ -127,7 +127,7 @@ export default function SettingsPage() {
   };
 
   const processImport = () => {
-    if (!pendingImportFile || !hasMounted) return; // Prevent action if not mounted
+    if (!pendingImportFile || !hasMounted) return; 
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -155,11 +155,7 @@ export default function SettingsPage() {
   if (!hasMounted) {
     return (
       <AppWrapper>
-        <div className="space-y-8">
-          <Skeleton className="h-[250px] w-full rounded-lg bg-card/80" />
-          <Skeleton className="h-[400px] w-full rounded-lg bg-card/80" />
-          <Skeleton className="h-[200px] w-full rounded-lg bg-card/80" />
-        </div>
+        <LoadingScreen />
       </AppWrapper>
     );
   }
@@ -178,7 +174,7 @@ export default function SettingsPage() {
                 <Input
                   id="userNameInput"
                   type="text"
-                  value={hasMounted ? currentUserName : INITIAL_USER_PROFILE.userName}
+                  value={currentUserName}
                   onChange={handleUserNameChange}
                   onBlur={handleUserNameBlur}
                   placeholder="Enter your codename"
@@ -193,7 +189,7 @@ export default function SettingsPage() {
                 <Input
                   id="customQuoteInput"
                   type="text"
-                  value={hasMounted ? currentCustomQuote : INITIAL_USER_PROFILE.customQuote}
+                  value={currentCustomQuote}
                   onChange={handleCustomQuoteChange}
                   onBlur={handleCustomQuoteBlur}
                   placeholder="Enter your guiding principle"
@@ -216,7 +212,7 @@ export default function SettingsPage() {
                 <Label htmlFor="enableAnimations" className="text-lg font-medium">Enable Animations</Label>
                 <Switch
                   id="enableAnimations"
-                  checked={hasMounted ? appSettings.enableAnimations : INITIAL_APP_SETTINGS.enableAnimations}
+                  checked={appSettings.enableAnimations}
                   onCheckedChange={(checked) => handleSettingsChange('enableAnimations', checked)}
                   aria-label="Toggle animations"
                 />
@@ -226,7 +222,7 @@ export default function SettingsPage() {
                 <Label htmlFor="enableSoundEffects" className="text-lg font-medium">Enable Sound Effects</Label>
                 <Switch
                   id="enableSoundEffects"
-                  checked={hasMounted ? appSettings.enableSoundEffects : INITIAL_APP_SETTINGS.enableSoundEffects}
+                  checked={appSettings.enableSoundEffects}
                   onCheckedChange={(checked) => handleSettingsChange('enableSoundEffects', checked)}
                   aria-label="Toggle sound effects"
                 />
@@ -235,7 +231,7 @@ export default function SettingsPage() {
               <div className="p-4 rounded-md border bg-background/30 space-y-2">
                 <Label htmlFor="rivalName" className="text-lg font-medium">Rival Name</Label>
                 <Select
-                  value={hasMounted ? rival.name : INITIAL_RIVAL.name}
+                  value={rival.name}
                   onValueChange={handleRivalNameChange}
                 >
                   <SelectTrigger id="rivalName" className="w-full bg-input/50 focus:bg-input">
@@ -253,7 +249,7 @@ export default function SettingsPage() {
               <div className="p-4 rounded-md border bg-background/30 space-y-2">
                 <Label htmlFor="rivalDifficulty" className="text-lg font-medium">Rival Difficulty</Label>
                 <Select
-                  value={hasMounted ? appSettings.rivalDifficulty : INITIAL_APP_SETTINGS.rivalDifficulty}
+                  value={appSettings.rivalDifficulty}
                   onValueChange={(value) => handleSettingsChange('rivalDifficulty', value as "Easy" | "Normal" | "Hard")}
                 >
                   <SelectTrigger id="rivalDifficulty" className="w-full bg-input/50 focus:bg-input">
@@ -272,7 +268,7 @@ export default function SettingsPage() {
                 <Label htmlFor="autoAssignStatExp" className="text-lg font-medium">Auto-Assign Stat XP</Label>
                 <Switch
                   id="autoAssignStatExp"
-                  checked={hasMounted ? appSettings.autoAssignStatExp : INITIAL_APP_SETTINGS.autoAssignStatExp}
+                  checked={appSettings.autoAssignStatExp}
                   onCheckedChange={(checked) => handleSettingsChange('autoAssignStatExp', checked)}
                   aria-label="Toggle automatic stat experience assignment"
                 />

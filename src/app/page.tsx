@@ -2,6 +2,7 @@
 'use client';
 
 import AppWrapper from '@/components/layout/AppWrapper';
+import LoadingScreen from '@/components/layout/LoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -23,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, parseISO, startOfDay, isBefore } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { playSound } from '@/lib/soundManager';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const AddTaskForm = ({
   onTaskAdd,
@@ -513,14 +513,6 @@ export default function HomePage() {
 
 
   const renderTaskList = (tasksToList: Task[], taskType: TaskType) => {
-    if (!hasMounted) {
-      return (
-        <div className="space-y-2">
-          <Skeleton className="h-16 w-full bg-muted" />
-          <Skeleton className="h-16 w-full bg-muted" />
-        </div>
-      );
-    }
     return tasksToList.length > 0 ? (
       <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
         {tasksToList.map(task => (
@@ -540,6 +532,14 @@ export default function HomePage() {
   const displayedName = hasMounted ? userProfile.userName : INITIAL_USER_PROFILE.userName;
   const displayedQuote = hasMounted ? userProfile.customQuote : INITIAL_USER_PROFILE.customQuote;
 
+  if (!hasMounted) {
+    return (
+      <AppWrapper>
+        <LoadingScreen />
+      </AppWrapper>
+    );
+  }
+
   return (
     <AppWrapper>
     <div className="space-y-6">
@@ -547,7 +547,7 @@ export default function HomePage() {
           <CardHeader className="items-center text-center flex flex-col p-4">
              <div className="avatar-arc-container mb-3 w-[120px] h-[120px]">
                 <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden">
-                    {hasMounted && profileToDisplay.avatarUrl ? (
+                    {profileToDisplay.avatarUrl ? (
                     <Image
                         src={profileToDisplay.avatarUrl}
                         alt="Your Avatar"
@@ -628,8 +628,6 @@ export default function HomePage() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-3 pt-2 pb-4 px-4">
-          {hasMounted ? (
-            <>
             <div>
               <div className="flex justify-between text-xs mb-1 font-code">
                 <span className="text-foreground uppercase">EXP</span>
@@ -648,16 +646,6 @@ export default function HomePage() {
               <span className="text-foreground uppercase">Streak: <span className="text-primary font-bold">{profileToDisplay.currentStreak}</span></span>
               <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{profileToDisplay.dailyTaskCompletionPercentage.toFixed(1)}%</span></span>
             </div>
-            </>
-             ) : (
-            <>
-              <Skeleton className="h-2 w-full rounded-full bg-secondary my-1" />
-              <div className="flex justify-between text-xs font-code">
-                  <Skeleton className="h-4 w-20 bg-muted" />
-                  <Skeleton className="h-4 w-24 bg-muted" />
-              </div>
-            </>
-          )}
           </CardContent>
         </Card>
 
@@ -753,3 +741,4 @@ export default function HomePage() {
       </AppWrapper>
   );
 }
+

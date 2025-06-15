@@ -2,6 +2,7 @@
 // src/app/timers/page.tsx
 'use client';
 import AppWrapper from '@/components/layout/AppWrapper';
+import LoadingScreen from '@/components/layout/LoadingScreen';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, Settings2, PlusCircle, Trash2, Edit3, BellRing, BellOff, BarChartBig, Palette, Timer as TimerIcon, Save, ChevronDown } from 'lucide-react'; 
@@ -30,8 +31,6 @@ import { CartesianGrid, XAxis, YAxis, Line, LineChart as RechartsLineChart, Resp
 import { format, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachWeekOfInterval, startOfYear, endOfYear, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { playSound } from '@/lib/soundManager';
-import { Skeleton } from '@/components/ui/skeleton';
-
 
 const PomodoroTimer = () => {
   const { pomodoroSettings: contextPomodoroSettings, setPomodoroSettings, grantExp, appSettings } = useApp();
@@ -54,14 +53,14 @@ const PomodoroTimer = () => {
 
   useEffect(() => {
     if (hasMounted) {
-      setTempSettings(pomodoroSettings); // Sync tempSettings when context changes and mounted
+      setTempSettings(pomodoroSettings); 
       setTimeLeft(calculateTimeForMode(mode));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pomodoroSettings, hasMounted]); // mode is handled in next effect
+  }, [pomodoroSettings, hasMounted]); 
 
   const calculateTimeForMode = useCallback((currentMode: 'focus' | 'shortBreak' | 'longBreak') => {
-    if (!hasMounted) return INITIAL_POMODORO_SETTINGS.focusDuration * 60; // Default before mount
+    if (!hasMounted) return INITIAL_POMODORO_SETTINGS.focusDuration * 60; 
     switch (currentMode) {
       case 'focus': return pomodoroSettings.focusDuration * 60;
       case 'shortBreak': return pomodoroSettings.shortBreakDuration * 60;
@@ -72,7 +71,7 @@ const PomodoroTimer = () => {
 
   useEffect(() => {
     setTimeLeft(calculateTimeForMode(mode));
-  }, [mode, calculateTimeForMode]); // Recalculate timeLeft when mode changes
+  }, [mode, calculateTimeForMode]);
 
 
   useEffect(() => {
@@ -150,29 +149,6 @@ const PomodoroTimer = () => {
 
   const currentDuration = calculateTimeForMode(mode);
   const progressPercentage = currentDuration > 0 ? ((currentDuration - timeLeft) / currentDuration) * 100 : 0;
-
-  if (!hasMounted) {
-    return (
-      <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-xl text-primary flex items-center">
-              <TimerIcon className="mr-2 h-5 w-5"/> Pomodoro Timer
-          </CardTitle>
-          <Button variant="ghost" size="icon" disabled><Settings2 className="h-5 w-5" /></Button>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center space-y-6 py-8">
-          <Skeleton className="h-16 w-40" /> {/* Time display */}
-          <Skeleton className="h-3 w-full" /> {/* Progress bar */}
-          <Skeleton className="h-5 w-32" /> {/* Mode text */}
-          <div className="flex space-x-4">
-            <Skeleton className="h-10 w-24" /> {/* Start button */}
-            <Skeleton className="h-10 w-24" /> {/* Reset button */}
-          </div>
-          <Skeleton className="h-4 w-28" /> {/* Sessions completed */}
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
@@ -741,26 +717,6 @@ const IntervalTimersManager = () => {
     }
   };
 
-  if (!hasMounted) {
-    return (
-      <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
-        <CardHeader className="flex flex-row items-baseline justify-between">
-          <CardTitle className="font-headline text-xl text-primary flex items-center">
-              <BellRing className="mr-2 h-5 w-5"/>Interval Timers
-          </CardTitle>
-          <Button variant="outline" size="sm" disabled>
-            <PlusCircle className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Add Timer</span>
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4 py-6">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
       <CardHeader className="flex flex-row items-baseline justify-between">
@@ -1060,23 +1016,6 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
     { value: 'alltime', label: 'All Time View' },
   ];
 
-  if (!hasMounted) {
-     return (
-      <Card className="bg-background/50 border">
-        <CardHeader className="pb-3 pt-4">
-           <Skeleton className="h-6 w-3/4 mb-1" /> {/* Title */}
-           <Skeleton className="h-8 w-[180px]" /> {/* Select Trigger */}
-        </CardHeader>
-        <CardContent className="pt-2 pb-4 h-[300px]">
-            <Skeleton className="h-full w-full" /> {/* Chart Area */}
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-3 items-start p-4 pt-0">
-          <Skeleton className="h-8 w-full" /> {/* Log today's values trigger */}
-        </CardFooter>
-      </Card>
-    );
-  }
-
   return (
     <Card className="bg-background/50 border">
       <CardHeader className="pb-3 pt-4">
@@ -1218,29 +1157,6 @@ const GraphsManager = () => {
     }
   };
 
-  if (!hasMounted) {
-    return (
-      <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
-        <CardHeader className="flex flex-row items-baseline justify-between">
-          <CardTitle className="font-headline text-xl text-primary flex items-center">
-            <BarChartBig className="mr-2 h-5 w-5"/> Graphs 
-          </CardTitle>
-          <Button variant="outline" size="sm" disabled>
-            <PlusCircle className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Add Graph</span>
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4 py-6">
-          <p className="text-muted-foreground text-center">Loading graphs...</p>
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Skeleton className="h-[400px] w-full" />
-            <Skeleton className="h-[400px] w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
       <CardHeader className="flex flex-row items-baseline justify-between">
@@ -1298,11 +1214,7 @@ export default function TimersPage() {
   if (!hasMounted) {
      return (
       <AppWrapper>
-        <div className="space-y-8">
-          <Skeleton className="h-80 w-full" /> {/* Pomodoro Skeleton */}
-          <Skeleton className="h-60 w-full" /> {/* Interval Timers Skeleton */}
-          <Skeleton className="h-96 w-full" /> {/* Graphs Manager Skeleton */}
-        </div>
+        <LoadingScreen />
       </AppWrapper>
     );
   }

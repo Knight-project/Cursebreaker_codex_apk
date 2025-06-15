@@ -3,6 +3,7 @@
 'use client';
 
 import AppWrapper from '@/components/layout/AppWrapper';
+import LoadingScreen from '@/components/layout/LoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +18,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSound } from '@/lib/soundManager';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const HOURS_OF_DAY = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 
@@ -118,19 +118,7 @@ export default function JournalPage() {
   if (!hasMounted) {
     return (
       <AppWrapper>
-        <div className="space-y-6 max-w-2xl mx-auto">
-          <Card className="bg-card/80 backdrop-blur-sm shadow-xl w-full">
-            <CardHeader>
-              <Skeleton className="h-8 w-3/4" /> {/* Title Skeleton */}
-              <Skeleton className="h-5 w-1/2" /> {/* Description Skeleton */}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Skeleton className="h-10 w-full" /> {/* Tabs List Skeleton */}
-              <Skeleton className="h-[300px] w-full" /> {/* Textarea Skeleton */}
-              <Skeleton className="h-10 w-full" /> {/* Button Skeleton */}
-            </CardContent>
-          </Card>
-        </div>
+        <LoadingScreen />
       </AppWrapper>
     );
   }

@@ -2,6 +2,7 @@
 // src/app/rival/page.tsx
 'use client';
 import AppWrapper from '@/components/layout/AppWrapper';
+import LoadingScreen from '@/components/layout/LoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -16,7 +17,6 @@ import { format, subDays, eachDayOfInterval, differenceInSeconds, isValid as dat
 import RankDisplay from '@/components/shared/RankDisplay';
 import { playSound } from '@/lib/soundManager';
 import { INITIAL_RIVAL } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const CyberpunkRivalPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
@@ -53,11 +53,15 @@ export default function RivalPage() {
   useEffect(() => {
     setHasMounted(true);
     setActiveTab('rival');
-    if (hasMounted && !rival.lastTaunt) { // Only call if mounted and no taunt yet
+  }, [setActiveTab]);
+  
+  useEffect(() => {
+    if (hasMounted && !rival.lastTaunt) {
       handleGetTaunt();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setActiveTab, hasMounted]); // Add hasMounted to dependency array
+  }, [hasMounted, rival.lastTaunt]);
+
 
   const formatTimeLeft = useCallback((totalSeconds: number) => {
     if (totalSeconds < 0) return "Processing EXP Gain...";
@@ -221,6 +225,14 @@ export default function RivalPage() {
 
   const rivalToDisplay = hasMounted ? rival : INITIAL_RIVAL;
 
+  if (!hasMounted) {
+    return (
+      <AppWrapper>
+        <LoadingScreen />
+      </AppWrapper>
+    );
+  }
+
   return (
     <AppWrapper>
       <div className="space-y-6">
@@ -228,7 +240,7 @@ export default function RivalPage() {
           <CardHeader className="items-center text-center flex flex-col p-4">
             <div className={`avatar-arc-container mb-3 ${avatarContainerSize}`}>
               <div onClick={handleRivalAvatarClick} className={`cursor-pointer relative group border-2 border-destructive p-0.5 rounded-full overflow-hidden ${avatarSize}`}>
-                {hasMounted && rivalToDisplay.avatarUrl && rivalToDisplay.avatarUrl !== 'https://placehold.co/120x120.png' ? (
+                {rivalToDisplay.avatarUrl && rivalToDisplay.avatarUrl !== 'https://placehold.co/120x120.png' ? (
                   <Image
                     src={rivalToDisplay.avatarUrl}
                     alt={`${rivalToDisplay.name}'s Avatar`}
@@ -264,8 +276,6 @@ export default function RivalPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-center pt-2 pb-4 px-4">
-          {hasMounted ? (
-            <>
             <div className="px-0 sm:px-4">
               <div className="flex justify-between text-xs mb-1 font-code">
                 <span className="text-foreground uppercase">Rival EXP</span>
@@ -291,13 +301,6 @@ export default function RivalPage() {
                   </p>
               </CardContent>
             </Card>
-            </>
-            ) : (
-              <>
-                <Skeleton className="h-2 w-full rounded-full bg-secondary my-1" />
-                <Skeleton className="h-16 w-full rounded-md bg-background/30 my-4" />
-              </>
-            )}
 
 
             <Card className="bg-background/50 border-border mt-4 rounded-md">
@@ -306,9 +309,9 @@ export default function RivalPage() {
               </CardHeader>
               <CardContent className="p-3 pt-0">
                 <p className="text-base italic text-center text-foreground min-h-[40px] flex items-center justify-center font-code">
-                  {hasMounted ? (rivalToDisplay.lastTaunt || "Static...") : (<Skeleton className="h-5 w-3/4" />) }
+                  {rivalToDisplay.lastTaunt || "Static..."}
                 </p>
-                <Button onClick={handleGetTaunt} disabled={isLoadingTaunt || !hasMounted} className="mt-3 w-full bg-destructive hover:bg-destructive/90 font-headline uppercase text-xs py-2">
+                <Button onClick={handleGetTaunt} disabled={isLoadingTaunt} className="mt-3 w-full bg-destructive hover:bg-destructive/90 font-headline uppercase text-xs py-2">
                   <Swords className="mr-2 h-3 w-3" />
                   {isLoadingTaunt ? 'Provoking...' : 'Provoke Rival'}
                 </Button>
@@ -325,7 +328,7 @@ export default function RivalPage() {
             <CardDescription>Cumulative EXP gained by your rival (over the past 14 days).</CardDescription>
           </CardHeader>
           <CardContent>
-            {hasMounted && rivalExpGrowthData.length > 1 ? (
+            {rivalExpGrowthData.length > 1 ? (
               <ChartContainer config={chartConfigRival} className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={rivalExpGrowthData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -345,7 +348,7 @@ export default function RivalPage() {
                 </ResponsiveContainer>
               </ChartContainer>
             ) : (
-              <p className="text-muted-foreground text-center py-4">{hasMounted ? "Not enough EXP history for your rival to display growth graph." : "Loading graph data..."}</p>
+              <p className="text-muted-foreground text-center py-4">Not enough EXP history for your rival to display growth graph.</p>
             )}
           </CardContent>
         </Card>

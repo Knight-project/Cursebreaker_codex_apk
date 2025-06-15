@@ -3,6 +3,7 @@
 'use client';
 
 import AppWrapper from '@/components/layout/AppWrapper';
+import LoadingScreen from '@/components/layout/LoadingScreen';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -11,7 +12,6 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
 import { ATTRIBUTES_LIST, type Attribute } from '@/lib/types';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const chartConfigBase = {
   completion: {
@@ -106,26 +106,7 @@ export default function GraphsPage() {
   if (!hasMounted) {
     return (
       <AppWrapper>
-        <div className="space-y-8">
-          <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
-            <CardHeader>
-              <Skeleton className="h-7 w-3/4" /> {/* Title */}
-              <Skeleton className="h-5 w-full mt-1" /> {/* Description */}
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-[300px] w-full" /> {/* Chart Area */}
-            </CardContent>
-          </Card>
-          <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
-            <CardHeader>
-              <Skeleton className="h-7 w-3/4" /> {/* Title */}
-              <Skeleton className="h-5 w-full mt-1" /> {/* Description */}
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-[300px] w-full" /> {/* Chart Area */}
-            </CardContent>
-          </Card>
-        </div>
+        <LoadingScreen />
       </AppWrapper>
     );
   }
