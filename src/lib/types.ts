@@ -4,8 +4,18 @@ import type { format } from 'date-fns';
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
 export type TaskType = 'daily' | 'ritual' | 'event';
 
-export interface Task {
+export interface Goal {
   id: string;
+  name: string;
+  description?: string;
+  targetDate?: string; // ISO string
+  status: 'active' | 'completed' | 'archived';
+  linkedTaskIds: string[];
+  createdAt: string; // ISO string
+}
+
+export interface Task {
+  id:string;
   name: string;
   difficulty: "Easy" | "Moderate" | "Hard";
   attribute: Attribute;
@@ -13,6 +23,7 @@ export interface Task {
   isCompleted: boolean;
   dateAdded: string;
   baseExpValue: number;
+  goalId?: string; // New: Link to a goal
 
   dateCompleted?: string;
 
@@ -60,7 +71,8 @@ export interface UserProfile {
   avatarUrl?: string;
   expGainedToday: number;
   lastExpResetDate: string;
-  lastDayAllTasksCompleted: string;
+  lastDayAllTasksCompleted: string; // Kept for potential future reference, but not used for current "Consecutive Ops"
+  goals: Goal[]; // New: User's goals
 }
 
 export interface Rival {
@@ -131,7 +143,7 @@ export interface CustomGraphDailyLogs {
 }
 
 export interface AppSaveData {
-  userProfile: UserProfile;
+  userProfile: UserProfile; // Will now contain goals
   tasks: Task[];
   rival: Rival;
   appSettings: AppSettings;
@@ -139,7 +151,7 @@ export interface AppSaveData {
   intervalTimerSettings: IntervalTimerSetting[];
   customGraphs: CustomGraphSetting[];
   customGraphDailyLogs: CustomGraphDailyLogs;
-  saveFileVersion: string;
+  saveFileVersion: string; // Updated to 1.0.1 for goal feature
   appName: string;
 }
 
@@ -190,6 +202,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   expGainedToday: 0,
   lastExpResetDate: new Date().toISOString().split('T')[0],
   lastDayAllTasksCompleted: "",
+  goals: [], // New: Initialize goals as empty array
 };
 
 const tomorrow = new Date();

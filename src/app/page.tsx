@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2, RotateCcw, Check, Trash2 } from 'lucide-react';
+import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2, RotateCcw, Check, Trash2, Target } from 'lucide-react'; // Added Target
 import React, { useEffect, useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -394,16 +394,12 @@ export default function HomePage() {
 
   const handleUserAvatarClick = () => {
     // CAPACITOR_NOTE: For native image selection/capture, use Capacitor Camera plugin (@capacitor/camera).
-    // This would replace the hidden file input.
     userImageInputRef.current?.click();
     playSound('buttonClick');
   };
 
   const handleUserAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    // CAPACITOR_NOTE: If using Capacitor Camera, this function would receive a Photo object
-    // from the plugin, which includes path, webPath, or base64String.
-    // You'd then likely use the base64String or upload the file from its path.
-    // Image size/shape validation would still be relevant.
+    // CAPACITOR_NOTE: If using Capacitor Camera, this function would receive a Photo object.
     const file = event.target.files?.[0];
     const inputElement = event.target;
 
@@ -630,13 +626,22 @@ export default function HomePage() {
                 {profileToDisplay.customQuote || INITIAL_USER_PROFILE.customQuote}
               </CardDescription>
             )}
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 w-full max-w-md">
+              <Link href="/stats" passHref className="w-full">
+                <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4" onClick={() => playSound('buttonClick')}>
+                  <User className="mr-2 h-4 w-4" />
+                  Status Report
+                </Button>
+              </Link>
+              <Link href="/goals" passHref className="w-full">
+                <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4" onClick={() => playSound('buttonClick')}>
+                  <Target className="mr-2 h-4 w-4" />
+                  Manage Goals
+                </Button>
+              </Link>
+            </div>
 
-            <Link href="/stats" passHref className="mt-3 w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4" onClick={() => playSound('buttonClick')}>
-                <User className="mr-2 h-4 w-4" />
-                Status Report
-              </Button>
-            </Link>
           </CardHeader>
           <CardContent className="space-y-3 pt-2 pb-4 px-4">
             <div>
@@ -752,4 +757,3 @@ export default function HomePage() {
       </AppWrapper>
   );
 }
-

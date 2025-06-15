@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { UserProfile, Task, TaskType, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute, CustomGraphSetting, CustomGraphDailyLogs } from '@/lib/types';
+import type { UserProfile, Task, TaskType, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute, CustomGraphSetting, CustomGraphDailyLogs, Goal } from '@/lib/types'; // Added Goal
 import {
   ATTRIBUTES_LIST,
   INITIAL_USER_PROFILE,
@@ -39,7 +39,7 @@ import { playSound, updateGlobalSoundSetting } from '@/lib/soundManager';
 // This can be useful for saving state when the app goes to the background, or pausing/resuming timers.
 
 export interface AppSaveData {
-  userProfile: UserProfile;
+  userProfile: UserProfile; // UserProfile now includes goals
   tasks: Task[];
   rival: Rival;
   appSettings: AppSettings;
@@ -76,7 +76,7 @@ interface AppContextType {
   setCustomGraphDailyLogs: React.Dispatch<React.SetStateAction<CustomGraphDailyLogs>>;
   logCustomGraphData: (graphId: string, variableId: string, value: number) => void;
   commitStaleDailyLogs: () => void;
-  addTask: (taskData: Omit<Task, 'id' | 'dateAdded' | 'isCompleted' | 'nextDueDate' | 'baseExpValue'> & { taskType: TaskType; scheduledDate?: string; repeatIntervalDays?: number; isAllDay?: boolean; startTime?: string; endTime?: string; reminderOffsetMinutes?: number; }) => void;
+  addTask: (taskData: Omit<Task, 'id' | 'dateAdded' | 'isCompleted' | 'nextDueDate' | 'baseExpValue'> & { taskType: TaskType; scheduledDate?: string; repeatIntervalDays?: number; isAllDay?: boolean; startTime?: string; endTime?: string; reminderOffsetMinutes?: number; goalId?: string; }) => void;
   updateTask: (updatedTask: Task) => void;
   deleteTask: (taskId: string) => void;
   completeTask: (taskId: string) => void;
@@ -92,6 +92,12 @@ interface AppContextType {
   grantExp: (expGained: number) => void;
   getAllSaveData: () => AppSaveData;
   loadAllSaveData: (data: AppSaveData) => boolean;
+  // Goal functions
+  addGoal: (goalData: Omit<Goal, 'id' | 'linkedTaskIds' | 'status' | 'createdAt'>) => void;
+  updateGoal: (updatedGoalData: Omit<Goal, 'linkedTaskIds' | 'createdAt' | 'status'> & { id: string; status?: Goal['status']}) => void;
+  deleteGoal: (goalId: string) => void;
+  toggleGoalStatus: (goalId: string, newStatus: Goal['status']) => void;
+  getGoalById: (goalId: string) => Goal | undefined;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -123,10 +129,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [activeTab, setActiveTabState] = useState('home');
-  const [hasMounted, setHasMounted] = useState(false); // Keep hasMounted for initial client-side rendering logic
+  const [hasMounted, setHasMounted] = useState(false); 
 
   useEffect(() => {
-    setHasMounted(true); // Set hasMounted to true after initial mount
+    setHasMounted(true); 
   }, []);
 
   useEffect(() => {
@@ -150,11 +156,14 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-    if (!hasMounted) return; // Wait for client mount before running initialization logic
+    if (!hasMounted) return; 
 
     const today = format(new Date(), 'yyyy-MM-dd');
     if (userProfile.customQuote === undefined ) {
        setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
+    }
+    if (!userProfile.goals) { // Ensure goals array exists
+      setUserProfile(prev => ({ ...prev, goals: [] }));
     }
     if (!rival.name) {
       setRival(prev => ({ ...prev, name: INITIAL_RIVAL.name }));
@@ -219,20 +228,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMounted]); // Depend on hasMounted
-
-
-  // useEffect(() => {
-  //   if (!isInitialized || !hasMounted) return; // Also check hasMounted here
-  //   // This useEffect related to resetting streak based on lastDayAllTasksCompleted is removed for the new "Consecutive Ops" logic.
-  // }, [isInitialized, setUserProfile, hasMounted]);
+  }, [hasMounted]); 
 
 
   useEffect(() => {
-    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
+    if (!isInitialized || !hasMounted) return; 
     // CAPACITOR_NOTE: For Event Reminders on native, use Capacitor Local Notifications plugin (@capacitor/local-notifications).
-    // This logic would need to interface with that plugin to schedule native notifications.
-    // The `localStorage.getItem(reminderSentKey)` check would also need a native equivalent if you want to persist sent status across app restarts.
     const intervalId = setInterval(() => {
       const now = new Date();
       const todayStr = format(now, 'yyyy-MM-dd');
@@ -251,9 +252,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           const reminderTime = new Date(startTimeToday.getTime() - task.reminderOffsetMinutes * 60000);
 
           const reminderSentKey = `reminderSent_event_${task.id}_${task.scheduledDate}`;
+          // CAPACITOR_NOTE: localStorage might not be ideal for persisting reminder sent status on native.
+          // Native notifications might offer their own tracking or you might use Capacitor Storage.
           const reminderAlreadySent = localStorage.getItem(reminderSentKey);
 
           if (now >= reminderTime && now < startTimeToday && !reminderAlreadySent) {
+            // CAPACITOR_NOTE: Replace web toast with native notification.
             toast({
               title: "Event Reminder",
               description: `${task.name} is scheduled to start at ${task.startTime}.`,
@@ -413,7 +417,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
 
-  const addTask = (taskData: Omit<Task, 'id' | 'dateAdded' | 'isCompleted' | 'nextDueDate' | 'baseExpValue'> & { taskType: TaskType; scheduledDate?: string; repeatIntervalDays?: number; isAllDay?: boolean; startTime?: string; endTime?: string; reminderOffsetMinutes?: number; }) => {
+  const addTask = (taskData: Omit<Task, 'id' | 'dateAdded' | 'isCompleted' | 'nextDueDate' | 'baseExpValue'> & { taskType: TaskType; scheduledDate?: string; repeatIntervalDays?: number; isAllDay?: boolean; startTime?: string; endTime?: string; reminderOffsetMinutes?: number; goalId?: string }) => {
     const dateAdded = format(new Date(), 'yyyy-MM-dd');
     let nextDueDateCalculated: string | undefined = undefined;
     if (taskData.taskType === 'ritual') {
@@ -431,6 +435,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       isCompleted: false,
       dateAdded: dateAdded,
       baseExpValue: baseExp,
+      goalId: taskData.goalId,
       repeatIntervalDays: taskData.taskType === 'ritual' ? (taskData.repeatIntervalDays || 1) : undefined,
       nextDueDate: taskData.taskType === 'ritual' ? nextDueDateCalculated : undefined,
       scheduledDate: taskData.taskType === 'event' ? taskData.scheduledDate : undefined,
@@ -440,15 +445,61 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       reminderOffsetMinutes: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.reminderOffsetMinutes : undefined,
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
+    
+    // Link task to goal if goalId is provided
+    if (newTask.goalId) {
+      setUserProfile(prev => {
+        const goals = prev.goals.map(g => {
+          if (g.id === newTask.goalId) {
+            return { ...g, linkedTaskIds: [...g.linkedTaskIds, newTask.id] };
+          }
+          return g;
+        });
+        return { ...prev, goals };
+      });
+    }
     playSound('buttonClick');
   };
 
   const updateTask = (updatedTask: Task) => {
+    const oldTask = tasks.find(t => t.id === updatedTask.id);
     setTasks(prevTasks => prevTasks.map(task => task.id === updatedTask.id ? updatedTask : task));
+
+    // Handle goal linking changes
+    if (oldTask && oldTask.goalId !== updatedTask.goalId) {
+      setUserProfile(prev => {
+        const goals = prev.goals.map(g => {
+          // Remove from old goal
+          if (g.id === oldTask.goalId) {
+            g.linkedTaskIds = g.linkedTaskIds.filter(tid => tid !== updatedTask.id);
+          }
+          // Add to new goal
+          if (g.id === updatedTask.goalId) {
+            g.linkedTaskIds = [...g.linkedTaskIds, updatedTask.id];
+          }
+          return g;
+        });
+        return { ...prev, goals };
+      });
+    }
   };
 
   const deleteTask = (taskId: string) => {
+    const taskToDelete = tasks.find(t => t.id === taskId);
     setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+
+    // Unlink task from goal if it was linked
+    if (taskToDelete && taskToDelete.goalId) {
+      setUserProfile(prev => {
+        const goals = prev.goals.map(g => {
+          if (g.id === taskToDelete.goalId) {
+            return { ...g, linkedTaskIds: g.linkedTaskIds.filter(id => id !== taskId) };
+          }
+          return g;
+        });
+        return { ...prev, goals };
+      });
+    }
     playSound('buttonClick');
   };
 
@@ -472,7 +523,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         return prevTasks;
       }
       taskWasCompletedThisAction = true;
-      streakIncremented = true; // For new "Consecutive Ops" logic
+      streakIncremented = true;
 
       const expAwardedForThisCompletion = originalTask.baseExpValue;
       let statExpGainedForThisInstance: number | undefined = undefined;
@@ -496,14 +547,14 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (originalTask.taskType === 'ritual') {
         updatedTaskInMainList.lastCompletedDate = todayStr;
-        updatedTaskInMainList.isCompleted = true; // Ritual is considered completed for the day
+        updatedTaskInMainList.isCompleted = true; 
         const currentDueDate = originalTask.nextDueDate ? parseISO(originalTask.nextDueDate) : parseISO(originalTask.dateAdded);
         updatedTaskInMainList.nextDueDate = format(addDays(currentDueDate, originalTask.repeatIntervalDays || 1), 'yyyy-MM-dd');
       } else {
         updatedTaskInMainList.isCompleted = true;
         updatedTaskInMainList.dateCompleted = todayStr;
       }
-      updatedTaskInMainList.expAwarded = undefined; // Clear these from main task list
+      updatedTaskInMainList.expAwarded = undefined; 
       updatedTaskInMainList.statExpGained = undefined;
       updatedTaskInMainList.attributeAffectedForStatExp = undefined;
 
@@ -570,7 +621,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     grantExp(-(expToRevoke));
     taskWasUndoneThisAction = true;
-    streakDecremented = true; // For new "Consecutive Ops" logic
+    streakDecremented = true;
 
     if (attributeForStatRevoke && attributeForStatRevoke !== "None" && statExpToRevoke !== undefined) {
       grantStatExp(attributeForStatRevoke, -statExpToRevoke);
@@ -588,11 +639,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           };
           if (t.taskType === 'ritual') {
             updatedTask.lastCompletedDate = undefined;
-            // If nextDueDate was pushed forward, pull it back to today if appropriate
             if (t.nextDueDate && isAfter(parseISO(t.nextDueDate), startOfDay(new Date()))) {
                 updatedTask.nextDueDate = todayStr;
             } else if (!t.nextDueDate || isBefore(parseISO(t.nextDueDate), startOfDay(new Date())) ) {
-                // If next due date was invalid or in past, set to today
                 updatedTask.nextDueDate = todayStr;
             }
           } else {
@@ -637,7 +686,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const today = format(new Date(), 'yyyy-MM-dd');
     return tasks.filter(task => {
       if (task.taskType !== 'ritual') return false;
-      // Show ritual if it's due today OR it was completed today (to allow undo)
       return task.nextDueDate === today || task.lastCompletedDate === today;
     });
   }, [tasks]);
@@ -649,7 +697,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   const updateRivalTaunt = useCallback(async () => {
-    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
+    if (!isInitialized || !hasMounted) return; 
     try {
       const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5;
       const input: AdaptiveTauntInput = {
@@ -670,7 +718,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
+    if (!isInitialized || !hasMounted) return; 
 
     const dailyCheck = () => {
       const now = new Date();
@@ -763,7 +811,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
             lastExpResetDate: todayStr,
         }));
       }
-
+      // CAPACITOR_NOTE: localStorage is used here. For native, Capacitor Storage would be better.
       const lastRitualProcessingDate = localStorage.getItem(`${APP_NAME}_lastRitualProcessingDate`);
       if (lastRitualProcessingDate !== todayStr) {
         setTasks(prevTasks =>
@@ -802,7 +850,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
+    if (!isInitialized || !hasMounted) return; 
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const tasksActionableToday = tasks.filter(task =>
@@ -934,7 +982,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [customGraphDailyLogs, customGraphs, setCustomGraphs, setCustomGraphDailyLogs]);
 
   useEffect(() => {
-    if (isInitialized && hasMounted) { // Check hasMounted before these operations
+    if (isInitialized && hasMounted) { 
       commitStaleDailyLogs();
        setTasks(prevTasks =>
         prevTasks.map(task => {
@@ -965,7 +1013,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       intervalTimerSettings,
       customGraphs,
       customGraphDailyLogs,
-      saveFileVersion: '1.0.0', 
+      saveFileVersion: '1.0.1', // Updated version for goal feature
       appName: APP_NAME,
     };
   }, [userProfile, tasks, rival, appSettings, pomodoroSettings, intervalTimerSettings, customGraphs, customGraphDailyLogs]);
@@ -974,7 +1022,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     // CAPACITOR_NOTE: For native import, the user would select a file (e.g., using a file picker
     // which might need a custom plugin or by handling a URI from the Share plugin).
     // The file content would then be read using Capacitor Filesystem.
-    if (!data || data.appName !== APP_NAME || data.saveFileVersion !== '1.0.0') {
+    if (!data || data.appName !== APP_NAME || (data.saveFileVersion !== '1.0.0' && data.saveFileVersion !== '1.0.1')) {
       toast({ title: "Import Failed", description: "Invalid or incompatible save file.", variant: "destructive" });
       return false;
     }
@@ -993,8 +1041,20 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      setUserProfile(data.userProfile);
-      setTasks(data.tasks);
+      const loadedUserProfile = data.userProfile || INITIAL_USER_PROFILE;
+      if (!loadedUserProfile.goals && data.saveFileVersion === '1.0.1') { // Handle if goals is missing in a 1.0.1 file for safety
+        loadedUserProfile.goals = [];
+      } else if (data.saveFileVersion === '1.0.0') { // If old version, add empty goals
+         loadedUserProfile.goals = [];
+      }
+      setUserProfile(loadedUserProfile);
+
+      const loadedTasks = (data.tasks || []).map((task: Task) => ({
+        ...task,
+        goalId: (data.saveFileVersion === '1.0.1' && task.goalId) ? task.goalId : undefined
+      }));
+      setTasks(loadedTasks);
+      
       setRival(data.rival);
       setAppSettings(data.appSettings);
       setPomodoroSettings(data.pomodoroSettings);
@@ -1004,7 +1064,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       updateGlobalSoundSetting(data.appSettings.enableSoundEffects);
 
-      setHasMounted(false); // Force re-evaluation of hasMounted dependent effects
+      setHasMounted(false); 
       setIsInitialized(false);
       setTimeout(() => {
           setHasMounted(true);
@@ -1027,6 +1087,57 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     setCustomGraphs, setCustomGraphDailyLogs, toast, setActiveTabState, setIsInitialized, setHasMounted
   ]);
 
+  // Goal Management Functions
+  const addGoal = (goalData: Omit<Goal, 'id' | 'linkedTaskIds' | 'status' | 'createdAt'>) => {
+    setUserProfile(prev => {
+      const newGoal: Goal = {
+        ...goalData,
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        linkedTaskIds: [],
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      };
+      return { ...prev, goals: [...(prev.goals || []), newGoal] };
+    });
+    playSound('buttonClick');
+  };
+
+  const updateGoal = (updatedGoalData: Omit<Goal, 'linkedTaskIds' | 'createdAt' | 'status'> & { id: string; status?: Goal['status']}) => {
+    setUserProfile(prev => {
+      const goals = (prev.goals || []).map(g => 
+        g.id === updatedGoalData.id ? { ...g, ...updatedGoalData, status: updatedGoalData.status || g.status } : g
+      );
+      return { ...prev, goals };
+    });
+     playSound('buttonClick');
+  };
+
+  const deleteGoal = (goalId: string) => {
+    setUserProfile(prev => {
+      const goals = (prev.goals || []).filter(g => g.id !== goalId);
+      // Unlink tasks from this goal
+      setTasks(currentTasks => currentTasks.map(task => 
+        task.goalId === goalId ? { ...task, goalId: undefined } : task
+      ));
+      return { ...prev, goals };
+    });
+     playSound('buttonClick');
+  };
+
+  const toggleGoalStatus = (goalId: string, newStatus: Goal['status']) => {
+    setUserProfile(prev => {
+      const goals = (prev.goals || []).map(g => 
+        g.id === goalId ? { ...g, status: newStatus } : g
+      );
+      return { ...prev, goals };
+    });
+    playSound('buttonClick');
+  };
+
+  const getGoalById = useCallback((goalId: string): Goal | undefined => {
+    return userProfile.goals.find(g => g.id === goalId);
+  }, [userProfile.goals]);
+
 
   return (
     <AppContext.Provider value={{
@@ -1048,13 +1159,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       activeTab, setActiveTab,
       grantExp,
       getAllSaveData,
-      loadAllSaveData
+      loadAllSaveData,
+      addGoal, updateGoal, deleteGoal, toggleGoalStatus, getGoalById,
     }}>
-      {/* Conditionally render children only after client mount to avoid hydration issues */}
       {hasMounted ? children : null}
     </AppContext.Provider>
   );
 };
 
 export default AppProvider;
-

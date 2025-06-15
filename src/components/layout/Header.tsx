@@ -51,7 +51,8 @@ const Header = () => {
     journal: "Daily Journal",
     stats: "Character Stats",
     settings: "Settings",
-    graphs: "Data Logs & Trends"
+    graphs: "Data Logs & Trends",
+    goals: "Manage Goals" // Added title for goals page
   };
   
   const title = pageTitles[activeTab] || APP_NAME;
