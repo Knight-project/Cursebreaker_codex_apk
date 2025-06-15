@@ -1,9 +1,20 @@
+
 'use client';
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { UserProfile, Task, TaskType, Rival, AppSettings, PomodoroSettings, IntervalTimerSetting, Attribute, CustomGraphSetting, CustomGraphDailyLogs } from '@/lib/types';
-import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, INITIAL_RIVAL, INITIAL_APP_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS, INITIAL_CUSTOM_GRAPHS, INITIAL_CUSTOM_GRAPH_DAILY_LOGS, RANK_NAMES as RANK_NAMES_TYPED_ARRAY } from '@/lib/types';
+import {
+  ATTRIBUTES_LIST,
+  INITIAL_USER_PROFILE,
+  INITIAL_RIVAL,
+  INITIAL_APP_SETTINGS,
+  INITIAL_POMODORO_SETTINGS,
+  INITIAL_INTERVAL_TIMER_SETTINGS,
+  INITIAL_CUSTOM_GRAPHS,
+  INITIAL_CUSTOM_GRAPH_DAILY_LOGS,
+  RANK_NAMES as RANK_NAMES_TYPED_ARRAY
+} from '@/lib/types';
 import {
   RANK_NAMES_LIST,
   MAX_SUB_RANKS,
@@ -91,14 +102,6 @@ export const useApp = (): AppContextType => {
   return context;
 };
 
-const INITIAL_POMODORO_SETTINGS: PomodoroSettings = {
-  focusDuration: 25,
-  shortBreakDuration: 5,
-  longBreakDuration: 15,
-  sessionsBeforeLongBreak: 4,
-};
-
-
 const AppProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useLocalStorage<UserProfile>(`${APP_NAME}UserProfile`, INITIAL_USER_PROFILE);
   const [tasks, setTasks] = useLocalStorage<Task[]>(`${APP_NAME}Tasks`, []);
@@ -174,13 +177,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         if (task.taskType === 'ritual') {
           const interval = task.repeatIntervalDays || 1;
           let expectedNextDueDate = task.nextDueDate ? parseISO(task.nextDueDate) : parseISO(task.dateAdded);
-          
+
           const daysSinceAddedOrLastDue = differenceInDays(startOfDay(new Date()), task.nextDueDate ? parseISO(task.nextDueDate) : parseISO(task.dateAdded));
-          if (daysSinceAddedOrLastDue >= interval || !task.nextDueDate) { 
+          if (daysSinceAddedOrLastDue >= interval || !task.nextDueDate) {
             const cyclesMissed = Math.floor(daysSinceAddedOrLastDue / interval);
             expectedNextDueDate = addDays(task.nextDueDate ? parseISO(task.nextDueDate) : parseISO(task.dateAdded), cyclesMissed * interval);
           }
-                    
+
           if(isBefore(expectedNextDueDate, startOfDay(new Date()))) {
             expectedNextDueDate = addDays(expectedNextDueDate, interval);
           }
@@ -202,7 +205,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
 
   useEffect(() => {
@@ -228,7 +231,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
                     }
                 }
             }
-        } else if (prevProfile.currentStreak !== 0) { 
+        } else if (prevProfile.currentStreak !== 0) {
             // No completion day recorded, but streak > 0. This is an anomaly. Reset.
             return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
         }
@@ -245,7 +248,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       tasks.forEach(task => {
         if (
-          task.taskType === 'event' && 
+          task.taskType === 'event' &&
           task.scheduledDate === todayStr &&
           !task.isAllDay &&
           task.startTime &&
@@ -255,13 +258,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           const [hours, minutes] = task.startTime.split(':').map(Number);
           const startTimeToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
           const reminderTime = new Date(startTimeToday.getTime() - task.reminderOffsetMinutes * 60000);
-          
-          const reminderSentKey = `reminderSent_event_${task.id}_${task.scheduledDate}`; 
+
+          const reminderSentKey = `reminderSent_event_${task.id}_${task.scheduledDate}`;
           const reminderAlreadySent = localStorage.getItem(reminderSentKey);
 
           if (now >= reminderTime && now < startTimeToday && !reminderAlreadySent) {
             toast({
-              title: "Event Reminder", 
+              title: "Event Reminder",
               description: `${task.name} is scheduled to start at ${task.startTime}.`,
             });
             playSound('notification');
@@ -272,7 +275,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       });
-    }, 60000); 
+    }, 60000);
 
     return () => clearInterval(intervalId);
   }, [isInitialized, tasks, toast]);
@@ -299,7 +302,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       let newExpToNextSubRank = prev.expToNextSubRank;
       let leveledUp = false;
 
-      while (newCurrentExpInSubRank >= newExpToNextSubRank && newExpToNextSubRank > 0) { 
+      while (newCurrentExpInSubRank >= newExpToNextSubRank && newExpToNextSubRank > 0) {
         leveledUp = true;
         newCurrentExpInSubRank -= newExpToNextSubRank;
         newSubRank++;
@@ -309,31 +312,31 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           if (currentRankIndex < RANK_NAMES_LIST.length - 1) {
             newRankName = RANK_NAMES_LIST[currentRankIndex + 1];
           } else {
-            newSubRank = MAX_SUB_RANKS; 
-            newCurrentExpInSubRank = newExpToNextSubRank; 
+            newSubRank = MAX_SUB_RANKS;
+            newCurrentExpInSubRank = newExpToNextSubRank;
           }
         }
         newExpToNextSubRank = calculateExpForNextSubRank(newRankName, newSubRank);
       }
-      
+
       while (newCurrentExpInSubRank < 0 && (newSubRank > 1 || RANK_NAMES_LIST.indexOf(newRankName as typeof RANK_NAMES_LIST[number]) > 0) ) {
           newSubRank--;
           if (newSubRank < 1) {
               const currentRankIndex = RANK_NAMES_LIST.indexOf(newRankName as typeof RANK_NAMES_LIST[number]);
-              if (currentRankIndex > 0) { 
+              if (currentRankIndex > 0) {
                   newRankName = RANK_NAMES_LIST[currentRankIndex - 1];
                   newSubRank = MAX_SUB_RANKS;
                   const expForPreviousLevel = calculateExpForNextSubRank(newRankName, newSubRank);
                   newCurrentExpInSubRank += expForPreviousLevel;
-                  newExpToNextSubRank = expForPreviousLevel; 
-              } else { 
+                  newExpToNextSubRank = expForPreviousLevel;
+              } else {
                   newSubRank = 1;
                   newRankName = RANK_NAMES_LIST[0];
-                  newCurrentExpInSubRank = 0; 
+                  newCurrentExpInSubRank = 0;
                   newExpToNextSubRank = calculateExpForNextSubRank(newRankName, newSubRank);
-                  newTotalExp = prev.totalExp + (newCurrentExpInSubRank - prev.currentExpInSubRank) - expGained; 
+                  newTotalExp = prev.totalExp + (newCurrentExpInSubRank - prev.currentExpInSubRank) - expGained;
                   if (newTotalExp < 0) newTotalExp = 0;
-                  break; 
+                  break;
               }
           } else {
             const expForPreviousLevel = calculateExpForNextSubRank(newRankName, newSubRank);
@@ -341,29 +344,29 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
             newExpToNextSubRank = expForPreviousLevel;
           }
       }
-      if (newCurrentExpInSubRank < 0) newCurrentExpInSubRank = 0; 
+      if (newCurrentExpInSubRank < 0) newCurrentExpInSubRank = 0;
 
 
-      if (leveledUp && isInitialized && expGained > 0) { 
+      if (leveledUp && isInitialized && expGained > 0) {
          triggerLevelUpAnimation();
       }
 
       const today = format(new Date(), 'yyyy-MM-dd');
       let currentExpGainedToday = prev.expGainedToday;
       if (prev.lastExpResetDate !== today) {
-        currentExpGainedToday = 0; 
+        currentExpGainedToday = 0;
       }
       currentExpGainedToday += expGained;
 
       return {
         ...prev,
-        totalExp: Math.max(0, newTotalExp), 
-        currentExpInSubRank: Math.max(0, newCurrentExpInSubRank), 
+        totalExp: Math.max(0, newTotalExp),
+        currentExpInSubRank: Math.max(0, newCurrentExpInSubRank),
         subRank: newSubRank,
         rankName: newRankName,
         expToNextSubRank: newExpToNextSubRank,
-        expGainedToday: currentExpGainedToday, 
-        lastExpResetDate: prev.lastExpResetDate !== today ? today : prev.lastExpResetDate, 
+        expGainedToday: currentExpGainedToday,
+        lastExpResetDate: prev.lastExpResetDate !== today ? today : prev.lastExpResetDate,
       };
     });
   }, [setUserProfile, isInitialized, appSettings.enableAnimations, calculateExpForNextSubRank]);
@@ -372,27 +375,27 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const grantStatExp = useCallback((attribute: Attribute, expGainedStat: number) => {
     setUserProfile(prev => {
       const statKey = attribute.toLowerCase() as keyof typeof prev.stats;
-      if (!prev.stats[statKey] || attribute === "None") return prev; 
+      if (!prev.stats[statKey] || attribute === "None") return prev;
       const currentStat = prev.stats[statKey];
 
       let newExp = currentStat.exp + expGainedStat;
       let newLevel = currentStat.level;
       let newExpToNext = currentStat.expToNextLevel;
 
-      if (expGainedStat > 0) { 
+      if (expGainedStat > 0) {
         while (newExp >= newExpToNext && newExpToNext > 0) {
           newExp -= newExpToNext;
           newLevel++;
           newExpToNext = Math.floor(INITIAL_USER_PROFILE.stats.strength.expToNextLevel * Math.pow(1.2, newLevel -1));
         }
-      } else { 
-         while (newExp < 0 && newLevel > 1) { 
+      } else {
+         while (newExp < 0 && newLevel > 1) {
             newLevel--;
             const expForPrevLevel = Math.floor(INITIAL_USER_PROFILE.stats.strength.expToNextLevel * Math.pow(1.2, newLevel -1));
             newExp += expForPrevLevel;
             newExpToNext = expForPrevLevel;
         }
-        if (newLevel === 1 && newExp < 0) newExp = 0; 
+        if (newLevel === 1 && newExp < 0) newExp = 0;
       }
 
 
@@ -401,8 +404,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         stats: {
           ...prev.stats,
           [statKey]: {
-            level: Math.max(1, newLevel), 
-            exp: Math.max(0, newExp),     
+            level: Math.max(1, newLevel),
+            exp: Math.max(0, newExp),
             expToNextLevel: newExpToNext,
           }
         }
@@ -417,7 +420,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const rankMultiplier = 1 + (rankIndex * RANK_EXP_SCALING_FACTOR);
     return Math.floor(BASE_TASK_EXP * difficultyMultiplier * rankMultiplier);
   }, []);
-  
+
 
   const addTask = (taskData: Omit<Task, 'id' | 'dateAdded' | 'isCompleted' | 'nextDueDate' | 'baseExpValue'> & { taskType: TaskType; scheduledDate?: string; repeatIntervalDays?: number; isAllDay?: boolean; startTime?: string; endTime?: string; reminderOffsetMinutes?: number; }) => {
     const dateAdded = format(new Date(), 'yyyy-MM-dd');
@@ -425,7 +428,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     if (taskData.taskType === 'ritual') {
       nextDueDateCalculated = calculateNextDueDate(dateAdded, taskData.repeatIntervalDays || 1);
     }
-    
+
     const baseExp = calculatePotentialTaskExp(taskData, userProfile.rankName);
 
     const newTask: Task = {
@@ -436,17 +439,17 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       taskType: taskData.taskType,
       isCompleted: false,
       dateAdded: dateAdded,
-      baseExpValue: baseExp, 
+      baseExpValue: baseExp,
       repeatIntervalDays: taskData.taskType === 'ritual' ? (taskData.repeatIntervalDays || 1) : undefined,
       nextDueDate: taskData.taskType === 'ritual' ? nextDueDateCalculated : undefined,
-      scheduledDate: taskData.taskType === 'event' ? taskData.scheduledDate : undefined, 
-      isAllDay: taskData.taskType === 'event' ? taskData.isAllDay : undefined, 
-      startTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.startTime : undefined, 
-      endTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.endTime : undefined, 
-      reminderOffsetMinutes: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.reminderOffsetMinutes : undefined, 
+      scheduledDate: taskData.taskType === 'event' ? taskData.scheduledDate : undefined,
+      isAllDay: taskData.taskType === 'event' ? taskData.isAllDay : undefined,
+      startTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.startTime : undefined,
+      endTime: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.endTime : undefined,
+      reminderOffsetMinutes: taskData.taskType === 'event' && !taskData.isAllDay ? taskData.reminderOffsetMinutes : undefined,
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
-    playSound('buttonClick'); 
+    playSound('buttonClick');
   };
 
   const updateTask = (updatedTask: Task) => {
@@ -455,9 +458,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteTask = (taskId: string) => {
     setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
-    playSound('buttonClick'); 
+    playSound('buttonClick');
   };
-  
+
   const completeTask = useCallback((taskId: string) => {
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
@@ -489,7 +492,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         statExpGainedForThisInstance = statExp;
         attributeAffectedForThisInstance = originalTask.attribute;
       }
-      
+
       historyEntryData = {
         ...originalTask,
         isCompleted: true,
@@ -499,10 +502,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         statExpGained: statExpGainedForThisInstance,
         attributeAffectedForStatExp: attributeAffectedForThisInstance,
       };
-      
+
       if (originalTask.taskType === 'ritual') {
         updatedTaskInMainList.lastCompletedDate = todayStr;
-        updatedTaskInMainList.isCompleted = true; 
+        updatedTaskInMainList.isCompleted = true;
         const currentDueDate = originalTask.nextDueDate ? parseISO(originalTask.nextDueDate) : parseISO(originalTask.dateAdded);
         updatedTaskInMainList.nextDueDate = format(addDays(currentDueDate, originalTask.repeatIntervalDays || 1), 'yyyy-MM-dd');
       } else {
@@ -515,17 +518,17 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const newTasks = [...prevTasks];
       newTasks[taskIndex] = updatedTaskInMainList;
-      
+
       const tasksForStreakCheck = newTasks;
       const tasksActionableToday = tasksForStreakCheck.filter(t =>
           (t.taskType === 'daily' && t.dateAdded === todayStr) ||
-          (t.taskType === 'ritual' && (t.nextDueDate === todayStr || t.lastCompletedDate === todayStr) ) || 
+          (t.taskType === 'ritual' && (t.nextDueDate === todayStr || t.lastCompletedDate === todayStr) ) ||
           (t.taskType === 'event' && t.scheduledDate === todayStr)
       );
 
       const allTodayNowCompleted = tasksActionableToday.length > 0 && tasksActionableToday.every(t =>
           (t.taskType === 'daily' && t.isCompleted && t.dateCompleted === todayStr) ||
-          (t.taskType === 'ritual' && t.lastCompletedDate === todayStr) || 
+          (t.taskType === 'ritual' && t.lastCompletedDate === todayStr) ||
           (t.taskType === 'event' && t.isCompleted && t.dateCompleted === todayStr)
       );
 
@@ -533,10 +536,10 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           setUserProfile(prev => {
               if (prev.lastDayAllTasksCompleted === yesterdayStr) {
                   return { ...prev, currentStreak: prev.currentStreak + 1, lastDayAllTasksCompleted: todayStr };
-              } else if (prev.lastDayAllTasksCompleted !== todayStr) { 
+              } else if (prev.lastDayAllTasksCompleted !== todayStr) {
                   return { ...prev, currentStreak: 1, lastDayAllTasksCompleted: todayStr };
               }
-              return prev; 
+              return prev;
           });
       }
       return newTasks;
@@ -551,21 +554,21 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       if (finalHistoryRecord.attributeAffectedForStatExp && finalHistoryRecord.attributeAffectedForStatExp !== "None" && finalHistoryRecord.statExpGained !== undefined) {
         grantStatExp(finalHistoryRecord.attributeAffectedForStatExp, finalHistoryRecord.statExpGained);
       }
-      
+
       playSound('taskComplete');
       setUserProfile(prev => {
         const newTaskHistory = [...prev.taskHistory];
-        const existingIndex = newTaskHistory.findIndex(ht => 
-            ht.id === finalHistoryRecord.id && 
-            ( (ht.taskType !== 'ritual' && ht.dateCompleted === finalHistoryRecord.dateCompleted) || 
+        const existingIndex = newTaskHistory.findIndex(ht =>
+            ht.id === finalHistoryRecord.id &&
+            ( (ht.taskType !== 'ritual' && ht.dateCompleted === finalHistoryRecord.dateCompleted) ||
               (ht.taskType === 'ritual' && ht.lastCompletedDate === finalHistoryRecord.lastCompletedDate) )
         );
         if(existingIndex > -1){
-             newTaskHistory[existingIndex] = finalHistoryRecord; 
+             newTaskHistory[existingIndex] = finalHistoryRecord;
         } else {
              newTaskHistory.push(finalHistoryRecord);
         }
-        return { ...prev, taskHistory: newTaskHistory.slice(-100) }; 
+        return { ...prev, taskHistory: newTaskHistory.slice(-100) };
       });
     }
   }, [setTasks, appSettings.autoAssignStatExp, grantExp, grantStatExp, setUserProfile]);
@@ -576,47 +579,47 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
     let taskWasUndoneThisAction = false;
 
-    const taskToUndoFromHistory = userProfile.taskHistory.find(ht => 
-        ht.id === taskId && 
+    const taskToUndoFromHistory = userProfile.taskHistory.find(ht =>
+        ht.id === taskId &&
         (ht.taskType === 'ritual' ? ht.lastCompletedDate === todayStr : ht.dateCompleted === todayStr)
       );
-    
+
     if (!taskToUndoFromHistory) {
       toast({ title: "Cannot Undo", description: "Task not found in today's completion history or cannot be undone.", variant: "destructive" });
       return;
     }
-    
+
     const expToRevoke = taskToUndoFromHistory.expAwarded;
     const statExpToRevoke = taskToUndoFromHistory.statExpGained;
     const attributeForStatRevoke = taskToUndoFromHistory.attributeAffectedForStatExp;
 
-    if (expToRevoke === undefined) { 
+    if (expToRevoke === undefined) {
       toast({ title: "Error Undoing", description: "Could not reliably determine EXP to revoke from history.", variant: "destructive" });
-      return; 
+      return;
     }
-    
-    grantExp(-(expToRevoke)); 
+
+    grantExp(-(expToRevoke));
     taskWasUndoneThisAction = true;
 
     if (attributeForStatRevoke && attributeForStatRevoke !== "None" && statExpToRevoke !== undefined) {
-      grantStatExp(attributeForStatRevoke, -statExpToRevoke); 
+      grantStatExp(attributeForStatRevoke, -statExpToRevoke);
     }
 
     setTasks(prevTasks =>
       prevTasks.map(t => {
         if (t.id === taskId) {
-          const updatedTask = { 
-            ...t, 
-            isCompleted: false, 
-            expAwarded: undefined, 
-            statExpGained: undefined, 
+          const updatedTask = {
+            ...t,
+            isCompleted: false,
+            expAwarded: undefined,
+            statExpGained: undefined,
             attributeAffectedForStatExp: undefined,
           };
           if (t.taskType === 'ritual') {
             updatedTask.lastCompletedDate = undefined;
             if (t.nextDueDate && isAfter(parseISO(t.nextDueDate), startOfDay(new Date()))) {
-                updatedTask.nextDueDate = todayStr; 
-            } else if (!t.nextDueDate || isBefore(parseISO(t.nextDueDate), startOfDay(new Date())) ) { 
+                updatedTask.nextDueDate = todayStr;
+            } else if (!t.nextDueDate || isBefore(parseISO(t.nextDueDate), startOfDay(new Date())) ) {
                 updatedTask.nextDueDate = todayStr;
             }
           } else {
@@ -629,23 +632,23 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     );
 
     setUserProfile(prev => {
-      const newHistory = prev.taskHistory.filter(ht => 
+      const newHistory = prev.taskHistory.filter(ht =>
          !(ht.id === taskId && (ht.taskType === 'ritual' ? ht.lastCompletedDate === todayStr : ht.dateCompleted === todayStr))
       );
-      
+
       let newCurrentStreak = prev.currentStreak;
       let newLastDayAllTasksCompleted = prev.lastDayAllTasksCompleted;
 
       if (prev.lastDayAllTasksCompleted === todayStr) {
-          newLastDayAllTasksCompleted = yesterdayStr; 
-          if (prev.currentStreak === 1) { 
+          newLastDayAllTasksCompleted = yesterdayStr;
+          if (prev.currentStreak === 1) {
               newCurrentStreak = 0;
-              newLastDayAllTasksCompleted = ""; 
-          } else if (prev.currentStreak > 1) { 
+              newLastDayAllTasksCompleted = "";
+          } else if (prev.currentStreak > 1) {
               newCurrentStreak = prev.currentStreak - 1;
           }
       }
-      
+
       return {
           ...prev,
           taskHistory: newHistory,
@@ -653,7 +656,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           lastDayAllTasksCompleted: newLastDayAllTasksCompleted,
       };
     });
-    
+
     if (taskWasUndoneThisAction) {
       toast({ title: "Task Undone", description: `${taskToUndoFromHistory.name} reverted to incomplete.` });
       playSound('buttonClick');
@@ -674,16 +677,16 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [tasks]);
 
-  const getEventsForToday = useCallback(() => { 
+  const getEventsForToday = useCallback(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
-    return tasks.filter(task => task.taskType === 'event' && task.scheduledDate === today); 
+    return tasks.filter(task => task.taskType === 'event' && task.scheduledDate === today);
   }, [tasks]);
 
 
   const updateRivalTaunt = useCallback(async () => {
     if (!isInitialized) return;
     try {
-      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5; 
+      const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5;
       const input: AdaptiveTauntInput = {
         userTaskCompletionRate: userProfile.dailyTaskCompletionPercentage / 100,
         rivalTaskCompletionRate: rivalTaskCompletionRate,
@@ -710,30 +713,30 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (rival.nextExpGainTime && now.toISOString() >= rival.nextExpGainTime) {
         const previousDayForExpCalc = format(subDays(parseISO(rival.nextExpGainTime), 1), 'yyyy-MM-dd');
-        
+
         const userExpGainedForRival = userProfile.taskHistory
             .filter(th => (th.dateCompleted === previousDayForExpCalc || th.lastCompletedDate === previousDayForExpCalc) && th.expAwarded !== undefined)
             .reduce((acc, currTask) => acc + (currTask.expAwarded!), 0);
-        
+
         const expFromUserUncompletedDailyTasks = tasks
           .filter(t => t.taskType === 'daily' && t.dateAdded === previousDayForExpCalc && !userProfile.taskHistory.some(ht => ht.id === t.id && ht.dateCompleted === previousDayForExpCalc && ht.isCompleted))
           .reduce((sum, task) => sum + (task.baseExpValue !== undefined ? task.baseExpValue : calculatePotentialTaskExp(task, userProfile.rankName)), 0);
-        
-        const expFromUserUncompletedEventTasksForYesterday = tasks 
-          .filter(t => t.taskType === 'event' && t.scheduledDate === previousDayForExpCalc && !userProfile.taskHistory.some(ht => ht.id === t.id && ht.dateCompleted === previousDayForExpCalc && ht.isCompleted)) 
+
+        const expFromUserUncompletedEventTasksForYesterday = tasks
+          .filter(t => t.taskType === 'event' && t.scheduledDate === previousDayForExpCalc && !userProfile.taskHistory.some(ht => ht.id === t.id && ht.dateCompleted === previousDayForExpCalc && ht.isCompleted))
           .reduce((sum, task) => sum + (task.baseExpValue !== undefined ? task.baseExpValue : calculatePotentialTaskExp(task, userProfile.rankName)), 0);
-        
+
         const expFromUserUncompletedRitualTasksForYesterday = tasks
-            .filter(t => t.taskType === 'ritual' && 
-                         (t.nextDueDate === previousDayForExpCalc || (t.lastCompletedDate && format(addDays(parseISO(t.lastCompletedDate), t.repeatIntervalDays || 1),'yyyy-MM-dd') === previousDayForExpCalc ) ) && 
-                         !userProfile.taskHistory.some(ht => ht.id === t.id && ht.lastCompletedDate === previousDayForExpCalc && ht.isCompleted) 
+            .filter(t => t.taskType === 'ritual' &&
+                         (t.nextDueDate === previousDayForExpCalc || (t.lastCompletedDate && format(addDays(parseISO(t.lastCompletedDate), t.repeatIntervalDays || 1),'yyyy-MM-dd') === previousDayForExpCalc ) ) &&
+                         !userProfile.taskHistory.some(ht => ht.id === t.id && ht.lastCompletedDate === previousDayForExpCalc && ht.isCompleted)
             )
             .reduce((sum,task) => sum + (task.baseExpValue !== undefined ? task.baseExpValue : calculatePotentialTaskExp(task, userProfile.rankName)), 0);
 
 
         let baseRivalExpGain =
             (userExpGainedForRival * RIVAL_USER_DAILY_EXP_PERCENTAGE) +
-            expFromUserUncompletedDailyTasks + 
+            expFromUserUncompletedDailyTasks +
             expFromUserUncompletedEventTasksForYesterday +
             expFromUserUncompletedRitualTasksForYesterday;
 
@@ -770,13 +773,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
           }
 
           const newHistoryEntry = {
-            date: format(parseISO(prev.nextExpGainTime!), 'yyyy-MM-dd'), 
+            date: format(parseISO(prev.nextExpGainTime!), 'yyyy-MM-dd'),
             expGained: expGainedByRival,
             totalExp: newTotalExp,
           };
-          const updatedExpHistory = [...(prev.expHistory || []), newHistoryEntry].slice(-30); 
+          const updatedExpHistory = [...(prev.expHistory || []), newHistoryEntry].slice(-30);
 
-          const nextGainTime = startOfDay(addHours(parseISO(prev.nextExpGainTime!), 25)); 
+          const nextGainTime = startOfDay(addHours(parseISO(prev.nextExpGainTime!), 25));
 
           return {
             ...prev,
@@ -792,7 +795,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
         setUserProfile(prevUser => ({
             ...prevUser,
             expGainedToday: 0,
-            lastExpResetDate: todayStr, 
+            lastExpResetDate: todayStr,
         }));
       }
 
@@ -812,7 +815,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
                 needsUpdate = true;
               }
               newNextDueDateStr = format(tempNextDueDate, 'yyyy-MM-dd');
-              
+
               if (newNextDueDateStr === todayStr && task.lastCompletedDate !== todayStr) {
                 return { ...task, nextDueDate: newNextDueDateStr, isCompleted: false };
               } else if (needsUpdate) {
@@ -826,8 +829,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    dailyCheck(); 
-    const intervalId = setInterval(dailyCheck, 60000 * 5); 
+    dailyCheck();
+    const intervalId = setInterval(dailyCheck, 60000 * 5);
 
     return () => clearInterval(intervalId);
   }, [isInitialized, rival.nextExpGainTime, userProfile, tasks, appSettings.rivalDifficulty, setRival, setUserProfile, calculatePotentialTaskExp, setTasks, calculateNextDueDate, calculateExpForNextSubRank]);
@@ -839,16 +842,16 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const tasksActionableToday = tasks.filter(task =>
         (task.taskType === 'daily' && task.dateAdded === todayStr) ||
-        (task.taskType === 'ritual' && (task.nextDueDate === todayStr || task.lastCompletedDate === todayStr )) || 
+        (task.taskType === 'ritual' && (task.nextDueDate === todayStr || task.lastCompletedDate === todayStr )) ||
         (task.taskType === 'event' && task.scheduledDate === todayStr)
     );
 
     const relevantTasksForCompletion = tasksActionableToday.filter(t =>
       (t.taskType === 'daily' && t.isCompleted && t.dateCompleted === todayStr) ||
-      (t.taskType === 'ritual' && t.lastCompletedDate === todayStr) || 
+      (t.taskType === 'ritual' && t.lastCompletedDate === todayStr) ||
       (t.taskType === 'event' && t.isCompleted && t.dateCompleted === todayStr)
     );
-    
+
     const completionPercentage = tasksActionableToday.length > 0
       ? (relevantTasksForCompletion.length / tasksActionableToday.length) * 100
       : 0;
@@ -876,7 +879,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteIntervalTimerSetting = (settingId: string) => {
     setIntervalTimerSettings(prev => prev.filter(s => s.id !== settingId));
-     playSound('buttonClick'); 
+     playSound('buttonClick');
   };
 
   const addCustomGraph = (graphData: Omit<CustomGraphSetting, 'id' | 'data'>) => {
@@ -901,7 +904,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       delete newLogs[graphId];
       return newLogs;
     });
-    playSound('buttonClick'); 
+    playSound('buttonClick');
   };
 
   const logCustomGraphData = (graphId: string, variableId: string, value: number) => {
@@ -991,25 +994,23 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       intervalTimerSettings,
       customGraphs,
       customGraphDailyLogs,
-      saveFileVersion: '1.0.0', // Current save file version
+      saveFileVersion: '1.0.0', 
       appName: APP_NAME,
     };
   }, [userProfile, tasks, rival, appSettings, pomodoroSettings, intervalTimerSettings, customGraphs, customGraphDailyLogs]);
 
   const loadAllSaveData = useCallback((data: any): boolean => {
-    // Basic validation
     if (!data || data.appName !== APP_NAME || data.saveFileVersion !== '1.0.0') {
       toast({ title: "Import Failed", description: "Invalid or incompatible save file.", variant: "destructive" });
       return false;
     }
-    
-    // More specific validation for key properties
+
     const requiredKeys: (keyof AppSaveData)[] = [
-      'userProfile', 'tasks', 'rival', 'appSettings', 
-      'pomodoroSettings', 'intervalTimerSettings', 
+      'userProfile', 'tasks', 'rival', 'appSettings',
+      'pomodoroSettings', 'intervalTimerSettings',
       'customGraphs', 'customGraphDailyLogs'
     ];
-    
+
     for (const key of requiredKeys) {
       if (data[key] === undefined) {
         toast({ title: "Import Failed", description: `Save file is missing essential data: ${key}.`, variant: "destructive" });
@@ -1026,15 +1027,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       setIntervalTimerSettings(data.intervalTimerSettings);
       setCustomGraphs(data.customGraphs);
       setCustomGraphDailyLogs(data.customGraphDailyLogs);
-      
+
       updateGlobalSoundSetting(data.appSettings.enableSoundEffects);
-      
-      // Trigger re-initialization effects or specific updates by briefly setting isInitialized to false then true
-      // This is a bit of a hack, cleaner might be specific re-init functions or more granular state updates
-      setIsInitialized(false); 
-      setTimeout(() => setIsInitialized(true), 0); 
-      
-      setActiveTabState('home'); 
+
+      setIsInitialized(false);
+      setTimeout(() => setIsInitialized(true), 0);
+
+      setActiveTabState('home');
 
       toast({ title: "Import Successful!", description: "Your data has been loaded. The app will refresh its state." });
       return true;
@@ -1044,19 +1043,17 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
   }, [
-    setUserProfile, setTasks, setRival, setAppSettings, 
-    setPomodoroSettings, setIntervalTimerSettings, 
+    setUserProfile, setTasks, setRival, setAppSettings,
+    setPomodoroSettings, setIntervalTimerSettings,
     setCustomGraphs, setCustomGraphDailyLogs, toast, setActiveTabState, setIsInitialized
   ]);
 
 
-  if (!isInitialized && activeTab !== 'settings') { // Allow settings page to load for import even if not fully initialized
-     // This check is primarily for when loadAllSaveData briefly sets isInitialized to false.
-     // During the very first load, we might return null until local storage is read.
+  if (!isInitialized && activeTab !== 'settings') { 
     if (typeof window !== 'undefined' && localStorage.getItem(`${APP_NAME}UserProfile`)) {
-       // If data exists, we are likely in the re-initialization phase of an import
+       
     } else if (typeof window !== 'undefined') {
-       // Normal initial load, waiting for local storage
+       
        return null;
     }
   }
@@ -1076,7 +1073,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       customGraphDailyLogs, setCustomGraphDailyLogs,
       logCustomGraphData, commitStaleDailyLogs,
       addTask, updateTask, deleteTask, completeTask, undoCompleteTask,
-      getDailyDirectives, getRituals, getEventsForToday, 
+      getDailyDirectives, getRituals, getEventsForToday,
       updateRivalTaunt,
       triggerLevelUpAnimation, showLevelUp,
       activeTab, setActiveTab,

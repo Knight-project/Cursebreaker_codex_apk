@@ -10,20 +10,20 @@ export interface Task {
   difficulty: "Easy" | "Moderate" | "Hard";
   attribute: Attribute;
   taskType: TaskType;
-  isCompleted: boolean; 
-  dateAdded: string; 
+  isCompleted: boolean;
+  dateAdded: string;
   baseExpValue: number;
-  
-  dateCompleted?: string; 
-  
-  lastCompletedDate?: string; 
-  repeatIntervalDays?: number; 
-  nextDueDate?: string; 
 
-  scheduledDate?: string; 
-  isAllDay?: boolean; 
-  startTime?: string; 
-  endTime?: string; 
+  dateCompleted?: string;
+
+  lastCompletedDate?: string;
+  repeatIntervalDays?: number;
+  nextDueDate?: string;
+
+  scheduledDate?: string;
+  isAllDay?: boolean;
+  startTime?: string;
+  endTime?: string;
   reminderOffsetMinutes?: number;
 
   statExpGained?: number;
@@ -40,7 +40,7 @@ export interface UserStat {
 export interface UserProfile {
   userName: string;
   rankName: string;
-  subRank: number; 
+  subRank: number;
   totalExp: number;
   expToNextSubRank: number;
   currentExpInSubRank: number;
@@ -52,14 +52,14 @@ export interface UserProfile {
     charisma: UserStat;
   };
   currentStreak: number;
-  dailyTaskCompletionPercentage: number; 
+  dailyTaskCompletionPercentage: number;
   customQuote: string;
   taskHistory: Task[];
-  journalEntries: { [date: string]: string }; 
+  journalEntries: { [date: string]: string };
   hourlyJournalEntries: { [date: string]: { [hour: string]: string } };
   avatarUrl?: string;
   expGainedToday: number;
-  lastExpResetDate: string; 
+  lastExpResetDate: string;
   lastDayAllTasksCompleted: string;
 }
 
@@ -80,8 +80,8 @@ export interface AppSettings {
   enableAnimations: boolean;
   rivalDifficulty: "Easy" | "Normal" | "Hard";
   autoAssignStatExp: boolean;
-  enableSoundEffects: boolean; 
-  rivalName?: string; // Added for INITIAL_APP_SETTINGS consistency
+  enableSoundEffects: boolean;
+  rivalName?: string;
 }
 
 export interface PomodoroSettings {
@@ -96,7 +96,7 @@ export interface IntervalTimerSetting {
   taskName: string;
   isEnabled: boolean;
   timerMode: 'windowed' | 'duration';
-  windowStart?: string; 
+  windowStart?: string;
   windowEnd?: string;
   durationHours?: number;
   durationMinutes?: number;
@@ -167,7 +167,7 @@ export const DEFAULT_USER_STAT: UserStat = {
 };
 
 export const INITIAL_USER_PROFILE: UserProfile = {
-  userName: "Codex User", 
+  userName: "Codex User",
   rankName: RANK_NAMES[0],
   subRank: 1,
   totalExp: 0,
@@ -189,7 +189,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   avatarUrl: '',
   expGainedToday: 0,
   lastExpResetDate: new Date().toISOString().split('T')[0],
-  lastDayAllTasksCompleted: "", 
+  lastDayAllTasksCompleted: "",
 };
 
 const tomorrow = new Date();
@@ -212,8 +212,15 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
   enableAnimations: true,
   rivalDifficulty: "Normal",
   autoAssignStatExp: true,
-  enableSoundEffects: true, 
-  rivalName: "Kairos", // Default rival name added here
+  enableSoundEffects: true,
+  rivalName: "Kairos",
+};
+
+export const INITIAL_POMODORO_SETTINGS: PomodoroSettings = {
+  focusDuration: 25,
+  shortBreakDuration: 5,
+  longBreakDuration: 15,
+  sessionsBeforeLongBreak: 4,
 };
 
 export const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSetting[] = [];
@@ -239,4 +246,3 @@ export const REMINDER_OPTIONS = [
   { label: "30 minutes before", value: 30 },
   { label: "1 hour before", value: 60 },
 ];
-
