@@ -1,4 +1,3 @@
-
 // src/app/settings/page.tsx
 'use client';
 
@@ -9,20 +8,38 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { RIVAL_NAMES_POOL } from '@/lib/constants';
+import { RIVAL_NAMES_POOL, APP_NAME } from '@/lib/constants';
 import { playSound } from '@/lib/soundManager';
+import { Download, Upload, AlertTriangle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
-  const { appSettings, setAppSettings, userProfile, setUserProfile, rival, setRival, setActiveTab } = useApp();
+  const { 
+    appSettings, setAppSettings, 
+    userProfile, setUserProfile, 
+    rival, setRival, 
+    setActiveTab,
+    getAllSaveData, loadAllSaveData
+  } = useApp();
   const { toast } = useToast();
 
-  // Local state for debounced input might be useful for performance if direct context updates are too frequent.
-  // For now, direct updates are used for simplicity, similar to Home page editing.
   const [currentUserName, setCurrentUserName] = useState(userProfile.userName);
   const [currentCustomQuote, setCurrentCustomQuote] = useState(userProfile.customQuote);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
 
   useEffect(() => {
     setActiveTab('settings');
@@ -53,11 +70,10 @@ export default function SettingsPage() {
     const newName = event.target.value;
     setCurrentUserName(newName);
     setUserProfile(prev => ({ ...prev, userName: newName.trim() }));
-    // Debounce or save on blur could be added here if needed
   };
 
   const handleUserNameBlur = () => {
-    if (userProfile.userName !== currentUserName.trim()) { // Only toast if changed
+    if (userProfile.userName !== currentUserName.trim()) { 
         toast({ title: "Username Updated!"});
     }
   }
@@ -65,14 +81,72 @@ export default function SettingsPage() {
   const handleCustomQuoteChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newQuote = event.target.value;
     setCurrentCustomQuote(newQuote);
-    setUserProfile(prev => ({ ...prev, customQuote: newQuote }));
+    setUserProfile(prev => ({ ...prev, customQuote: newQuote.trim() }));
   };
   
   const handleCustomQuoteBlur = () => {
-     if (userProfile.customQuote !== currentCustomQuote) {
+     if (userProfile.customQuote !== currentCustomQuote.trim()) {
         toast({ title: "Quote Updated!" });
      }
   }
+
+  const handleExportData = () => {
+    const saveData = getAllSaveData();
+    const jsonString = JSON.stringify(saveData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${APP_NAME}_save_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    playSound('buttonClick');
+    toast({ title: "Data Exported", description: "Your save file has been downloaded." });
+  };
+
+  const handleFileSelectForImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setPendingImportFile(file);
+      // AlertDialog will be controlled by its trigger, so we don't directly open it here
+      // The AlertDialogTrigger button for import will handle opening the dialog.
+    }
+     if (fileInputRef.current) {
+        fileInputRef.current.value = ""; // Reset to allow same file selection
+    }
+  };
+
+  const processImport = () => {
+    if (!pendingImportFile) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') {
+          toast({ title: "Import Failed", description: "Could not read file content.", variant: "destructive" });
+          return;
+        }
+        const importedData = JSON.parse(text);
+        if (loadAllSaveData(importedData)) {
+          // Success toast is handled in loadAllSaveData
+          // Consider a page reload or specific state reset if necessary
+          // window.location.reload(); // Or navigate to home, etc.
+        } else {
+          // Failure toast handled in loadAllSaveData
+        }
+      } catch (error) {
+        console.error("Error importing data:", error);
+        toast({ title: "Import Failed", description: "Invalid JSON file or structure.", variant: "destructive" });
+      } finally {
+        setPendingImportFile(null); // Clear pending file after processing
+      }
+    };
+    reader.readAsText(pendingImportFile);
+    playSound('buttonClick');
+  };
 
 
   return (
@@ -193,6 +267,67 @@ export default function SettingsPage() {
               </p>
           </CardContent>
         </Card>
+
+        <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl text-primary">Data Management</CardTitle>
+            <CardDescription>Export your progress or import a previous save.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 rounded-md border bg-background/30 space-y-3">
+              <Button onClick={handleExportData} className="w-full sm:w-auto bg-accent hover:bg-accent/90">
+                <Download className="mr-2 h-5 w-5" /> Export Data
+              </Button>
+              <p className="text-xs text-muted-foreground">Download a JSON file of your current app data.</p>
+            </div>
+            
+            <div className="p-4 rounded-md border bg-background/30 space-y-3">
+               <AlertDialog>
+                <AlertDialogTrigger asChild>
+                   <Button 
+                     variant="outline" 
+                     className="w-full sm:w-auto border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                     onClick={() => fileInputRef.current?.click()} 
+                    >
+                    <Upload className="mr-2 h-5 w-5" /> Import Data
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center">
+                      <AlertTriangle className="mr-2 h-5 w-5 text-destructive"/> Confirm Import
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Importing data will overwrite your current progress in this browser. This action cannot be undone. Are you sure you want to proceed?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => {setPendingImportFile(null); playSound('buttonClick');}}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={processImport} 
+                      disabled={!pendingImportFile}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      Proceed with Import
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileSelectForImport} 
+                accept=".json" 
+                className="hidden" 
+              />
+              <p className="text-xs text-muted-foreground">
+                Load data from a previously exported JSON file.
+                {pendingImportFile && <span className="block mt-1 text-accent">Selected file: {pendingImportFile.name}. Click "Import Data" again and confirm to proceed.</span>}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
       </div>
     </AppWrapper>
   );

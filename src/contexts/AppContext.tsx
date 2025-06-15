@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
@@ -25,6 +24,19 @@ import { format, isBefore, startOfDay, addHours, subDays, parseISO, addDays, dif
 import { useToast } from '@/hooks/use-toast';
 import { playSound, updateGlobalSoundSetting } from '@/lib/soundManager';
 
+
+export interface AppSaveData {
+  userProfile: UserProfile;
+  tasks: Task[];
+  rival: Rival;
+  appSettings: AppSettings;
+  pomodoroSettings: PomodoroSettings;
+  intervalTimerSettings: IntervalTimerSetting[];
+  customGraphs: CustomGraphSetting[];
+  customGraphDailyLogs: CustomGraphDailyLogs;
+  saveFileVersion: string;
+  appName: string;
+}
 
 interface AppContextType {
   userProfile: UserProfile;
@@ -65,6 +77,8 @@ interface AppContextType {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   grantExp: (expGained: number) => void;
+  getAllSaveData: () => AppSaveData;
+  loadAllSaveData: (data: AppSaveData) => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -122,7 +136,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
-    if (userProfile.customQuote === undefined || userProfile.customQuote.toLowerCase() === "fuck" ) {
+    if (userProfile.customQuote === undefined ) {
        setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
     }
     if (!rival.name) {
@@ -191,34 +205,35 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []); 
 
 
-  // Daily Streak Check: Only breaks very old streaks.
   useEffect(() => {
-      if (!isInitialized) return;
+    if (!isInitialized) return;
 
-      setUserProfile(prevProfile => {
-          const today = new Date();
-          const yesterday = subDays(today, 1);
-          // const yesterdayStr = format(yesterday, 'yyyy-MM-dd'); // Not directly used here anymore
+    const today = new Date();
+    const yesterday = subDays(today, 1);
+    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
 
-          if (prevProfile.lastDayAllTasksCompleted && dateIsValid(parseISO(prevProfile.lastDayAllTasksCompleted))) {
-              const lastCompletedDateObj = parseISO(prevProfile.lastDayAllTasksCompleted);
-              // If last completed day is older than yesterday, streak is broken.
-              if (isBefore(lastCompletedDateObj, yesterday)) {
-                  if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
-                      return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
-                  }
-              }
-          } else if (prevProfile.lastDayAllTasksCompleted && prevProfile.lastDayAllTasksCompleted !== "") { // Invalid date string but not empty
-              if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
-                  return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
-              }
-          } else if (!prevProfile.lastDayAllTasksCompleted && prevProfile.currentStreak !== 0) { // No completion day but streak > 0
-              return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
-          }
-          // If lastDayAllTasksCompleted is empty, or today, or yesterday, this effect does nothing to break the streak.
-          // Streak is either 0 (and lastDayAllTasksCompleted is ""), or being actively managed by completeTask/undoCompleteTask.
-          return prevProfile;
-      });
+    setUserProfile(prevProfile => {
+        if (prevProfile.lastDayAllTasksCompleted) {
+            if (!dateIsValid(parseISO(prevProfile.lastDayAllTasksCompleted))) {
+                 // Invalid date string, but was not empty. Break streak.
+                if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
+                    return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
+                }
+            } else {
+                const lastCompletedDateObj = parseISO(prevProfile.lastDayAllTasksCompleted);
+                // If last completed day is older than yesterday, streak is broken.
+                if (isBefore(lastCompletedDateObj, yesterday)) {
+                    if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
+                        return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
+                    }
+                }
+            }
+        } else if (prevProfile.currentStreak !== 0) { 
+            // No completion day recorded, but streak > 0. This is an anomaly. Reset.
+            return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
+        }
+        return prevProfile;
+    });
   }, [isInitialized, setUserProfile]);
 
 
@@ -501,7 +516,6 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       const newTasks = [...prevTasks];
       newTasks[taskIndex] = updatedTaskInMainList;
       
-      // Streak logic, using the `newTasks` array which reflects the current completion
       const tasksForStreakCheck = newTasks;
       const tasksActionableToday = tasksForStreakCheck.filter(t =>
           (t.taskType === 'daily' && t.dateAdded === todayStr) ||
@@ -622,15 +636,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       let newCurrentStreak = prev.currentStreak;
       let newLastDayAllTasksCompleted = prev.lastDayAllTasksCompleted;
 
-      // If today was previously 'all complete', undoing a task breaks that.
       if (prev.lastDayAllTasksCompleted === todayStr) {
-          newLastDayAllTasksCompleted = yesterdayStr; // Fallback to yesterday
-          if (prev.currentStreak === 1) { // If streak was 1 (started today)
+          newLastDayAllTasksCompleted = yesterdayStr; 
+          if (prev.currentStreak === 1) { 
               newCurrentStreak = 0;
-              newLastDayAllTasksCompleted = ""; // No prior completion, so reset
-          } else if (prev.currentStreak > 1) { // If streak was > 1 (continued from yesterday)
+              newLastDayAllTasksCompleted = ""; 
+          } else if (prev.currentStreak > 1) { 
               newCurrentStreak = prev.currentStreak - 1;
-              // newLastDayAllTasksCompleted correctly remains yesterdayStr
           }
       }
       
@@ -969,10 +981,86 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInitialized, commitStaleDailyLogs, calculateNextDueDate]);
 
+  const getAllSaveData = useCallback((): AppSaveData => {
+    return {
+      userProfile,
+      tasks,
+      rival,
+      appSettings,
+      pomodoroSettings,
+      intervalTimerSettings,
+      customGraphs,
+      customGraphDailyLogs,
+      saveFileVersion: '1.0.0', // Current save file version
+      appName: APP_NAME,
+    };
+  }, [userProfile, tasks, rival, appSettings, pomodoroSettings, intervalTimerSettings, customGraphs, customGraphDailyLogs]);
 
-  if (!isInitialized) {
-    return null;
+  const loadAllSaveData = useCallback((data: any): boolean => {
+    // Basic validation
+    if (!data || data.appName !== APP_NAME || data.saveFileVersion !== '1.0.0') {
+      toast({ title: "Import Failed", description: "Invalid or incompatible save file.", variant: "destructive" });
+      return false;
+    }
+    
+    // More specific validation for key properties
+    const requiredKeys: (keyof AppSaveData)[] = [
+      'userProfile', 'tasks', 'rival', 'appSettings', 
+      'pomodoroSettings', 'intervalTimerSettings', 
+      'customGraphs', 'customGraphDailyLogs'
+    ];
+    
+    for (const key of requiredKeys) {
+      if (data[key] === undefined) {
+        toast({ title: "Import Failed", description: `Save file is missing essential data: ${key}.`, variant: "destructive" });
+        return false;
+      }
+    }
+
+    try {
+      setUserProfile(data.userProfile);
+      setTasks(data.tasks);
+      setRival(data.rival);
+      setAppSettings(data.appSettings);
+      setPomodoroSettings(data.pomodoroSettings);
+      setIntervalTimerSettings(data.intervalTimerSettings);
+      setCustomGraphs(data.customGraphs);
+      setCustomGraphDailyLogs(data.customGraphDailyLogs);
+      
+      updateGlobalSoundSetting(data.appSettings.enableSoundEffects);
+      
+      // Trigger re-initialization effects or specific updates by briefly setting isInitialized to false then true
+      // This is a bit of a hack, cleaner might be specific re-init functions or more granular state updates
+      setIsInitialized(false); 
+      setTimeout(() => setIsInitialized(true), 0); 
+      
+      setActiveTabState('home'); 
+
+      toast({ title: "Import Successful!", description: "Your data has been loaded. The app will refresh its state." });
+      return true;
+    } catch (error) {
+      console.error("Error applying imported data:", error);
+      toast({ title: "Import Failed", description: "An error occurred while loading the data.", variant: "destructive" });
+      return false;
+    }
+  }, [
+    setUserProfile, setTasks, setRival, setAppSettings, 
+    setPomodoroSettings, setIntervalTimerSettings, 
+    setCustomGraphs, setCustomGraphDailyLogs, toast, setActiveTabState, setIsInitialized
+  ]);
+
+
+  if (!isInitialized && activeTab !== 'settings') { // Allow settings page to load for import even if not fully initialized
+     // This check is primarily for when loadAllSaveData briefly sets isInitialized to false.
+     // During the very first load, we might return null until local storage is read.
+    if (typeof window !== 'undefined' && localStorage.getItem(`${APP_NAME}UserProfile`)) {
+       // If data exists, we are likely in the re-initialization phase of an import
+    } else if (typeof window !== 'undefined') {
+       // Normal initial load, waiting for local storage
+       return null;
+    }
   }
+
 
   return (
     <AppContext.Provider value={{
@@ -992,7 +1080,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       updateRivalTaunt,
       triggerLevelUpAnimation, showLevelUp,
       activeTab, setActiveTab,
-      grantExp
+      grantExp,
+      getAllSaveData,
+      loadAllSaveData
     }}>
       {children}
     </AppContext.Provider>
@@ -1000,6 +1090,3 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export default AppProvider;
-
-
-    

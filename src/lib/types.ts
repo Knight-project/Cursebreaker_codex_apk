@@ -1,4 +1,3 @@
-
 import type { format } from 'date-fns';
 
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
@@ -127,6 +126,19 @@ export interface CustomGraphDailyLogs {
   [graphId: string]: {
     [variableId: string]: DailyGraphLog;
   };
+}
+
+export interface AppSaveData {
+  userProfile: UserProfile;
+  tasks: Task[];
+  rival: Rival;
+  appSettings: AppSettings;
+  pomodoroSettings: PomodoroSettings;
+  intervalTimerSettings: IntervalTimerSetting[];
+  customGraphs: CustomGraphSetting[];
+  customGraphDailyLogs: CustomGraphDailyLogs;
+  saveFileVersion: string;
+  appName: string;
 }
 
 
