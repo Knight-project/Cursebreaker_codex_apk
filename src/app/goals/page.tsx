@@ -7,14 +7,14 @@ import AppWrapper from '@/components/layout/AppWrapper';
 import LoadingScreen from '@/components/layout/LoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApp } from '@/contexts/AppContext';
-import type { Goal } from '@/lib/types';
+import type { Goal, Task } from '@/lib/types'; // Added Task
 import { format, parseISO, startOfDay } from 'date-fns';
 import { PlusCircle, Edit3, Trash2, CheckCircle, Archive, ArchiveRestore, Target, CalendarIcon as CalendarLucideIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -45,11 +45,11 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
       toast({ title: "Goal Name Required", description: "Please enter a name for your goal.", variant: "destructive" });
       return;
     }
-    onSave({ 
-      id: initialData?.id, 
-      name, 
-      description, 
-      targetDate: targetDate ? targetDate.toISOString() : undefined 
+    onSave({
+      id: initialData?.id,
+      name,
+      description,
+      targetDate: targetDate ? targetDate.toISOString() : undefined
     });
   };
 
@@ -116,7 +116,7 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
 
 
 const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
-  const { deleteGoal, toggleGoalStatus, getGoalById } = useApp();
+  const { deleteGoal, toggleGoalStatus, updateGoal, getGoalById } = useApp(); // Added updateGoal
   const { toast } = useToast();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -129,11 +129,17 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
   }, [linkedTasks]);
 
   const progress = linkedTasks.length > 0 ? (completedLinkedTasks / linkedTasks.length) * 100 : 0;
-  
+
   const handleSaveEdit = (data: Omit<Goal, 'id' | 'linkedTaskIds' | 'createdAt' | 'status'> & { id?: string }) => {
     if (data.id) {
-      toggleGoalStatus(data.id, goal.status); // preserve status
-      getGoalById(data.id); // This seems to be for AppContext internal use?
+      // Pass the full data object including name, description, targetDate
+      updateGoal({
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        targetDate: data.targetDate,
+        status: goal.status, // preserve original status unless specifically changed
+      });
     }
     setIsEditOpen(false);
     toast({title: "Goal Updated", description: `"${data.name}" has been modified.`});
@@ -156,9 +162,9 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
               <DialogHeader>
                 <DialogTitle className="font-headline text-primary">Edit Goal</DialogTitle>
               </DialogHeader>
-              <GoalForm 
-                initialData={goal} 
-                onSave={handleSaveEdit} 
+              <GoalForm
+                initialData={goal}
+                onSave={handleSaveEdit}
                 onClose={() => {setIsEditOpen(false); playSound('buttonClick');}}
               />
             </DialogContent>
@@ -183,9 +189,9 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
       </CardContent>
       <CardFooter className="flex flex-wrap gap-2 justify-end">
         {goal.status === 'active' && (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="border-green-500 text-green-500 hover:bg-green-500 hover:text-primary-foreground"
             onClick={() => {toggleGoalStatus(goal.id, 'completed'); playSound('buttonClick');}}
           >
@@ -193,9 +199,9 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
           </Button>
         )}
         {goal.status === 'active' && (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="border-muted-foreground text-muted-foreground hover:bg-muted hover:text-foreground"
             onClick={() => {toggleGoalStatus(goal.id, 'archived'); playSound('buttonClick');}}
           >
@@ -203,18 +209,18 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
           </Button>
         )}
         {(goal.status === 'completed' || goal.status === 'archived') && (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
             onClick={() => {toggleGoalStatus(goal.id, 'active'); playSound('buttonClick');}}
           >
             <ArchiveRestore className="mr-2 h-4 w-4" /> Reactivate
           </Button>
         )}
-        <Button 
-          variant="destructive" 
-          size="sm" 
+        <Button
+          variant="destructive"
+          size="sm"
           onClick={() => {
             if(window.confirm(`Are you sure you want to delete the goal "${goal.name}"? This cannot be undone.`)) {
               deleteGoal(goal.id);
@@ -295,7 +301,7 @@ export default function GoalsPage() {
 
           <TabsContent value="active" className="mt-4">
             {activeGoals.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {activeGoals.map(goal => <GoalItem key={goal.id} goal={goal} tasks={tasks}/>)}
               </div>
             ) : (
@@ -304,7 +310,7 @@ export default function GoalsPage() {
           </TabsContent>
           <TabsContent value="completed" className="mt-4">
             {completedGoals.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {completedGoals.map(goal => <GoalItem key={goal.id} goal={goal} tasks={tasks}/>)}
               </div>
             ) : (
@@ -313,7 +319,7 @@ export default function GoalsPage() {
           </TabsContent>
           <TabsContent value="archived" className="mt-4">
             {archivedGoals.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {archivedGoals.map(goal => <GoalItem key={goal.id} goal={goal} tasks={tasks}/>)}
               </div>
             ) : (
