@@ -12,6 +12,7 @@ import { useApp } from '@/contexts/AppContext';
 import React, { useEffect, useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+// CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
 import { RIVAL_NAMES_POOL, APP_NAME } from '@/lib/constants';
 import { playSound } from '@/lib/soundManager';
 import { Download, Upload, AlertTriangle } from 'lucide-react';
@@ -100,6 +101,8 @@ export default function SettingsPage() {
   }
 
   const handleExportData = () => {
+    // CAPACITOR_NOTE: For native export, use Capacitor Filesystem to write to a file
+    // and Capacitor Share plugin to allow user to save/send it.
     if (!hasMounted) return; 
     const saveData = getAllSaveData();
     const jsonString = JSON.stringify(saveData, null, 2);
@@ -117,6 +120,8 @@ export default function SettingsPage() {
   };
 
   const handleFileSelectForImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // CAPACITOR_NOTE: For native import, use a file picker (custom plugin or by handling URI from Share plugin)
+    // then read the file using Capacitor Filesystem.
     const file = event.target.files?.[0];
     if (file) {
       setPendingImportFile(file);
@@ -220,6 +225,7 @@ export default function SettingsPage() {
               
               <div className="flex items-center justify-between p-4 rounded-md border bg-background/30">
                 <Label htmlFor="enableSoundEffects" className="text-lg font-medium">Enable Sound Effects</Label>
+                {/* CAPACITOR_NOTE: Sound effect preferences might control native sound APIs if Capacitor Haptics/SoundEffect plugins are used. */}
                 <Switch
                   id="enableSoundEffects"
                   checked={appSettings.enableSoundEffects}
@@ -293,6 +299,7 @@ export default function SettingsPage() {
               </div>
               
               <div className="p-4 rounded-md border bg-background/30 space-y-3">
+                 {/* CAPACITOR_NOTE: For native confirm dialogs, use Capacitor Dialog plugin (@capacitor/dialog). */}
                  <AlertDialog open={pendingImportFile !== null} onOpenChange={(open) => { if(!open) setPendingImportFile(null); }}>
                   <AlertDialogTrigger asChild>
                      <Button 
@@ -342,3 +349,4 @@ export default function SettingsPage() {
     </AppWrapper>
   );
 }
+

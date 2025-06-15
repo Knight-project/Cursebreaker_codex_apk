@@ -46,6 +46,7 @@ const AddTaskForm = ({
 
   const { addTask } = useApp();
   const { toast } = useToast();
+  // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +136,7 @@ const AddTaskForm = ({
         <>
           <div>
             <Label htmlFor="scheduledDate" className="font-headline">Scheduled Date</Label>
+             {/* CAPACITOR_NOTE: For native date/time pickers, consider using Capacitor Datetime Picker plugin (@capacitor-community/datetime-picker) or a similar community plugin for a native feel. */}
             <Calendar
               mode="single"
               selected={scheduledDate}
@@ -161,6 +163,7 @@ const AddTaskForm = ({
               </div>
               <div>
                 <Label htmlFor="reminderOffsetMinutes" className="font-headline">Reminder</Label>
+                {/* CAPACITOR_NOTE: Reminder scheduling for native apps should use Capacitor Local Notifications. */}
                 <Select onValueChange={(value) => setReminderOffsetMinutes(parseInt(value))} defaultValue={reminderOffsetMinutes.toString()}>
                     <SelectTrigger id="reminderOffsetMinutes" className="mt-1 bg-input/50 focus:bg-input">
                         <SelectValue placeholder="Select reminder time" />
@@ -227,6 +230,7 @@ const AddTaskForm = ({
 const TaskItem = ({ task }: { task: Task }) => {
   const { completeTask, deleteTask, undoCompleteTask } = useApp();
   const { toast } = useToast();
+  // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
   const today = format(new Date(), 'yyyy-MM-dd');
 
   let isTaskEffectivelyCompleted: boolean;
@@ -272,6 +276,7 @@ const TaskItem = ({ task }: { task: Task }) => {
   };
 
   const handleDelete = () => {
+    // CAPACITOR_NOTE: For native confirmation dialogs, use Capacitor Action Sheet (@capacitor/action-sheet) or Dialog (@capacitor/dialog) plugins.
     if (window.confirm(`Are you sure you want to delete "${task.name}"? This action cannot be undone.`)) {
       deleteTask(task.id);
       toast({ title: "Task Deleted", description: `${task.name} removed.` });
@@ -350,6 +355,7 @@ export default function HomePage() {
   const [editingQuote, setEditingQuote] = useState(userProfile.customQuote);
 
   const { toast } = useToast();
+  // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
   const userImageInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const quoteInputRef = useRef<HTMLInputElement>(null);
@@ -391,11 +397,17 @@ export default function HomePage() {
   const eventsForToday = getEventsForToday();
 
   const handleUserAvatarClick = () => {
+    // CAPACITOR_NOTE: For native image selection/capture, use Capacitor Camera plugin (@capacitor/camera).
+    // This would replace the hidden file input.
     userImageInputRef.current?.click();
     playSound('buttonClick');
   };
 
   const handleUserAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    // CAPACITOR_NOTE: If using Capacitor Camera, this function would receive a Photo object
+    // from the plugin, which includes path, webPath, or base64String.
+    // You'd then likely use the base64String or upload the file from its path.
+    // Image size/shape validation would still be relevant.
     const file = event.target.files?.[0];
     const inputElement = event.target;
 
@@ -547,6 +559,7 @@ export default function HomePage() {
           <CardHeader className="items-center text-center flex flex-col p-4">
              <div className="avatar-arc-container mb-3 w-[120px] h-[120px]">
                 <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden">
+                    {/* CAPACITOR_NOTE: If avatarUrl is a local file path from Capacitor Camera, next/image might need adjustments or direct <img> tag with webPath. */}
                     {profileToDisplay.avatarUrl ? (
                     <Image
                         src={profileToDisplay.avatarUrl}

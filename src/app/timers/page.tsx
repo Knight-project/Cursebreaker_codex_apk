@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+// CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,9 @@ const PomodoroTimer = () => {
 
   useEffect(() => {
     if (!hasMounted) return;
+    // CAPACITOR_NOTE: For Pomodoro timer notifications on native, use Capacitor Local Notifications plugin.
+    // This useEffect logic would need to schedule/cancel native notifications based on timer state.
+    // Also, if app is backgrounded, this JS timer might be paused by OS. Native notifications are more reliable.
     let interval: NodeJS.Timeout | null = null;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
@@ -395,6 +399,9 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
   const [statusMessage, setStatusMessage] = useState("Calculating...");
 
   useEffect(() => {
+    // CAPACITOR_NOTE: For Interval Timer notifications, similar to Pomodoro, use Capacitor Local Notifications.
+    // This useEffect checking time and using localStorage would be replaced by native scheduling.
+    // Background reliability is key here.
     if (!timer.isEnabled) {
       setStatusMessage("Timer disabled.");
       setTimeLeftForNotification(null);
@@ -573,7 +580,9 @@ const IntervalTimersManager = () => {
 
   useEffect(() => {
     if (!hasMounted) return;
-
+    // CAPACITOR_NOTE: Interval Timer notifications on native should use Capacitor Local Notifications plugin.
+    // This entire useEffect, which relies on JS intervals and localStorage for tracking sent notifications,
+    // would be replaced by scheduling native notifications. This makes them reliable even if the app is in the background.
     const timerId = setInterval(() => {
       const now = new Date();
       const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
@@ -709,6 +718,7 @@ const IntervalTimersManager = () => {
 
   const handleDeleteTimer = (timerId: string) => {
     if (!hasMounted) return;
+    // CAPACITOR_NOTE: For native confirmation dialogs, use Capacitor Action Sheet or Dialog plugins.
     if (window.confirm("Are you sure you want to delete this interval timer?")) {
       deleteIntervalTimerSetting(timerId);
       localStorage.removeItem(`lastNotified_${timerId}_timestamp`); 
@@ -943,6 +953,8 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
       if (dailyLog && dailyLog.date === todayStr) {
         initialInputs[variable.id] = dailyLog.value.toString();
       } else {
+        // CAPACITOR_NOTE: When custom graph data is stored with Capacitor Storage,
+        // retrieval would be async here.
         initialInputs[variable.id] = graph.data?.[variable.id]?.[todayStr]?.toString() || '';
       }
     });
@@ -1002,6 +1014,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
         if (dailyLog && dailyLog.date === dateStr) {
           entry[variable.id] = dailyLog.value;
         } else {
+           // CAPACITOR_NOTE: graph.data access might be async if using Capacitor Storage.
           entry[variable.id] = graph.data?.[variable.id]?.[dateStr] || 0;
         }
       });
@@ -1138,6 +1151,7 @@ const GraphsManager = () => {
   const handleSaveGraph = (data: Omit<CustomGraphSetting, 'id' | 'data'>) => {
     if (!hasMounted) return;
     if (editingGraph) {
+      // CAPACITOR_NOTE: If graph.data is large and stored natively, updating would involve reading old native data, merging, then writing back.
       const existingData = customGraphs.find(g => g.id === editingGraph.id)?.data || {};
       updateCustomGraph({ ...data, id: editingGraph.id, data: existingData });
       toast({ title: "Graph Updated!" });
@@ -1151,6 +1165,7 @@ const GraphsManager = () => {
   
   const handleDeleteGraph = (graphId: string) => {
     if (!hasMounted) return;
+     // CAPACITOR_NOTE: For native confirmation dialogs, use Capacitor Action Sheet or Dialog plugins.
     if (window.confirm("Are you sure you want to delete this graph? This will also remove its logged data.")) {
       deleteCustomGraph(graphId);
       toast({ title: "Graph Deleted", variant: "destructive" });
@@ -1229,3 +1244,4 @@ export default function TimersPage() {
     </AppWrapper>
   );
 }
+

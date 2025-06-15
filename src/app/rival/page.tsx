@@ -11,6 +11,7 @@ import React, { useEffect, useState, useRef, type ChangeEvent, useMemo, useCallb
 import Image from 'next/image';
 import { Swords, PlusCircle, TrendingUp, TimerIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+// CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
 import { format, subDays, eachDayOfInterval, differenceInSeconds, isValid as dateIsValid } from 'date-fns';
@@ -101,11 +102,14 @@ export default function RivalPage() {
   };
 
   const handleRivalAvatarClick = () => {
+    // CAPACITOR_NOTE: For native image selection/capture, use Capacitor Camera plugin (@capacitor/camera).
     rivalImageInputRef.current?.click();
     playSound('buttonClick');
   };
 
   const handleRivalAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    // CAPACITOR_NOTE: If using Capacitor Camera, this function would receive a Photo object
+    // with path, webPath, or base64String.
     const file = event.target.files?.[0];
     const inputElement = event.target;
 
@@ -240,6 +244,7 @@ export default function RivalPage() {
           <CardHeader className="items-center text-center flex flex-col p-4">
             <div className={`avatar-arc-container mb-3 ${avatarContainerSize}`}>
               <div onClick={handleRivalAvatarClick} className={`cursor-pointer relative group border-2 border-destructive p-0.5 rounded-full overflow-hidden ${avatarSize}`}>
+                {/* CAPACITOR_NOTE: If avatarUrl is a local file path from Capacitor Camera, next/image might need adjustments or direct <img> tag with webPath. */}
                 {rivalToDisplay.avatarUrl && rivalToDisplay.avatarUrl !== 'https://placehold.co/120x120.png' ? (
                   <Image
                     src={rivalToDisplay.avatarUrl}
@@ -357,3 +362,4 @@ export default function RivalPage() {
     </AppWrapper>
   );
 }
+

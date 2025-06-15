@@ -35,6 +35,8 @@ import { format, isBefore, startOfDay, addHours, subDays, parseISO, addDays, dif
 import { useToast } from '@/hooks/use-toast';
 import { playSound, updateGlobalSoundSetting } from '@/lib/soundManager';
 
+// CAPACITOR_NOTE: For native apps, monitor app lifecycle events (pause, resume) using Capacitor's App plugin (@capacitor/app).
+// This can be useful for saving state when the app goes to the background, or pausing/resuming timers.
 
 export interface AppSaveData {
   userProfile: UserProfile;
@@ -103,6 +105,8 @@ export const useApp = (): AppContextType => {
 };
 
 const AppProvider = ({ children }: { children: ReactNode }) => {
+  // CAPACITOR_NOTE: All these useLocalStorage instances would be prime candidates
+  // to be replaced with a custom hook using Capacitor Storage.
   const [userProfile, setUserProfile] = useLocalStorage<UserProfile>(`${APP_NAME}UserProfile`, INITIAL_USER_PROFILE);
   const [tasks, setTasks] = useLocalStorage<Task[]>(`${APP_NAME}Tasks`, []);
   const [rival, setRival] = useLocalStorage<Rival>(`${APP_NAME}Rival`, INITIAL_RIVAL);
@@ -111,11 +115,19 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [intervalTimerSettings, setIntervalTimerSettings] = useLocalStorage<IntervalTimerSetting[]>(`${APP_NAME}IntervalTimers`, INITIAL_INTERVAL_TIMER_SETTINGS);
   const [customGraphs, setCustomGraphs] = useLocalStorage<CustomGraphSetting[]>(`${APP_NAME}CustomGraphs`, INITIAL_CUSTOM_GRAPHS);
   const [customGraphDailyLogs, setCustomGraphDailyLogs] = useLocalStorage<CustomGraphDailyLogs>(`${APP_NAME}CustomGraphDailyLogs`, INITIAL_CUSTOM_GRAPH_DAILY_LOGS);
+  
   const { toast } = useToast();
+  // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
+  // The `useToast` hook and Toaster component would need to be adapted or replaced.
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [activeTab, setActiveTabState] = useState('home');
+  const [hasMounted, setHasMounted] = useState(false); // Keep hasMounted for initial client-side rendering logic
+
+  useEffect(() => {
+    setHasMounted(true); // Set hasMounted to true after initial mount
+  }, []);
 
   useEffect(() => {
     updateGlobalSoundSetting(appSettings.enableSoundEffects);
@@ -138,6 +150,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
+    if (!hasMounted) return; // Wait for client mount before running initialization logic
+
     const today = format(new Date(), 'yyyy-MM-dd');
     if (userProfile.customQuote === undefined ) {
        setUserProfile(prev => ({...prev, customQuote: INITIAL_USER_PROFILE.customQuote}));
@@ -205,26 +219,23 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasMounted]); // Depend on hasMounted
 
 
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
 
     const today = new Date();
     const yesterday = subDays(today, 1);
-    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
 
     setUserProfile(prevProfile => {
         if (prevProfile.lastDayAllTasksCompleted) {
             if (!dateIsValid(parseISO(prevProfile.lastDayAllTasksCompleted))) {
-                 // Invalid date string, but was not empty. Break streak.
                 if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
                     return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
                 }
             } else {
                 const lastCompletedDateObj = parseISO(prevProfile.lastDayAllTasksCompleted);
-                // If last completed day is older than yesterday, streak is broken.
                 if (isBefore(lastCompletedDateObj, yesterday)) {
                     if (prevProfile.currentStreak !== 0 || prevProfile.lastDayAllTasksCompleted !== "") {
                         return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
@@ -232,16 +243,18 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
                 }
             }
         } else if (prevProfile.currentStreak !== 0) {
-            // No completion day recorded, but streak > 0. This is an anomaly. Reset.
             return { ...prevProfile, currentStreak: 0, lastDayAllTasksCompleted: "" };
         }
         return prevProfile;
     });
-  }, [isInitialized, setUserProfile]);
+  }, [isInitialized, setUserProfile, hasMounted]);
 
 
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
+    // CAPACITOR_NOTE: For Event Reminders on native, use Capacitor Local Notifications plugin (@capacitor/local-notifications).
+    // This logic would need to interface with that plugin to schedule native notifications.
+    // The `localStorage.getItem(reminderSentKey)` check would also need a native equivalent if you want to persist sent status across app restarts.
     const intervalId = setInterval(() => {
       const now = new Date();
       const todayStr = format(now, 'yyyy-MM-dd');
@@ -278,7 +291,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     }, 60000);
 
     return () => clearInterval(intervalId);
-  }, [isInitialized, tasks, toast]);
+  }, [isInitialized, tasks, toast, hasMounted]);
 
 
   const setActiveTab = (tab: string) => {
@@ -684,7 +697,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   const updateRivalTaunt = useCallback(async () => {
-    if (!isInitialized) return;
+    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
     try {
       const rivalTaskCompletionRate = Math.random() * 0.4 + 0.5;
       const input: AdaptiveTauntInput = {
@@ -701,11 +714,11 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to get rival taunt:", error);
       setRival(prev => ({ ...prev, lastTaunt: "Hmph. My systems are... momentarily indisposed." }));
     }
-  }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized]);
+  }, [userProfile.dailyTaskCompletionPercentage, userProfile.rankName, userProfile.subRank, rival.rankName, rival.subRank, setRival, isInitialized, hasMounted]);
 
 
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
 
     const dailyCheck = () => {
       const now = new Date();
@@ -833,11 +846,11 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     const intervalId = setInterval(dailyCheck, 60000 * 5);
 
     return () => clearInterval(intervalId);
-  }, [isInitialized, rival.nextExpGainTime, userProfile, tasks, appSettings.rivalDifficulty, setRival, setUserProfile, calculatePotentialTaskExp, setTasks, calculateNextDueDate, calculateExpForNextSubRank]);
+  }, [isInitialized, rival.nextExpGainTime, userProfile, tasks, appSettings.rivalDifficulty, setRival, setUserProfile, calculatePotentialTaskExp, setTasks, calculateNextDueDate, calculateExpForNextSubRank, hasMounted]);
 
 
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !hasMounted) return; // Also check hasMounted here
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const tasksActionableToday = tasks.filter(task =>
@@ -861,7 +874,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       dailyTaskCompletionPercentage: parseFloat(completionPercentage.toFixed(1)),
     }));
 
-  }, [tasks, setUserProfile, isInitialized]);
+  }, [tasks, setUserProfile, isInitialized, hasMounted]);
 
   const addIntervalTimerSetting = (settingData: Omit<IntervalTimerSetting, 'id'>) => {
     const newSetting: IntervalTimerSetting = {
@@ -922,6 +935,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const commitStaleDailyLogs = useCallback(() => {
+    // CAPACITOR_NOTE: If customGraphDailyLogs were very large or needed to persist reliably
+    // across app updates/clears, Capacitor Storage or even a small SQLite DB (via a plugin)
+    // might be considered for native. For now, localStorage behavior is mimicked.
     const todayDate = startOfDay(new Date());
     let logsUpdated = false;
     let graphsNeedUpdating = false;
@@ -966,7 +982,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [customGraphDailyLogs, customGraphs, setCustomGraphs, setCustomGraphDailyLogs]);
 
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && hasMounted) { // Check hasMounted before these operations
       commitStaleDailyLogs();
        setTasks(prevTasks =>
         prevTasks.map(task => {
@@ -982,9 +998,12 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       );
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitialized, commitStaleDailyLogs, calculateNextDueDate]);
+  }, [isInitialized, commitStaleDailyLogs, calculateNextDueDate, hasMounted]);
 
   const getAllSaveData = useCallback((): AppSaveData => {
+    // CAPACITOR_NOTE: For native export, this data would be serialized (e.g., JSON)
+    // and then written to a file using Capacitor Filesystem plugin (@capacitor/filesystem).
+    // The user could then share it using Capacitor Share plugin (@capacitor/share).
     return {
       userProfile,
       tasks,
@@ -1000,6 +1019,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [userProfile, tasks, rival, appSettings, pomodoroSettings, intervalTimerSettings, customGraphs, customGraphDailyLogs]);
 
   const loadAllSaveData = useCallback((data: any): boolean => {
+    // CAPACITOR_NOTE: For native import, the user would select a file (e.g., using a file picker
+    // which might need a custom plugin or by handling a URI from the Share plugin).
+    // The file content would then be read using Capacitor Filesystem.
     if (!data || data.appName !== APP_NAME || data.saveFileVersion !== '1.0.0') {
       toast({ title: "Import Failed", description: "Invalid or incompatible save file.", variant: "destructive" });
       return false;
@@ -1030,8 +1052,13 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 
       updateGlobalSoundSetting(data.appSettings.enableSoundEffects);
 
+      setHasMounted(false); // Force re-evaluation of hasMounted dependent effects
       setIsInitialized(false);
-      setTimeout(() => setIsInitialized(true), 0);
+      setTimeout(() => {
+          setHasMounted(true);
+          setIsInitialized(true);
+      }, 0);
+
 
       setActiveTabState('home');
 
@@ -1045,18 +1072,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [
     setUserProfile, setTasks, setRival, setAppSettings,
     setPomodoroSettings, setIntervalTimerSettings,
-    setCustomGraphs, setCustomGraphDailyLogs, toast, setActiveTabState, setIsInitialized
+    setCustomGraphs, setCustomGraphDailyLogs, toast, setActiveTabState, setIsInitialized, setHasMounted
   ]);
-
-
-  if (!isInitialized && activeTab !== 'settings') { 
-    if (typeof window !== 'undefined' && localStorage.getItem(`${APP_NAME}UserProfile`)) {
-       
-    } else if (typeof window !== 'undefined') {
-       
-       return null;
-    }
-  }
 
 
   return (
@@ -1081,9 +1098,11 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
       getAllSaveData,
       loadAllSaveData
     }}>
-      {children}
+      {/* Conditionally render children only after client mount to avoid hydration issues */}
+      {hasMounted ? children : null}
     </AppContext.Provider>
   );
 };
 
 export default AppProvider;
+

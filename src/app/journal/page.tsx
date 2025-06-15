@@ -15,6 +15,7 @@ import { useApp } from '@/contexts/AppContext';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+// CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSound } from '@/lib/soundManager';
@@ -45,6 +46,8 @@ export default function JournalPage() {
       setCurrentHourlyNotes({});
       return;
     }
+    // CAPACITOR_NOTE: Journal entries are stored in userProfile, which uses localStorage (via useLocalStorage).
+    // For native, this data would come from Capacitor Storage. The retrieval might be async.
     setCurrentDailyEntry(userProfile.journalEntries?.[formattedSelectedDate] || '');
     setCurrentHourlyNotes(userProfile.hourlyJournalEntries?.[formattedSelectedDate] || {});
   }, [formattedSelectedDate, userProfile.journalEntries, userProfile.hourlyJournalEntries, hasMounted]);
@@ -80,6 +83,7 @@ export default function JournalPage() {
       toast({ title: "Error", description: "Please select a date.", variant: "destructive" });
       return;
     }
+    // CAPACITOR_NOTE: Saving journal entries updates userProfile, which would use Capacitor Storage (async) on native.
     setUserProfile(prevProfile => ({
       ...prevProfile,
       journalEntries: {
@@ -100,7 +104,7 @@ export default function JournalPage() {
     if (!hasMounted || !formattedSelectedDate) return;
     
     const noteToSave = currentHourlyNotes[hour];
-
+    // CAPACITOR_NOTE: Saving hourly notes updates userProfile, targeting Capacitor Storage (async) on native.
     setUserProfile(prevProfile => {
       const dayEntries = prevProfile.hourlyJournalEntries?.[formattedSelectedDate] || {};
       const updatedDayEntries = { ...dayEntries, [hour]: noteToSave };
@@ -132,6 +136,7 @@ export default function JournalPage() {
               <span className="text-primary">Journal Archive -</span>
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
+                   {/* CAPACITOR_NOTE: For native date pickers, consider Capacitor Datetime Picker plugin or similar. */}
                   <Button
                     variant={"outline"}
                     className={cn(
@@ -216,3 +221,4 @@ export default function JournalPage() {
     </AppWrapper>
   );
 }
+

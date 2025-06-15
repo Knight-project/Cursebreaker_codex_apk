@@ -1,6 +1,15 @@
 
 // src/lib/soundManager.ts
 
+// CAPACITOR_NOTE: For native mobile apps, playing sounds with HTMLAudioElement can sometimes be unreliable
+// or have limitations (e.g., background audio, system volume interaction).
+// Consider using:
+// 1. Capacitor Haptics plugin (@capacitor/haptics) for simple feedback like vibrations for button clicks.
+// 2. Capacitor Local Notifications plugin (@capacitor/local-notifications) can play a sound with a notification.
+// 3. For more complex sound effects, a community plugin like `capacitor-sound-effect` or
+//    even `cordova-plugin-nativeaudio` (which can be used with Capacitor) might be necessary.
+// This `playSound` function would need to be refactored to call the appropriate native API.
+
 export type SoundType = 
   | 'buttonClick' 
   | 'taskComplete' 
@@ -27,6 +36,7 @@ let globalSoundEffectsEnabled = true;
 // We initialize it to true here so it doesn't block sounds if AppContext hasn't updated it yet.
 
 export const updateGlobalSoundSetting = (isEnabled: boolean) => {
+  // CAPACITOR_NOTE: This setting would also gate calls to native sound/haptic APIs.
   globalSoundEffectsEnabled = isEnabled;
 };
 
@@ -37,6 +47,13 @@ export const playSound = (soundName: SoundType) => {
   if (typeof window === 'undefined' || !globalSoundEffectsEnabled) {
     return;
   }
+
+  // CAPACITOR_NOTE: Replace this HTMLAudioElement logic with calls to a native sound plugin.
+  // Example (pseudo-code for a hypothetical native sound plugin):
+  // if (Capacitor.isNativePlatform()) {
+  //   NativeSound.play({ soundId: soundName }); // Assuming sound files are packaged with the native app
+  //   return;
+  // }
 
   try {
     let audio = audioCache[soundName];
@@ -71,3 +88,4 @@ export const playSound = (soundName: SoundType) => {
     console.error(`Failed to play sound ${soundName}:`, error);
   }
 };
+

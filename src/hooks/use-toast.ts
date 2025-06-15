@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -7,6 +8,13 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+
+// CAPACITOR_NOTE: This whole custom toast system is web-based.
+// For native mobile apps, you'd typically use Capacitor's Toast plugin (@capacitor/toast)
+// which shows native toast messages. This would mean replacing the `toast()` function calls
+// and potentially removing the `Toaster` component and related UI components if only native toasts are desired.
+// If a hybrid approach is needed (web toasts for web, native for mobile), this hook would need
+// to conditionally call the appropriate toast mechanism.
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -143,6 +151,10 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // CAPACITOR_NOTE: This is the function called to show a toast.
+  // For native, you would conditionally call something like:
+  // if (isNativePlatform) { Capacitor.Plugins.Toast.show({ text: props.title || props.description, duration: 'short' }); }
+  // else { /* existing web toast logic */ }
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -192,3 +204,4 @@ function useToast() {
 }
 
 export { useToast, toast }
+
