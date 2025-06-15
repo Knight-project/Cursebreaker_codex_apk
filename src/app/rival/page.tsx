@@ -15,6 +15,8 @@ import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } fro
 import { format, subDays, eachDayOfInterval, differenceInSeconds, isValid as dateIsValid } from 'date-fns';
 import RankDisplay from '@/components/shared/RankDisplay';
 import { playSound } from '@/lib/soundManager';
+import { INITIAL_RIVAL } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const CyberpunkRivalPlaceholder = () => (
   <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground group-hover:text-destructive transition-colors">
@@ -46,14 +48,16 @@ export default function RivalPage() {
   const rivalImageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [timeLeftForExpGain, setTimeLeftForExpGain] = useState("Calculating...");
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true);
     setActiveTab('rival');
-    if (!rival.lastTaunt) {
+    if (hasMounted && !rival.lastTaunt) { // Only call if mounted and no taunt yet
       handleGetTaunt();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setActiveTab]);
+  }, [setActiveTab, hasMounted]); // Add hasMounted to dependency array
 
   const formatTimeLeft = useCallback((totalSeconds: number) => {
     if (totalSeconds < 0) return "Processing EXP Gain...";
@@ -64,8 +68,8 @@ export default function RivalPage() {
   }, []);
 
   useEffect(() => {
-    if (!rival.nextExpGainTime) {
-      setTimeLeftForExpGain("Not scheduled");
+    if (!hasMounted || !rival.nextExpGainTime) {
+      setTimeLeftForExpGain(hasMounted ? "Not scheduled" : "Calculating...");
       return;
     }
 
@@ -82,10 +86,11 @@ export default function RivalPage() {
     calculateTime();
     const intervalId = setInterval(calculateTime, 1000);
     return () => clearInterval(intervalId);
-  }, [rival.nextExpGainTime, formatTimeLeft]);
+  }, [rival.nextExpGainTime, formatTimeLeft, hasMounted]);
 
 
   const handleGetTaunt = async () => {
+    if (!hasMounted) return;
     setIsLoadingTaunt(true);
     await updateRivalTaunt(); 
     setIsLoadingTaunt(false);
@@ -160,6 +165,7 @@ export default function RivalPage() {
   };
 
   const rivalExpGrowthData = useMemo(() => {
+    if (!hasMounted) return [];
     const history = rival.expHistory || [];
 
     const last14Days = eachDayOfInterval({
@@ -206,12 +212,14 @@ export default function RivalPage() {
       };
     });
 
-  }, [rival.expHistory]);
+  }, [rival.expHistory, hasMounted]);
   
   const avatarContainerSize = "w-[120px] h-[120px] sm:w-[150px] sm:h-[150px]";
   const avatarSize = "w-[100px] h-[100px] sm:w-[120px] sm:h-[120px]";
   const arcBaseSize = 100; 
   const arcSizeMultiplier = 1.25; 
+
+  const rivalToDisplay = hasMounted ? rival : INITIAL_RIVAL;
 
   return (
     <AppWrapper>
@@ -220,10 +228,10 @@ export default function RivalPage() {
           <CardHeader className="items-center text-center flex flex-col p-4">
             <div className={`avatar-arc-container mb-3 ${avatarContainerSize}`}>
               <div onClick={handleRivalAvatarClick} className={`cursor-pointer relative group border-2 border-destructive p-0.5 rounded-full overflow-hidden ${avatarSize}`}>
-                {rival.avatarUrl && rival.avatarUrl !== 'https://placehold.co/120x120.png' ? (
+                {hasMounted && rivalToDisplay.avatarUrl && rivalToDisplay.avatarUrl !== 'https://placehold.co/120x120.png' ? (
                   <Image
-                    src={rival.avatarUrl}
-                    alt={`${rival.name}'s Avatar`}
+                    src={rivalToDisplay.avatarUrl}
+                    alt={`${rivalToDisplay.name}'s Avatar`}
                     layout="fill"
                     objectFit="cover"
                     className="rounded-full"
@@ -250,19 +258,21 @@ export default function RivalPage() {
             `}</style>
             <input type="file" ref={rivalImageInputRef} onChange={handleRivalAvatarChange} accept="image/*" className="hidden" />
 
-            <CardTitle className="font-headline text-2xl text-destructive uppercase tracking-wider">{rival.name}</CardTitle>
+            <CardTitle className="font-headline text-2xl text-destructive uppercase tracking-wider">{rivalToDisplay.name}</CardTitle>
             <CardDescription className="text-xs font-code">
-              <RankDisplay rankName={rival.rankName} subRank={rival.subRank} isRival className="text-muted-foreground" />
+              <RankDisplay rankName={rivalToDisplay.rankName} subRank={rivalToDisplay.subRank} isRival className="text-muted-foreground" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-center pt-2 pb-4 px-4">
+          {hasMounted ? (
+            <>
             <div className="px-0 sm:px-4">
               <div className="flex justify-between text-xs mb-1 font-code">
                 <span className="text-foreground uppercase">Rival EXP</span>
-                <span className="text-destructive">{rival.currentExpInSubRank} / {rival.expToNextSubRank}</span>
+                <span className="text-destructive">{rivalToDisplay.currentExpInSubRank} / {rivalToDisplay.expToNextSubRank}</span>
               </div>
               <Progress
-                value={(rival.expToNextSubRank > 0 ? (rival.currentExpInSubRank / rival.expToNextSubRank) : 0) * 100}
+                value={(rivalToDisplay.expToNextSubRank > 0 ? (rivalToDisplay.currentExpInSubRank / rivalToDisplay.expToNextSubRank) : 0) * 100}
                 className="h-2 bg-secondary"
                 indicatorClassName="bg-destructive"
               />
@@ -281,6 +291,13 @@ export default function RivalPage() {
                   </p>
               </CardContent>
             </Card>
+            </>
+            ) : (
+              <>
+                <Skeleton className="h-2 w-full rounded-full bg-secondary my-1" />
+                <Skeleton className="h-16 w-full rounded-md bg-background/30 my-4" />
+              </>
+            )}
 
 
             <Card className="bg-background/50 border-border mt-4 rounded-md">
@@ -289,9 +306,9 @@ export default function RivalPage() {
               </CardHeader>
               <CardContent className="p-3 pt-0">
                 <p className="text-base italic text-center text-foreground min-h-[40px] flex items-center justify-center font-code">
-                  {rival.lastTaunt || "Static..."}
+                  {hasMounted ? (rivalToDisplay.lastTaunt || "Static...") : (<Skeleton className="h-5 w-3/4" />) }
                 </p>
-                <Button onClick={handleGetTaunt} disabled={isLoadingTaunt} className="mt-3 w-full bg-destructive hover:bg-destructive/90 font-headline uppercase text-xs py-2">
+                <Button onClick={handleGetTaunt} disabled={isLoadingTaunt || !hasMounted} className="mt-3 w-full bg-destructive hover:bg-destructive/90 font-headline uppercase text-xs py-2">
                   <Swords className="mr-2 h-3 w-3" />
                   {isLoadingTaunt ? 'Provoking...' : 'Provoke Rival'}
                 </Button>
@@ -308,7 +325,7 @@ export default function RivalPage() {
             <CardDescription>Cumulative EXP gained by your rival (over the past 14 days).</CardDescription>
           </CardHeader>
           <CardContent>
-            {rivalExpGrowthData.length > 1 ? (
+            {hasMounted && rivalExpGrowthData.length > 1 ? (
               <ChartContainer config={chartConfigRival} className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={rivalExpGrowthData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -328,7 +345,7 @@ export default function RivalPage() {
                 </ResponsiveContainer>
               </ChartContainer>
             ) : (
-              <p className="text-muted-foreground text-center py-4">Not enough EXP history for your rival to display growth graph.</p>
+              <p className="text-muted-foreground text-center py-4">{hasMounted ? "Not enough EXP history for your rival to display growth graph." : "Loading graph data..."}</p>
             )}
           </CardContent>
         </Card>

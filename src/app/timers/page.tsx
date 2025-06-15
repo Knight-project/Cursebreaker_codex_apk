@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import type { IntervalTimerSetting, CustomGraphSetting, CustomGraphVariable, TimeView, DailyGraphLog } from '@/lib/types';
-import { CHART_COLOR_OPTIONS } from '@/lib/types';
+import type { IntervalTimerSetting, CustomGraphSetting, CustomGraphVariable, TimeView, DailyGraphLog, PomodoroSettings as PomodoroSettingsType } from '@/lib/types';
+import { CHART_COLOR_OPTIONS, INITIAL_POMODORO_SETTINGS, INITIAL_INTERVAL_TIMER_SETTINGS, INITIAL_CUSTOM_GRAPHS } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,11 +30,15 @@ import { CartesianGrid, XAxis, YAxis, Line, LineChart as RechartsLineChart, Resp
 import { format, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachWeekOfInterval, startOfYear, endOfYear, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { playSound } from '@/lib/soundManager';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const PomodoroTimer = () => {
-  const { pomodoroSettings, setPomodoroSettings, grantExp, appSettings } = useApp();
+  const { pomodoroSettings: contextPomodoroSettings, setPomodoroSettings, grantExp, appSettings } = useApp();
   const { toast } = useToast();
+  const [hasMounted, setHasMounted] = useState(false);
+
+  const pomodoroSettings = hasMounted ? contextPomodoroSettings : INITIAL_POMODORO_SETTINGS;
 
   const [mode, setMode] = useState<'focus' | 'shortBreak' | 'longBreak'>('focus');
   const [timeLeft, setTimeLeft] = useState(pomodoroSettings.focusDuration * 60);
@@ -44,38 +48,51 @@ const PomodoroTimer = () => {
   
   const [tempSettings, setTempSettings] = useState(pomodoroSettings);
 
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted) {
+      setTempSettings(pomodoroSettings); // Sync tempSettings when context changes and mounted
+      setTimeLeft(calculateTimeForMode(mode));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pomodoroSettings, hasMounted]); // mode is handled in next effect
+
   const calculateTimeForMode = useCallback((currentMode: 'focus' | 'shortBreak' | 'longBreak') => {
+    if (!hasMounted) return INITIAL_POMODORO_SETTINGS.focusDuration * 60; // Default before mount
     switch (currentMode) {
       case 'focus': return pomodoroSettings.focusDuration * 60;
       case 'shortBreak': return pomodoroSettings.shortBreakDuration * 60;
       case 'longBreak': return pomodoroSettings.longBreakDuration * 60;
       default: return pomodoroSettings.focusDuration * 60;
     }
-  }, [pomodoroSettings]);
+  }, [pomodoroSettings, hasMounted]);
 
   useEffect(() => {
     setTimeLeft(calculateTimeForMode(mode));
-  }, [pomodoroSettings, mode, calculateTimeForMode]);
+  }, [mode, calculateTimeForMode]); // Recalculate timeLeft when mode changes
+
 
   useEffect(() => {
+    if (!hasMounted) return;
     let interval: NodeJS.Timeout | null = null;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft(prevTime => prevTime - 1);
-        // Optionally play tick sound for last few seconds
-        // if (timeLeft <= 5 && timeLeft > 0) playSound('timerTick');
       }, 1000);
     } else if (isActive && timeLeft === 0) {
       setIsActive(false);
       if (mode === 'focus') {
         const expGained = appSettings.enableAnimations ? Math.floor(pomodoroSettings.focusDuration / 5) : 0;
         if (expGained > 0) {
-          grantExp(expGained); // grantExp handles level up sound
+          grantExp(expGained); 
           toast({ title: "Focus Session Complete!", description: `You earned ${expGained} EXP!` });
         } else {
            toast({ title: "Focus Session Complete!"});
         }
-        playSound('pomodoroFocusStart'); // Or a specific "focus session end" sound
+        playSound('pomodoroFocusStart'); 
         
         const newSessionsCompleted = sessionsCompleted + 1;
         setSessionsCompleted(newSessionsCompleted);
@@ -95,18 +112,20 @@ const PomodoroTimer = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, timeLeft, mode, sessionsCompleted, pomodoroSettings, grantExp, toast, appSettings.enableAnimations]);
+  }, [isActive, timeLeft, mode, sessionsCompleted, pomodoroSettings, grantExp, toast, appSettings.enableAnimations, hasMounted]);
 
   const toggleTimer = () => {
+    if (!hasMounted) return;
     setIsActive(!isActive);
     playSound('buttonClick');
-    if (!isActive && timeLeft > 0) { // Starting timer
+    if (!isActive && timeLeft > 0) { 
         if(mode === 'focus') playSound('pomodoroFocusStart');
         else playSound('pomodoroBreakStart');
     }
   };
 
   const resetTimer = () => {
+    if (!hasMounted) return;
     setIsActive(false);
     setMode('focus');
     setTimeLeft(pomodoroSettings.focusDuration * 60);
@@ -115,10 +134,10 @@ const PomodoroTimer = () => {
   };
   
   const handleSettingsSave = () => {
+    if (!hasMounted) return;
     setPomodoroSettings(tempSettings);
     setIsSettingsOpen(false);
-    setIsActive(false);
-    setTimeLeft(calculateTimeForMode(mode)); 
+    setIsActive(false); 
     toast({ title: "Pomodoro settings updated!" });
     playSound('buttonClick');
   };
@@ -131,6 +150,29 @@ const PomodoroTimer = () => {
 
   const currentDuration = calculateTimeForMode(mode);
   const progressPercentage = currentDuration > 0 ? ((currentDuration - timeLeft) / currentDuration) * 100 : 0;
+
+  if (!hasMounted) {
+    return (
+      <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="font-headline text-xl text-primary flex items-center">
+              <TimerIcon className="mr-2 h-5 w-5"/> Pomodoro Timer
+          </CardTitle>
+          <Button variant="ghost" size="icon" disabled><Settings2 className="h-5 w-5" /></Button>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center space-y-6 py-8">
+          <Skeleton className="h-16 w-40" /> {/* Time display */}
+          <Skeleton className="h-3 w-full" /> {/* Progress bar */}
+          <Skeleton className="h-5 w-32" /> {/* Mode text */}
+          <div className="flex space-x-4">
+            <Skeleton className="h-10 w-24" /> {/* Start button */}
+            <Skeleton className="h-10 w-24" /> {/* Reset button */}
+          </div>
+          <Skeleton className="h-4 w-28" /> {/* Sessions completed */}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
@@ -540,12 +582,22 @@ const IntervalTimerDisplayItem = ({ timer, onDelete, onEdit, onToggleEnable }: {
 
 
 const IntervalTimersManager = () => {
-  const { intervalTimerSettings, addIntervalTimerSetting, updateIntervalTimerSetting, deleteIntervalTimerSetting } = useApp();
+  const { intervalTimerSettings: contextIntervalTimerSettings, addIntervalTimerSetting, updateIntervalTimerSetting, deleteIntervalTimerSetting } = useApp();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTimer, setEditingTimer] = useState<IntervalTimerSetting | undefined>(undefined);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  const intervalTimerSettings = hasMounted ? contextIntervalTimerSettings : INITIAL_INTERVAL_TIMER_SETTINGS;
+
 
   useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasMounted) return;
+
     const timerId = setInterval(() => {
       const now = new Date();
       const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
@@ -599,7 +651,7 @@ const IntervalTimersManager = () => {
             if (now.getTime() >= endDate.getTime()) {
                 updateIntervalTimerSetting({ ...setting, isEnabled: false, startTime: undefined });
                 toast({ title: "Timer Finished", description: `${setting.taskName} duration has completed.` });
-                playSound('notification'); // Or a specific "timer end" sound
+                playSound('notification'); 
                 localStorage.removeItem(lastNotifiedTimestampKey); 
                 localStorage.removeItem(lastNotifiedMinuteMarkerKey);
                 return; 
@@ -636,9 +688,10 @@ const IntervalTimersManager = () => {
     }, 60000); 
 
     return () => clearInterval(timerId);
-  }, [intervalTimerSettings, toast, updateIntervalTimerSetting]);
+  }, [intervalTimerSettings, toast, updateIntervalTimerSetting, hasMounted]);
 
   const handleSaveTimer = (data: Omit<IntervalTimerSetting, 'id'>) => {
+     if (!hasMounted) return;
      const saveData = { ...data };
      if (saveData.timerMode === 'duration' && saveData.isEnabled && !saveData.startTime && !editingTimer?.startTime){ 
         saveData.startTime = new Date().toISOString();
@@ -659,6 +712,7 @@ const IntervalTimersManager = () => {
   };
 
   const handleToggleEnable = (timer: IntervalTimerSetting, newEnabledState: boolean) => {
+    if (!hasMounted) return;
     const updatedTimer = { ...timer, isEnabled: newEnabledState };
     if (timer.timerMode === 'duration') {
       if (newEnabledState && !timer.startTime) { 
@@ -678,6 +732,7 @@ const IntervalTimersManager = () => {
   };
 
   const handleDeleteTimer = (timerId: string) => {
+    if (!hasMounted) return;
     if (window.confirm("Are you sure you want to delete this interval timer?")) {
       deleteIntervalTimerSetting(timerId);
       localStorage.removeItem(`lastNotified_${timerId}_timestamp`); 
@@ -685,6 +740,26 @@ const IntervalTimersManager = () => {
       toast({ title: "Interval Timer Deleted", variant: "destructive" });
     }
   };
+
+  if (!hasMounted) {
+    return (
+      <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+        <CardHeader className="flex flex-row items-baseline justify-between">
+          <CardTitle className="font-headline text-xl text-primary flex items-center">
+              <BellRing className="mr-2 h-5 w-5"/>Interval Timers
+          </CardTitle>
+          <Button variant="outline" size="sm" disabled>
+            <PlusCircle className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add Timer</span>
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4 py-6">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
@@ -897,9 +972,15 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const [isLoggingOpen, setIsLoggingOpen] = useState(false);
   const [currentDisplayTimeView, setCurrentDisplayTimeView] = useState<TimeView>(graph.timeView);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
 
   useEffect(() => {
+    if (!hasMounted) return;
     const initialInputs: {[variableId: string]: string} = {};
     graph.variables.forEach(variable => {
       const dailyLog = customGraphDailyLogs[graph.id]?.[variable.id];
@@ -910,10 +991,11 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
       }
     });
     setTodayInputs(initialInputs);
-  }, [customGraphDailyLogs, graph, todayStr]);
+  }, [customGraphDailyLogs, graph, todayStr, hasMounted]);
 
 
   const handleTodayInputChange = (variableId: string, value: string) => {
+    if (!hasMounted) return;
     setTodayInputs(prev => ({...prev, [variableId]: value}));
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
@@ -936,6 +1018,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
   }, [graph.variables]);
 
   const chartData = useMemo(() => {
+    if (!hasMounted) return [];
     let dates: Date[] = [];
     const now = new Date();
     switch (currentDisplayTimeView) { 
@@ -968,7 +1051,7 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
       });
       return entry;
     });
-  }, [graph, customGraphDailyLogs, currentDisplayTimeView]); 
+  }, [graph, customGraphDailyLogs, currentDisplayTimeView, hasMounted]); 
 
   const timeViewOptions: {value: TimeView, label: string}[] = [
     { value: 'weekly', label: 'Weekly View' },
@@ -976,6 +1059,23 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
     { value: 'yearly', label: 'Yearly View' },
     { value: 'alltime', label: 'All Time View' },
   ];
+
+  if (!hasMounted) {
+     return (
+      <Card className="bg-background/50 border">
+        <CardHeader className="pb-3 pt-4">
+           <Skeleton className="h-6 w-3/4 mb-1" /> {/* Title */}
+           <Skeleton className="h-8 w-[180px]" /> {/* Select Trigger */}
+        </CardHeader>
+        <CardContent className="pt-2 pb-4 h-[300px]">
+            <Skeleton className="h-full w-full" /> {/* Chart Area */}
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-3 items-start p-4 pt-0">
+          <Skeleton className="h-8 w-full" /> {/* Log today's values trigger */}
+        </CardFooter>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-background/50 border">
@@ -1077,17 +1177,27 @@ const CustomGraphDisplayItem = ({ graph, onDelete, onEdit }: {
 
 
 const GraphsManager = () => { 
-  const { customGraphs, addCustomGraph, updateCustomGraph, deleteCustomGraph, commitStaleDailyLogs } = useApp();
+  const { customGraphs: contextCustomGraphs, addCustomGraph, updateCustomGraph, deleteCustomGraph, commitStaleDailyLogs } = useApp();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGraph, setEditingGraph] = useState<CustomGraphSetting | undefined>(undefined);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  const customGraphs = hasMounted ? contextCustomGraphs : INITIAL_CUSTOM_GRAPHS;
 
   useEffect(() => {
-    commitStaleDailyLogs(); 
-  }, [customGraphs, commitStaleDailyLogs]);
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if(hasMounted) {
+     commitStaleDailyLogs(); 
+    }
+  }, [customGraphs, commitStaleDailyLogs, hasMounted]);
 
 
   const handleSaveGraph = (data: Omit<CustomGraphSetting, 'id' | 'data'>) => {
+    if (!hasMounted) return;
     if (editingGraph) {
       const existingData = customGraphs.find(g => g.id === editingGraph.id)?.data || {};
       updateCustomGraph({ ...data, id: editingGraph.id, data: existingData });
@@ -1101,11 +1211,35 @@ const GraphsManager = () => {
   };
   
   const handleDeleteGraph = (graphId: string) => {
+    if (!hasMounted) return;
     if (window.confirm("Are you sure you want to delete this graph? This will also remove its logged data.")) {
       deleteCustomGraph(graphId);
       toast({ title: "Graph Deleted", variant: "destructive" });
     }
   };
+
+  if (!hasMounted) {
+    return (
+      <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+        <CardHeader className="flex flex-row items-baseline justify-between">
+          <CardTitle className="font-headline text-xl text-primary flex items-center">
+            <BarChartBig className="mr-2 h-5 w-5"/> Graphs 
+          </CardTitle>
+          <Button variant="outline" size="sm" disabled>
+            <PlusCircle className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add Graph</span>
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4 py-6">
+          <p className="text-muted-foreground text-center">Loading graphs...</p>
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Skeleton className="h-[400px] w-full" />
+            <Skeleton className="h-[400px] w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
@@ -1154,9 +1288,24 @@ const GraphsManager = () => {
 
 export default function TimersPage() {
   const { setActiveTab } = useApp();
+  const [hasMounted, setHasMounted] = useState(false);
+  
   useEffect(() => {
+    setHasMounted(true);
     setActiveTab('timers');
   }, [setActiveTab]);
+
+  if (!hasMounted) {
+     return (
+      <AppWrapper>
+        <div className="space-y-8">
+          <Skeleton className="h-80 w-full" /> {/* Pomodoro Skeleton */}
+          <Skeleton className="h-60 w-full" /> {/* Interval Timers Skeleton */}
+          <Skeleton className="h-96 w-full" /> {/* Graphs Manager Skeleton */}
+        </div>
+      </AppWrapper>
+    );
+  }
 
   return (
     <AppWrapper>

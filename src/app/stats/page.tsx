@@ -5,13 +5,14 @@
 import AppWrapper from '@/components/layout/AppWrapper';
 import { Card, CardContent } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { UserStat, Attribute } from '@/lib/types';
-import { ATTRIBUTES_LIST, DEFAULT_USER_STAT } from '@/lib/types';
+import { ATTRIBUTES_LIST, DEFAULT_USER_STAT, INITIAL_USER_PROFILE } from '@/lib/types';
 import { BarChart, Brain, Zap, Shield, Palette, Smile } from 'lucide-react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const attributeIcons: { [key in typeof ATTRIBUTES_LIST[number]]?: React.ElementType } = {
   Strength: BarChart,
@@ -60,10 +61,14 @@ const AttributeBar = ({ value, maxValue, colorClass = 'bg-primary' }: { value: n
 
 export default function StatsPage() {
   const { userProfile, setActiveTab, appSettings } = useApp();
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true);
     setActiveTab('stats');
   }, [setActiveTab]);
+
+  const profileToDisplay = hasMounted ? userProfile : INITIAL_USER_PROFILE;
 
   const {
     userName,
@@ -75,9 +80,60 @@ export default function StatsPage() {
     dailyTaskCompletionPercentage,
     stats,
     customQuote,
-  } = userProfile;
+  } = profileToDisplay;
 
   const attributeDisplayOrder: Attribute[] = ["Strength", "Intelligence", "Endurance", "Creativity", "Charisma"];
+
+  if (!hasMounted) {
+    return (
+      <AppWrapper>
+        <Card className="max-w-2xl mx-auto bg-card/90 backdrop-blur-md shadow-2xl border-2 border-primary/60 font-code text-sm">
+          <div className="px-3 py-1.5 border-b-2 border-primary/60 flex justify-between items-center">
+            <Skeleton className="h-5 w-40 bg-muted" />
+            <Skeleton className="h-5 w-20 bg-muted" />
+          </div>
+          <CardContent className="p-2 sm:p-3 md:p-4 space-y-3">
+            <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+              <div className="w-full md:w-1/3 flex-shrink-0">
+                <Skeleton className="aspect-square w-full bg-muted" />
+              </div>
+              <div className="flex-grow space-y-1.5">
+                <Skeleton className="h-4 w-1/2 bg-muted mb-1" />
+                <Skeleton className="h-6 w-3/4 bg-muted mb-1" />
+                <Skeleton className="h-5 w-full bg-muted mb-1" />
+                <Separator className="my-1.5 bg-border/30"/>
+                <Skeleton className="h-4 w-full bg-muted" />
+                <Separator className="my-1.5 bg-border/30"/>
+                <Skeleton className="h-8 w-full bg-muted" />
+                <Separator className="my-1.5 bg-border/30"/>
+                <Skeleton className="h-4 w-full bg-muted" />
+              </div>
+            </div>
+            <Separator className="my-3 bg-primary/60 h-0.5"/>
+            <div>
+              <Skeleton className="h-4 w-1/2 mx-auto bg-muted mb-2" />
+              <div className="space-y-2.5">
+                {attributeDisplayOrder.map(attrKey => (
+                  <div key={attrKey} className="text-xs space-y-1">
+                    <div className="flex justify-between items-center">
+                       <Skeleton className="h-4 w-24 bg-muted" />
+                       <Skeleton className="h-4 w-12 bg-muted" />
+                    </div>
+                    <Skeleton className="h-1.5 w-full bg-muted" />
+                    <Skeleton className="h-3 w-20 ml-auto bg-muted" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+          <div className="px-3 py-1.5 border-t-2 border-primary/60">
+            <Skeleton className="h-3 w-1/2 mx-auto bg-muted" />
+          </div>
+        </Card>
+      </AppWrapper>
+    );
+  }
+
 
   return (
     <AppWrapper>

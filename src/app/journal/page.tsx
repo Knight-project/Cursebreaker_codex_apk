@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSound } from '@/lib/soundManager';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const HOURS_OF_DAY = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 
@@ -29,24 +30,27 @@ export default function JournalPage() {
   const { toast } = useToast();
   const [activeLocalTab, setActiveLocalTab] = useState('daily');
   const hourlyInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const [hasMounted, setHasMounted] = useState(false);
   
   const formattedSelectedDate = useMemo(() => selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '', [selectedDate]);
 
   useEffect(() => {
+    setHasMounted(true);
     setAppActiveTab('journal');
   }, [setAppActiveTab]);
 
   useEffect(() => {
-    if (formattedSelectedDate) {
-      setCurrentDailyEntry(userProfile.journalEntries?.[formattedSelectedDate] || '');
-      setCurrentHourlyNotes(userProfile.hourlyJournalEntries?.[formattedSelectedDate] || {});
-    } else {
+    if (!hasMounted || !formattedSelectedDate) {
       setCurrentDailyEntry('');
       setCurrentHourlyNotes({});
+      return;
     }
-  }, [formattedSelectedDate, userProfile.journalEntries, userProfile.hourlyJournalEntries]);
+    setCurrentDailyEntry(userProfile.journalEntries?.[formattedSelectedDate] || '');
+    setCurrentHourlyNotes(userProfile.hourlyJournalEntries?.[formattedSelectedDate] || {});
+  }, [formattedSelectedDate, userProfile.journalEntries, userProfile.hourlyJournalEntries, hasMounted]);
 
   useEffect(() => {
+    if (!hasMounted) return;
     if (activeLocalTab === 'hourly' && selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
       const currentHour = new Date().getHours();
       const currentHourStr = `${String(currentHour).padStart(2, '0')}:00`;
@@ -55,16 +59,15 @@ export default function JournalPage() {
         setTimeout(() => {
           const targetInput = hourlyInputRefs.current[currentHourStr];
           if (targetInput) {
-            // Check if the element is in the document and visible
             if (document.body.contains(targetInput) && targetInput.offsetParent !== null) {
               targetInput.focus();
               targetInput.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
             }
           }
-        }, 150); // 150ms delay
+        }, 150);
       });
     }
-  }, [activeLocalTab, selectedDate]);
+  }, [activeLocalTab, selectedDate, hasMounted]);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -73,7 +76,7 @@ export default function JournalPage() {
   };
 
   const handleSaveDailyEntry = () => {
-    if (!formattedSelectedDate) {
+    if (!hasMounted || !formattedSelectedDate) {
       toast({ title: "Error", description: "Please select a date.", variant: "destructive" });
       return;
     }
@@ -89,11 +92,12 @@ export default function JournalPage() {
   };
 
   const handleHourlyNoteChange = (hour: string, text: string) => {
+    if (!hasMounted) return;
     setCurrentHourlyNotes(prev => ({ ...prev, [hour]: text }));
   };
 
   const handleSaveHourlyNote = (hour: string) => {
-    if (!formattedSelectedDate) return;
+    if (!hasMounted || !formattedSelectedDate) return;
     
     const noteToSave = currentHourlyNotes[hour];
 
@@ -111,6 +115,25 @@ export default function JournalPage() {
     });
   };
 
+  if (!hasMounted) {
+    return (
+      <AppWrapper>
+        <div className="space-y-6 max-w-2xl mx-auto">
+          <Card className="bg-card/80 backdrop-blur-sm shadow-xl w-full">
+            <CardHeader>
+              <Skeleton className="h-8 w-3/4" /> {/* Title Skeleton */}
+              <Skeleton className="h-5 w-1/2" /> {/* Description Skeleton */}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" /> {/* Tabs List Skeleton */}
+              <Skeleton className="h-[300px] w-full" /> {/* Textarea Skeleton */}
+              <Skeleton className="h-10 w-full" /> {/* Button Skeleton */}
+            </CardContent>
+          </Card>
+        </div>
+      </AppWrapper>
+    );
+  }
 
   return (
     <AppWrapper>
@@ -205,4 +228,3 @@ export default function JournalPage() {
     </AppWrapper>
   );
 }
-

@@ -5,12 +5,13 @@
 import AppWrapper from '@/components/layout/AppWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { LineChart as LineChartIcon, TrendingUp } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { CartesianGrid, XAxis, YAxis, Line, LineChart, ResponsiveContainer } from 'recharts';
 import { ATTRIBUTES_LIST, type Attribute } from '@/lib/types';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const chartConfigBase = {
   completion: {
@@ -27,12 +28,15 @@ const chartConfigBase = {
 
 export default function GraphsPage() {
   const { userProfile, tasks, setActiveTab } = useApp();
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true);
     setActiveTab('graphs');
   }, [setActiveTab]);
 
   const dailyCompletionData = useMemo(() => {
+    if (!hasMounted) return [];
     const last14Days = eachDayOfInterval({
       start: subDays(new Date(), 13),
       end: new Date(),
@@ -47,21 +51,18 @@ export default function GraphsPage() {
       if (tasksAddedOnDay.length > 0) {
         completionRate = (tasksCompletedFromAdded.length / tasksAddedOnDay.length) * 100;
       } else {
-        // If no tasks were added on a specific day in the past 14 days,
-        // check if any tasks were *completed* on this day from previous additions.
-        // This is a fallback, could be 0 or based on active tasks completed that day.
-        // For simplicity, if no tasks added, rate is 0 for "tasks added on day X".
         completionRate = 0; 
       }
       
       return {
-        date: format(day, 'MMM d'), // Format for XAxis display
+        date: format(day, 'MMM d'), 
         completion: parseFloat(completionRate.toFixed(1)),
       };
     });
-  }, [tasks]);
+  }, [tasks, hasMounted]);
 
   const attributeGrowthData = useMemo(() => {
+    if (!hasMounted) return [];
     const last14Days = eachDayOfInterval({
       start: subDays(new Date(), 13),
       end: new Date(),
@@ -75,7 +76,7 @@ export default function GraphsPage() {
 
     last14Days.forEach(day => {
       const dayString = format(day, 'yyyy-MM-dd');
-      cumulativeStatsByDay[dayString] = { ...runningTotals }; // Snapshot before adding today's
+      cumulativeStatsByDay[dayString] = { ...runningTotals }; 
 
       userProfile.taskHistory.forEach(task => {
         if (task.dateCompleted === dayString && task.attributeAffectedForStatExp && task.statExpGained) {
@@ -84,7 +85,7 @@ export default function GraphsPage() {
           }
         }
       });
-       cumulativeStatsByDay[dayString] = { ...runningTotals }; // Snapshot after adding today's
+       cumulativeStatsByDay[dayString] = { ...runningTotals }; 
     });
     
     return last14Days.map(day => {
@@ -98,9 +99,36 @@ export default function GraphsPage() {
       return entry;
     });
 
-  }, [userProfile.taskHistory]);
+  }, [userProfile.taskHistory, hasMounted]);
   
   const chartConfig = chartConfigBase;
+
+  if (!hasMounted) {
+    return (
+      <AppWrapper>
+        <div className="space-y-8">
+          <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+            <CardHeader>
+              <Skeleton className="h-7 w-3/4" /> {/* Title */}
+              <Skeleton className="h-5 w-full mt-1" /> {/* Description */}
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" /> {/* Chart Area */}
+            </CardContent>
+          </Card>
+          <Card className="bg-card/80 backdrop-blur-sm shadow-xl">
+            <CardHeader>
+              <Skeleton className="h-7 w-3/4" /> {/* Title */}
+              <Skeleton className="h-5 w-full mt-1" /> {/* Description */}
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" /> {/* Chart Area */}
+            </CardContent>
+          </Card>
+        </div>
+      </AppWrapper>
+    );
+  }
 
   return (
     <AppWrapper>
