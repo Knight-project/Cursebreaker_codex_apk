@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApp } from '@/contexts/AppContext';
-import type { Goal, Task } from '@/lib/types'; // Added Task
+import type { Goal, Task } from '@/lib/types';
 import { format, parseISO, startOfDay } from 'date-fns';
 import { PlusCircle, Edit3, Trash2, CheckCircle, Archive, ArchiveRestore, Target, CalendarIcon as CalendarLucideIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -116,7 +116,7 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
 
 
 const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
-  const { deleteGoal, toggleGoalStatus, updateGoal, getGoalById } = useApp(); // Added updateGoal
+  const { deleteGoal, toggleGoalStatus, updateGoal } = useApp();
   const { toast } = useToast();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -124,21 +124,30 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
     return tasks.filter(task => goal.linkedTaskIds.includes(task.id));
   }, [tasks, goal.linkedTaskIds]);
 
-  const completedLinkedTasks = useMemo(() => {
-    return linkedTasks.filter(task => task.isCompleted).length;
+  const completedLinkedTasksCount = useMemo(() => {
+    return linkedTasks.filter(task => {
+      // For rituals, check lastCompletedDate against today.
+      // For daily/event, check isCompleted and dateCompleted against today if applicable.
+      // More robustly, check if the task.isCompleted is true (AppContext should manage this correctly)
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      if (task.taskType === 'ritual') {
+        return task.lastCompletedDate === todayStr;
+      }
+      return task.isCompleted; // AppContext now accurately updates isCompleted based on its rules
+    }).length;
   }, [linkedTasks]);
 
-  const progress = linkedTasks.length > 0 ? (completedLinkedTasks / linkedTasks.length) * 100 : 0;
+
+  const progress = linkedTasks.length > 0 ? (completedLinkedTasksCount / linkedTasks.length) * 100 : 0;
 
   const handleSaveEdit = (data: Omit<Goal, 'id' | 'linkedTaskIds' | 'createdAt' | 'status'> & { id?: string }) => {
     if (data.id) {
-      // Pass the full data object including name, description, targetDate
       updateGoal({
         id: data.id,
         name: data.name,
         description: data.description,
         targetDate: data.targetDate,
-        status: goal.status, // preserve original status unless specifically changed
+        status: goal.status,
       });
     }
     setIsEditOpen(false);
@@ -181,11 +190,11 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
         <div className="mb-2">
           <div className="flex justify-between text-xs mb-1">
             <span>Progress</span>
-            <span>{completedLinkedTasks} / {linkedTasks.length} Tasks</span>
+            <span>{completedLinkedTasksCount} / {linkedTasks.length} Tasks</span>
           </div>
           <Progress value={progress} className="h-2 bg-secondary" indicatorClassName="bg-primary" />
         </div>
-        {/* Placeholder for listing linked tasks - to be implemented in Phase 2 */}
+        {/* Placeholder for listing linked tasks if needed */}
       </CardContent>
       <CardFooter className="flex flex-wrap gap-2 justify-end">
         {goal.status === 'active' && (
@@ -237,7 +246,7 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
 };
 
 export default function GoalsPage() {
-  const { userProfile, tasks, addGoal, updateGoal, setActiveTab } = useApp();
+  const { userProfile, tasks, addGoal, setActiveTab } = useApp();
   const [hasMounted, setHasMounted] = useState(false);
   const [isAddGoalOpen, setIsAddGoalOpen] = useState(false);
   const { toast } = useToast();

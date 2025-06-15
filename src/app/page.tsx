@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/contexts/AppContext';
-import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2, RotateCcw, Check, Trash2, Target } from 'lucide-react'; // Added Target
-import React, { useEffect, useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { PlusCircle, BarChart2, User, BookOpen, CalendarDays, Repeat, AlertTriangle, Edit2, RotateCcw, Check, Trash2, Target, Link2 } from 'lucide-react';
+import React, { useEffect, useState, useRef, type ChangeEvent, type KeyboardEvent, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Task, TaskType, Attribute } from '@/lib/types';
+import type { Task, TaskType, Attribute, Goal } from '@/lib/types';
 import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, REMINDER_OPTIONS } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -36,7 +36,8 @@ const AddTaskForm = ({
   const [taskName, setTaskName] = useState('');
   const [difficulty, setDifficulty] = useState<'Easy' | 'Moderate' | 'Hard'>('Moderate');
   const [attribute, setAttribute] = useState<Attribute>('None');
-  
+  const [goalId, setGoalId] = useState<string | undefined>(undefined);
+
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(new Date());
   const [isAllDay, setIsAllDay] = useState(true);
   const [startTime, setStartTime] = useState('09:00');
@@ -45,9 +46,13 @@ const AddTaskForm = ({
 
   const [repeatIntervalDays, setRepeatIntervalDays] = useState<number>(1);
 
-  const { addTask } = useApp();
+  const { addTask, userProfile } = useApp();
   const { toast } = useToast();
   // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
+
+  const activeGoals = useMemo(() => {
+    return (userProfile.goals || []).filter(g => g.status === 'active');
+  }, [userProfile.goals]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +66,7 @@ const AddTaskForm = ({
       difficulty,
       attribute,
       taskType: currentTaskType,
+      goalId: goalId === 'none' ? undefined : goalId,
     };
 
     if (currentTaskType === 'event') {
@@ -92,24 +98,25 @@ const AddTaskForm = ({
         return;
       }
       addTask({ ...baseTaskData, repeatIntervalDays });
-    } else { 
+    } else {
       addTask(baseTaskData);
     }
 
     setTaskName('');
     setDifficulty('Moderate');
     setAttribute('None');
+    setGoalId(undefined);
     setScheduledDate(new Date());
     setIsAllDay(true);
     setStartTime('09:00');
     setEndTime('17:00');
     setReminderOffsetMinutes(0);
     setRepeatIntervalDays(1);
-    
+
     toast({ title: "Success", description: `${currentTaskType.charAt(0).toUpperCase() + currentTaskType.slice(1)} added!` });
-    onTaskAdd(); 
+    onTaskAdd();
   };
-  
+
   const getTaskTypeSpecificPlaceholder = () => {
     switch(currentTaskType) {
       case 'daily': return "e.g., Review project notes";
@@ -142,8 +149,8 @@ const AddTaskForm = ({
               mode="single"
               selected={scheduledDate}
               onSelect={setScheduledDate}
-              className="rounded-md mt-1 bg-popover/90 backdrop-blur-sm" 
-              disabled={(date) => date < startOfDay(new Date())} 
+              className="rounded-md mt-1 bg-popover/90 backdrop-blur-sm"
+              disabled={(date) => date < startOfDay(new Date())}
             />
           </div>
           <div className="flex items-center space-x-2 pt-2">
@@ -218,6 +225,20 @@ const AddTaskForm = ({
           </SelectContent>
         </Select>
       </div>
+
+      <div>
+        <Label htmlFor="goalLink" className="font-headline">Link to Goal (Optional)</Label>
+        <Select onValueChange={(value) => setGoalId(value === 'none' ? undefined : value)} value={goalId || 'none'}>
+          <SelectTrigger id="goalLink" className="mt-1 bg-input/50 focus:bg-input">
+            <SelectValue placeholder="Select a goal" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            {activeGoals.map(goal => <SelectItem key={goal.id} value={goal.id}>{goal.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
       <DialogFooter className="pt-3">
         <DialogClose asChild>
           <Button type="button" variant="outline">Cancel</Button>
@@ -229,7 +250,7 @@ const AddTaskForm = ({
 };
 
 const TaskItem = ({ task }: { task: Task }) => {
-  const { completeTask, deleteTask, undoCompleteTask } = useApp();
+  const { completeTask, deleteTask, undoCompleteTask, getGoalById } = useApp();
   const { toast } = useToast();
   // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -238,6 +259,8 @@ const TaskItem = ({ task }: { task: Task }) => {
   let descriptionText: string;
   let isDueToday: boolean;
   let canComplete: boolean;
+
+  const linkedGoal = task.goalId ? getGoalById(task.goalId) : undefined;
 
   if (task.taskType === 'ritual') {
     isDueToday = task.nextDueDate === today;
@@ -255,14 +278,14 @@ const TaskItem = ({ task }: { task: Task }) => {
         timeInfo = " (All Day)";
     }
     descriptionText = `Scheduled: ${task.scheduledDate ? format(new Date(task.scheduledDate + 'T00:00:00'), "MMM d") : "N/A"}${timeInfo}. ${task.difficulty} - ${task.attribute}`;
-    canComplete = isDueToday && !task.isCompleted ; 
+    canComplete = isDueToday && !task.isCompleted ;
   } else { // daily
-    isDueToday = true; 
+    isDueToday = true;
     isTaskEffectivelyCompleted = task.isCompleted && task.dateCompleted === today;
     descriptionText = `${task.difficulty} - ${task.attribute}`;
-    canComplete = !task.isCompleted; 
+    canComplete = !task.isCompleted;
   }
-  
+
   const handleComplete = () => {
     if (canComplete) {
       completeTask(task.id);
@@ -283,7 +306,7 @@ const TaskItem = ({ task }: { task: Task }) => {
       toast({ title: "Task Deleted", description: `${task.name} removed.` });
     }
   };
-  
+
   const handleUndo = () => {
     undoCompleteTask(task.id);
   };
@@ -293,18 +316,24 @@ const TaskItem = ({ task }: { task: Task }) => {
 
 
   return (
-    <div className={`p-3 border flex items-center justify-between transition-all duration-300 rounded-md 
-      ${isTaskEffectivelyCompleted ? 'bg-secondary/30 border-green-500/50' : 
+    <div className={`p-3 border flex items-center justify-between transition-all duration-300 rounded-md
+      ${isTaskEffectivelyCompleted ? 'bg-secondary/30 border-green-500/50' :
         isPastDue ? 'bg-destructive/10 border-destructive/30' :
         'bg-card hover:bg-card/90 border-border'}`}>
       <div className="flex-1 min-w-0">
          <div className="flex items-center">
           {task.taskType === 'ritual' && <Repeat className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />}
-          {task.taskType === 'event' && <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />} 
+          {task.taskType === 'event' && <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />}
           {isPastDue && <AlertTriangle className="h-4 w-4 mr-2 text-destructive flex-shrink-0" />}
           <p className={`font-medium font-body truncate ${isTaskEffectivelyCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
         </div>
         <p className="text-xs text-muted-foreground truncate">{descriptionText}</p>
+        {linkedGoal && (
+          <div className="flex items-center mt-1">
+            <Target className="h-3 w-3 mr-1.5 text-primary/70 flex-shrink-0" />
+            <p className="text-xs text-primary/70 truncate">Goal: {linkedGoal.name}</p>
+          </div>
+        )}
       </div>
       <div className="flex items-center space-x-2 pl-2">
         {canComplete && (
@@ -374,7 +403,7 @@ export default function HomePage() {
       setEditingQuote(userProfile.customQuote);
     }
   }, [userProfile.userName, userProfile.customQuote, hasMounted]);
-  
+
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
       nameInputRef.current.focus();
@@ -407,13 +436,13 @@ export default function HomePage() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) { 
+    if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "Image too large",
         description: "Please select an image smaller than 2MB.",
         variant: "destructive",
       });
-      if (inputElement) inputElement.value = ""; 
+      if (inputElement) inputElement.value = "";
       return;
     }
 
@@ -437,7 +466,7 @@ export default function HomePage() {
         setUserProfile(prev => ({ ...prev, avatarUrl: reader.result as string }));
         toast({ title: "Avatar Updated!" });
         playSound('buttonClick');
-        if (inputElement) inputElement.value = ""; 
+        if (inputElement) inputElement.value = "";
       };
       reader.onerror = () => {
         toast({
@@ -474,7 +503,7 @@ export default function HomePage() {
   };
 
   const saveName = () => {
-    const nameToSave = editingName.trim(); 
+    const nameToSave = editingName.trim();
     setUserProfile(prev => ({ ...prev, userName: nameToSave }));
     if (userProfile.userName.trim() !== nameToSave) {
         toast({ title: "Name Updated!" });
@@ -509,7 +538,7 @@ export default function HomePage() {
     }
     setIsEditingQuote(false);
   };
-  
+
   const handleQuoteKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       saveQuote();
@@ -531,7 +560,7 @@ export default function HomePage() {
       <p className="text-muted-foreground text-center py-4 font-code text-xs">
         {taskType === 'daily' && "No directives logged for this cycle. Initiate new tasks to proceed."}
         {taskType === 'ritual' && "No rituals due today or all are completed. Establish or await next due cycle."}
-        {taskType === 'event' && "No events for today. Schedule new events or check other dates."} 
+        {taskType === 'event' && "No events for today. Schedule new events or check other dates."}
       </p>
     );
   };
@@ -577,7 +606,7 @@ export default function HomePage() {
                 <span className="avatar-orbiting-arc avatar-orbiting-arc-type3" style={{ width: '118px', height: '118px', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(50deg)', borderTopColor: 'transparent', borderRightColor: 'transparent' }}></span>
              </div>
               <input type="file" ref={userImageInputRef} onChange={handleUserAvatarChange} accept="image/*" className="hidden" />
-            
+
             {isEditingName ? (
               <Input
                 ref={nameInputRef}
@@ -590,8 +619,8 @@ export default function HomePage() {
                 maxLength={30}
               />
             ) : (
-              <h2 
-                onDoubleClick={handleNameDoubleClick} 
+              <h2
+                onDoubleClick={handleNameDoubleClick}
                 className="text-2xl font-headline text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px] uppercase"
                 title="Double-click to edit name"
               >
@@ -600,9 +629,9 @@ export default function HomePage() {
             )}
             <div className="h-0.5 w-2/3 my-2 bg-accent" />
             <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">
-              <RankDisplay 
-                rankName={profileToDisplay.rankName} 
-                subRank={profileToDisplay.subRank} 
+              <RankDisplay
+                rankName={profileToDisplay.rankName}
+                subRank={profileToDisplay.subRank}
               />
             </CardTitle>
 
@@ -618,7 +647,7 @@ export default function HomePage() {
                 maxLength={100}
               />
             ) : (
-              <CardDescription 
+              <CardDescription
                 onDoubleClick={handleQuoteDoubleClick}
                 className="text-muted-foreground mt-1 text-xs font-code italic cursor-pointer hover:bg-muted/30 rounded-md p-1 transition-colors min-h-[20px]"
                 title="Double-click to edit quote"
@@ -626,7 +655,7 @@ export default function HomePage() {
                 {profileToDisplay.customQuote || INITIAL_USER_PROFILE.customQuote}
               </CardDescription>
             )}
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 w-full max-w-md">
               <Link href="/stats" passHref className="w-full">
                 <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4" onClick={() => playSound('buttonClick')}>
@@ -651,11 +680,11 @@ export default function HomePage() {
                   {profileToDisplay.currentExpInSubRank} / {profileToDisplay.expToNextSubRank}
                 </span>
               </div>
-              <Progress 
+              <Progress
                 value={
-                  (profileToDisplay.expToNextSubRank > 0 ? profileToDisplay.currentExpInSubRank / profileToDisplay.expToNextSubRank : 0) * 100 
-                } 
-                className="h-2 bg-secondary" indicatorClassName="bg-primary" 
+                  (profileToDisplay.expToNextSubRank > 0 ? profileToDisplay.currentExpInSubRank / profileToDisplay.expToNextSubRank : 0) * 100
+                }
+                className="h-2 bg-secondary" indicatorClassName="bg-primary"
               />
             </div>
             <div className="flex justify-between text-xs font-code">
@@ -684,7 +713,7 @@ export default function HomePage() {
           <TabsList className="grid w-full grid-cols-3 bg-card/80 backdrop-blur-sm border-border">
             <TabsTrigger value="daily" className="font-headline" onClick={() => playSound('buttonClick')}>Directives</TabsTrigger>
             <TabsTrigger value="rituals" className="font-headline" onClick={() => playSound('buttonClick')}>Rituals</TabsTrigger>
-            <TabsTrigger value="events" className="font-headline" onClick={() => playSound('buttonClick')}>Events</TabsTrigger> 
+            <TabsTrigger value="events" className="font-headline" onClick={() => playSound('buttonClick')}>Events</TabsTrigger>
           </TabsList>
 
           <TabsContent value="daily">
@@ -731,24 +760,24 @@ export default function HomePage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="events"> 
+          <TabsContent value="events">
             <Card className="bg-card/80 backdrop-blur-sm shadow-lg mt-2">
               <CardHeader className="p-4 flex flex-row items-baseline justify-between">
-                <CardTitle className="font-headline text-lg text-primary uppercase">Today's Events</CardTitle> 
-                <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}> 
+                <CardTitle className="font-headline text-lg text-primary uppercase">Today's Events</CardTitle>
+                <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" onClick={() => playSound('buttonClick')}>
-                      <CalendarDays className="h-4 w-4 mr-2 neon-icon" /> New Event 
+                      <CalendarDays className="h-4 w-4 mr-2 neon-icon" /> New Event
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md bg-card border-border">
-                    <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Schedule New Event</DialogTitle></DialogHeader> 
-                    <AddTaskForm currentTaskType="event" onTaskAdd={() => setIsAddEventOpen(false)} /> 
+                    <DialogHeader><DialogTitle className="font-headline text-primary uppercase">Schedule New Event</DialogTitle></DialogHeader>
+                    <AddTaskForm currentTaskType="event" onTaskAdd={() => setIsAddEventOpen(false)} />
                   </DialogContent>
                 </Dialog>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                {renderTaskList(eventsForToday, 'event')} 
+                {renderTaskList(eventsForToday, 'event')}
               </CardContent>
             </Card>
           </TabsContent>
