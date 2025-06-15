@@ -24,13 +24,13 @@ import { playSound } from '@/lib/soundManager';
 import { Progress } from '@/components/ui/progress';
 
 
-interface GoalFormProps {
+interface TargetFormProps {
   initialData?: Goal;
   onSave: (data: Omit<Goal, 'id' | 'linkedTaskIds' | 'createdAt' | 'status'> & { id?: string }) => void;
   onClose: () => void;
 }
 
-const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => {
+const TargetForm: React.FC<TargetFormProps> = ({ initialData, onSave, onClose }) => {
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [targetDate, setTargetDate] = useState<Date | undefined>(
@@ -42,7 +42,7 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast({ title: "Goal Name Required", description: "Please enter a name for your goal.", variant: "destructive" });
+      toast({ title: "Target Name Required", description: "Please enter a name for your target.", variant: "destructive" });
       return;
     }
     onSave({
@@ -56,9 +56,9 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="goalName" className="font-headline">Goal Name</Label>
+        <Label htmlFor="targetName" className="font-headline">Target Name</Label>
         <Input
-          id="goalName"
+          id="targetName"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g., Master React Hooks"
@@ -66,9 +66,9 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
         />
       </div>
       <div>
-        <Label htmlFor="goalDescription" className="font-headline">Description (Optional)</Label>
+        <Label htmlFor="targetDescription" className="font-headline">Description (Optional)</Label>
         <Textarea
-          id="goalDescription"
+          id="targetDescription"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Briefly describe your objective..."
@@ -76,7 +76,7 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
         />
       </div>
       <div>
-        <Label htmlFor="goalTargetDate" className="font-headline">Target Date (Optional)</Label>
+        <Label htmlFor="targetTargetDate" className="font-headline">Target Date (Optional)</Label>
         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -107,7 +107,7 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </DialogClose>
         <Button type="submit" className="bg-primary hover:bg-primary/90">
-          {initialData ? "Save Changes" : "Add Goal"}
+          {initialData ? "Save Changes" : "Set Target"}
         </Button>
       </DialogFooter>
     </form>
@@ -115,7 +115,7 @@ const GoalForm: React.FC<GoalFormProps> = ({ initialData, onSave, onClose }) => 
 };
 
 
-const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
+const TargetItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
   const { deleteGoal, toggleGoalStatus, updateGoal } = useApp();
   const { toast } = useToast();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -126,14 +126,11 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
 
   const completedLinkedTasksCount = useMemo(() => {
     return linkedTasks.filter(task => {
-      // For rituals, check lastCompletedDate against today.
-      // For daily/event, check isCompleted and dateCompleted against today if applicable.
-      // More robustly, check if the task.isCompleted is true (AppContext should manage this correctly)
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       if (task.taskType === 'ritual') {
         return task.lastCompletedDate === todayStr;
       }
-      return task.isCompleted; // AppContext now accurately updates isCompleted based on its rules
+      return task.isCompleted;
     }).length;
   }, [linkedTasks]);
 
@@ -151,7 +148,7 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
       });
     }
     setIsEditOpen(false);
-    toast({title: "Goal Updated", description: `"${data.name}" has been modified.`});
+    toast({title: "Target Updated", description: `"${data.name}" has been modified.`});
     playSound('buttonClick');
   };
 
@@ -169,9 +166,9 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-md bg-card border-border">
               <DialogHeader>
-                <DialogTitle className="font-headline text-primary">Edit Goal</DialogTitle>
+                <DialogTitle className="font-headline text-primary">Edit Target</DialogTitle>
               </DialogHeader>
-              <GoalForm
+              <TargetForm
                 initialData={goal}
                 onSave={handleSaveEdit}
                 onClose={() => {setIsEditOpen(false); playSound('buttonClick');}}
@@ -182,7 +179,7 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
         {goal.description && <CardDescription className="text-sm mt-1">{goal.description}</CardDescription>}
         {goal.targetDate && (
           <p className="text-xs text-muted-foreground mt-1">
-            Target: {format(parseISO(goal.targetDate), "MMMM d, yyyy")}
+            Target Date: {format(parseISO(goal.targetDate), "MMMM d, yyyy")}
           </p>
         )}
       </CardHeader>
@@ -194,7 +191,6 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
           </div>
           <Progress value={progress} className="h-2 bg-secondary" indicatorClassName="bg-primary" />
         </div>
-        {/* Placeholder for listing linked tasks if needed */}
       </CardContent>
       <CardFooter className="flex flex-wrap gap-2 justify-end">
         {goal.status === 'active' && (
@@ -231,9 +227,9 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
           variant="destructive"
           size="sm"
           onClick={() => {
-            if(window.confirm(`Are you sure you want to delete the goal "${goal.name}"? This cannot be undone.`)) {
+            if(window.confirm(`Are you sure you want to delete the target "${goal.name}"? This cannot be undone.`)) {
               deleteGoal(goal.id);
-              toast({title: "Goal Deleted", description: `"${goal.name}" has been removed.`, variant: "destructive"});
+              toast({title: "Target Removed", description: `"${goal.name}" has been removed.`, variant: "destructive"});
               playSound('buttonClick');
             }
           }}
@@ -248,7 +244,7 @@ const GoalItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) => {
 export default function GoalsPage() {
   const { userProfile, tasks, addGoal, setActiveTab } = useApp();
   const [hasMounted, setHasMounted] = useState(false);
-  const [isAddGoalOpen, setIsAddGoalOpen] = useState(false);
+  const [isAddTargetOpen, setIsAddTargetOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -256,10 +252,10 @@ export default function GoalsPage() {
     setActiveTab('goals');
   }, [setActiveTab]);
 
-  const handleAddGoal = (data: Omit<Goal, 'id' | 'linkedTaskIds' | 'status' | 'createdAt'>) => {
-    addGoal(data);
-    setIsAddGoalOpen(false);
-    toast({title: "Goal Added!", description: `New objective "${data.name}" created.`});
+  const handleAddTarget = (data: Omit<Goal, 'id' | 'linkedTaskIds' | 'status' | 'createdAt'>) => {
+    addGoal(data); // AppContext still uses 'addGoal' internally
+    setIsAddTargetOpen(false);
+    toast({title: "Target Set!", description: `New objective "${data.name}" created.`});
     playSound('buttonClick');
   };
 
@@ -267,9 +263,9 @@ export default function GoalsPage() {
     return (userProfile.goals || []).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [userProfile.goals]);
 
-  const activeGoals = useMemo(() => goalsToDisplay.filter(g => g.status === 'active'), [goalsToDisplay]);
-  const completedGoals = useMemo(() => goalsToDisplay.filter(g => g.status === 'completed'), [goalsToDisplay]);
-  const archivedGoals = useMemo(() => goalsToDisplay.filter(g => g.status === 'archived'), [goalsToDisplay]);
+  const activeTargets = useMemo(() => goalsToDisplay.filter(g => g.status === 'active'), [goalsToDisplay]);
+  const completedTargets = useMemo(() => goalsToDisplay.filter(g => g.status === 'completed'), [goalsToDisplay]);
+  const archivedTargets = useMemo(() => goalsToDisplay.filter(g => g.status === 'archived'), [goalsToDisplay]);
 
   if (!hasMounted) {
     return (
@@ -284,55 +280,55 @@ export default function GoalsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-headline text-accent flex items-center">
-            <Target className="mr-3 h-7 w-7" /> Your Strategic Objectives
+            <Target className="mr-3 h-7 w-7" /> Targets
           </h1>
-          <Dialog open={isAddGoalOpen} onOpenChange={setIsAddGoalOpen}>
+          <Dialog open={isAddTargetOpen} onOpenChange={setIsAddTargetOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90" onClick={() => playSound('buttonClick')}>
-                <PlusCircle className="mr-2 h-5 w-5" /> Add New Goal
+                <PlusCircle className="mr-2 h-5 w-5" /> Set New Target
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md bg-card border-border">
               <DialogHeader>
-                <DialogTitle className="font-headline text-primary">Define New Goal</DialogTitle>
+                <DialogTitle className="font-headline text-primary">Set New Target</DialogTitle>
               </DialogHeader>
-              <GoalForm onSave={handleAddGoal} onClose={() => {setIsAddGoalOpen(false); playSound('buttonClick');}} />
+              <TargetForm onSave={handleAddTarget} onClose={() => {setIsAddTargetOpen(false); playSound('buttonClick');}} />
             </DialogContent>
           </Dialog>
         </div>
 
         <Tabs defaultValue="active" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-card/80 backdrop-blur-sm border-border">
-            <TabsTrigger value="active" className="font-headline" onClick={() => playSound('buttonClick')}>Active ({activeGoals.length})</TabsTrigger>
-            <TabsTrigger value="completed" className="font-headline" onClick={() => playSound('buttonClick')}>Completed ({completedGoals.length})</TabsTrigger>
-            <TabsTrigger value="archived" className="font-headline" onClick={() => playSound('buttonClick')}>Archived ({archivedGoals.length})</TabsTrigger>
+            <TabsTrigger value="active" className="font-headline" onClick={() => playSound('buttonClick')}>Active ({activeTargets.length})</TabsTrigger>
+            <TabsTrigger value="completed" className="font-headline" onClick={() => playSound('buttonClick')}>Completed ({completedTargets.length})</TabsTrigger>
+            <TabsTrigger value="archived" className="font-headline" onClick={() => playSound('buttonClick')}>Archived ({archivedTargets.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="active" className="mt-4">
-            {activeGoals.length > 0 ? (
+            {activeTargets.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {activeGoals.map(goal => <GoalItem key={goal.id} goal={goal} tasks={tasks}/>)}
+                {activeTargets.map(goal => <TargetItem key={goal.id} goal={goal} tasks={tasks}/>)}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-8">No active goals. Time to set some new objectives!</p>
+              <p className="text-muted-foreground text-center py-8">No active targets. Time to set some new objectives!</p>
             )}
           </TabsContent>
           <TabsContent value="completed" className="mt-4">
-            {completedGoals.length > 0 ? (
+            {completedTargets.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {completedGoals.map(goal => <GoalItem key={goal.id} goal={goal} tasks={tasks}/>)}
+                {completedTargets.map(goal => <TargetItem key={goal.id} goal={goal} tasks={tasks}/>)}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-8">No goals completed yet. Keep pushing!</p>
+              <p className="text-muted-foreground text-center py-8">No targets completed yet. Keep pushing!</p>
             )}
           </TabsContent>
           <TabsContent value="archived" className="mt-4">
-            {archivedGoals.length > 0 ? (
+            {archivedTargets.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {archivedGoals.map(goal => <GoalItem key={goal.id} goal={goal} tasks={tasks}/>)}
+                {archivedTargets.map(goal => <TargetItem key={goal.id} goal={goal} tasks={tasks}/>)}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-8">No archived goals.</p>
+              <p className="text-muted-foreground text-center py-8">No archived targets.</p>
             )}
           </TabsContent>
         </Tabs>

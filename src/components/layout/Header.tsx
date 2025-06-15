@@ -52,7 +52,7 @@ const Header = () => {
     stats: "Character Stats",
     settings: "Settings",
     graphs: "Data Logs & Trends",
-    goals: "Manage Goals" // Added title for goals page
+    goals: "Manage Targets" // Updated title for goals page to Targets
   };
   
   const title = pageTitles[activeTab] || APP_NAME;

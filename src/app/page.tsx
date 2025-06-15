@@ -36,7 +36,7 @@ const AddTaskForm = ({
   const [taskName, setTaskName] = useState('');
   const [difficulty, setDifficulty] = useState<'Easy' | 'Moderate' | 'Hard'>('Moderate');
   const [attribute, setAttribute] = useState<Attribute>('None');
-  const [goalId, setGoalId] = useState<string | undefined>(undefined);
+  const [goalId, setGoalId] = useState<string | undefined>(undefined); // Renamed from targetId for consistency with types
 
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(new Date());
   const [isAllDay, setIsAllDay] = useState(true);
@@ -50,7 +50,7 @@ const AddTaskForm = ({
   const { toast } = useToast();
   // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
 
-  const activeGoals = useMemo(() => {
+  const activeTargets = useMemo(() => { // Renamed from activeGoals to reflect UI change
     return (userProfile.goals || []).filter(g => g.status === 'active');
   }, [userProfile.goals]);
 
@@ -227,14 +227,14 @@ const AddTaskForm = ({
       </div>
 
       <div>
-        <Label htmlFor="goalLink" className="font-headline">Link to Goal (Optional)</Label>
+        <Label htmlFor="targetLink" className="font-headline">Link to Target (Optional)</Label> {/* Changed "goalLink" to "targetLink" and label text */}
         <Select onValueChange={(value) => setGoalId(value === 'none' ? undefined : value)} value={goalId || 'none'}>
-          <SelectTrigger id="goalLink" className="mt-1 bg-input/50 focus:bg-input">
-            <SelectValue placeholder="Select a goal" />
+          <SelectTrigger id="targetLink" className="mt-1 bg-input/50 focus:bg-input"> {/* Changed "goalLink" to "targetLink" */}
+            <SelectValue placeholder="Select a target" /> {/* Changed placeholder text */}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>
-            {activeGoals.map(goal => <SelectItem key={goal.id} value={goal.id}>{goal.name}</SelectItem>)}
+            {activeTargets.map(target => <SelectItem key={target.id} value={target.id}>{target.name}</SelectItem>)} {/* Renamed goal to target */}
           </SelectContent>
         </Select>
       </div>
@@ -250,7 +250,7 @@ const AddTaskForm = ({
 };
 
 const TaskItem = ({ task }: { task: Task }) => {
-  const { completeTask, deleteTask, undoCompleteTask, getGoalById } = useApp();
+  const { completeTask, deleteTask, undoCompleteTask, getGoalById } = useApp(); // getGoalById still used internally
   const { toast } = useToast();
   // CAPACITOR_NOTE: For native Toasts, use Capacitor Toast plugin (@capacitor/toast).
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -260,7 +260,7 @@ const TaskItem = ({ task }: { task: Task }) => {
   let isDueToday: boolean;
   let canComplete: boolean;
 
-  const linkedGoal = task.goalId ? getGoalById(task.goalId) : undefined;
+  const linkedTarget = task.goalId ? getGoalById(task.goalId) : undefined; // Renamed from linkedGoal
 
   if (task.taskType === 'ritual') {
     isDueToday = task.nextDueDate === today;
@@ -328,10 +328,10 @@ const TaskItem = ({ task }: { task: Task }) => {
           <p className={`font-medium font-body truncate ${isTaskEffectivelyCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.name}</p>
         </div>
         <p className="text-xs text-muted-foreground truncate">{descriptionText}</p>
-        {linkedGoal && (
+        {linkedTarget && ( // Renamed from linkedGoal
           <div className="flex items-center mt-1">
             <Target className="h-3 w-3 mr-1.5 text-primary/70 flex-shrink-0" />
-            <p className="text-xs text-primary/70 truncate">Goal: {linkedGoal.name}</p>
+            <p className="text-xs text-primary/70 truncate">Target: {linkedTarget.name}</p> {/* Changed "Goal:" to "Target:" */}
           </div>
         )}
       </div>
@@ -663,10 +663,10 @@ export default function HomePage() {
                   Status Report
                 </Button>
               </Link>
-              <Link href="/goals" passHref className="w-full">
+              <Link href="/goals" passHref className="w-full"> {/* Changed /targets to /goals */}
                 <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-headline uppercase text-xs py-2 px-4" onClick={() => playSound('buttonClick')}>
                   <Target className="mr-2 h-4 w-4" />
-                  Manage Goals
+                  Manage Targets {/* Changed "Manage Goals" to "Manage Targets" */}
                 </Button>
               </Link>
             </div>
