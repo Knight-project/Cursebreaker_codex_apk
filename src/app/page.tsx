@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Task, TaskType, Attribute } from '@/lib/types';
-import { ATTRIBUTES_LIST, REMINDER_OPTIONS } from '@/lib/types';
+import { ATTRIBUTES_LIST, REMINDER_OPTIONS, INITIAL_USER_PROFILE } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
@@ -348,22 +348,32 @@ export default function HomePage() {
   const [isEditingQuote, setIsEditingQuote] = useState(false);
   const [editingQuote, setEditingQuote] = useState(userProfile.customQuote || "");
 
+  const [hasMounted, setHasMounted] = useState(false);
+
   const { toast } = useToast();
   const userImageInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const quoteInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
     setActiveTab('home');
   }, [setActiveTab]);
 
   useEffect(() => {
-    setEditingName(userProfile.userName || "");
-  }, [userProfile.userName]);
+    if (hasMounted) {
+      setEditingName(userProfile.userName || "");
+    }
+  }, [userProfile.userName, hasMounted]);
 
   useEffect(() => {
-    setEditingQuote(userProfile.customQuote || "");
-  }, [userProfile.customQuote]);
+    if (hasMounted) {
+      setEditingQuote(userProfile.customQuote || "");
+    }
+  }, [userProfile.customQuote, hasMounted]);
   
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
@@ -569,7 +579,10 @@ export default function HomePage() {
                 className="text-2xl font-headline text-accent mb-1 p-1 cursor-pointer hover:bg-muted/30 rounded-md transition-colors min-h-[36px] uppercase"
                 title="Double-click to edit name"
               >
-                {((userProfile.userName || "").trim().toUpperCase()) || "NAME"}
+                {hasMounted
+                  ? (((userProfile.userName || "").trim().toUpperCase()) || "NAME")
+                  : (((INITIAL_USER_PROFILE.userName || "").trim().toUpperCase()) || "NAME")
+                }
               </h2>
             )}
             <div className="h-0.5 w-2/3 my-2 bg-accent" />
@@ -594,7 +607,10 @@ export default function HomePage() {
                 className="text-muted-foreground mt-1 text-xs font-code italic cursor-pointer hover:bg-muted/30 rounded-md p-1 transition-colors min-h-[20px]"
                 title="Double-click to edit quote"
               >
-                {((userProfile.customQuote || "").trim()) || "No quote set. Double-click to add one."}
+                {hasMounted
+                  ? (((userProfile.customQuote || "").trim()) || "No quote set. Double-click to add one.")
+                  : (((INITIAL_USER_PROFILE.customQuote || "").trim()) || "No quote set. Double-click to add one.")
+                }
               </CardDescription>
             )}
 
