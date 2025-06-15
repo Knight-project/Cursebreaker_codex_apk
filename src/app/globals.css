@@ -258,46 +258,85 @@
   height: 100%;
   border-radius: 50%;
   border: 3px solid transparent;
-  animation: loading-rotate 2s linear infinite;
+  /* Base rotation is now part of the specific ring animations */
 }
 
-.loading-ring:nth-child(1) {
+@keyframes loading-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes ring-glow-pulse-primary {
+  0%, 100% { box-shadow: 0 0 4px 0px hsla(var(--primary), 0.6), 0 0 8px 0px hsla(var(--primary), 0.4); }
+  50% { box-shadow: 0 0 10px 2px hsla(var(--primary), 0.9), 0 0 20px 2px hsla(var(--primary), 0.6); }
+}
+@keyframes ring-glow-pulse-accent {
+  0%, 100% { box-shadow: 0 0 4px 0px hsla(var(--accent), 0.6), 0 0 8px 0px hsla(var(--accent), 0.4); }
+  50% { box-shadow: 0 0 10px 2px hsla(var(--accent), 0.9), 0 0 20px 2px hsla(var(--accent), 0.6); }
+}
+@keyframes ring-glow-pulse-chart3 { /* Using chart-3 for the third ring */
+   0%, 100% { box-shadow: 0 0 4px 0px hsla(var(--chart-3), 0.6), 0 0 8px 0px hsla(var(--chart-3), 0.4); }
+   50% { box-shadow: 0 0 10px 2px hsla(var(--chart-3), 0.9), 0 0 20px 2px hsla(var(--chart-3), 0.6); }
+}
+
+.loading-ring-1 { /* Was :nth-child(1) */
   border-top-color: hsl(var(--primary));
-  animation-delay: -0.5s;
+  animation:
+    loading-rotate 2s linear -0.5s infinite,
+    ring-glow-pulse-primary 1.8s ease-in-out -0.5s infinite alternate;
 }
 
-.loading-ring:nth-child(2) {
+.loading-ring-2 { /* Was :nth-child(2) */
   border-right-color: hsl(var(--accent));
-  animation-delay: -1s;
   transform: rotate(120deg);
+  animation:
+    loading-rotate 2s linear -1s infinite,
+    ring-glow-pulse-accent 1.8s ease-in-out -0.75s infinite alternate;
 }
 
-.loading-ring:nth-child(3) {
-  border-bottom-color: hsl(var(--primary));
-  animation-delay: -1.5s;
+.loading-ring-3 { /* Was :nth-child(3) */
+  border-bottom-color: hsl(var(--chart-3)); /* Changed color for variety */
   transform: rotate(240deg);
+  animation:
+    loading-rotate 2s linear -1.5s infinite,
+    ring-glow-pulse-chart3 1.8s ease-in-out -1s infinite alternate;
 }
+
 
 .loading-logo {
   width: 80px;
   height: 80px;
-  animation: loading-logo-pulse 1.5s infinite ease-in-out;
+  /* Base pulse for the whole logo group if needed, or rely on individual part animations */
 }
 
-.pulse-accent {
-  animation: pulse-accent-kf 1.5s infinite ease-in-out alternate;
+#loading-logo-outer-ring {
+  transform-origin: 50% 50%;
+  animation: logo-outer-ring-breath 2.2s ease-in-out infinite;
+}
+@keyframes logo-outer-ring-breath {
+  0%, 100% { r: 29; stroke-width: 2.5; filter: drop-shadow(0 0 1px hsl(var(--primary))); }
+  50% { r: 31; stroke-width: 3.5; filter: drop-shadow(0 0 5px hsl(var(--primary))); }
 }
 
-@keyframes loading-rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+#loading-logo-crosshairs {
+  animation: logo-crosshairs-pulse 1.8s ease-in-out infinite alternate;
+}
+@keyframes logo-crosshairs-pulse {
+  from { opacity: 0.4; stroke-width: 1.5; }
+  to { opacity: 1; stroke-width: 2.5; }
 }
 
-@keyframes loading-logo-pulse {
+.pulse-accent { /* This is the inner-most circle */
+  animation: pulse-accent-kf 1.2s infinite ease-in-out;
+}
+@keyframes pulse-accent-kf {
+  0% { fill-opacity: 0.5; r: 7; filter: brightness(0.7) saturate(0.7); }
+  50% { fill-opacity: 1; r: 11; filter: brightness(1.3) saturate(1.3) drop-shadow(0 0 4px hsl(var(--accent))); }
+  100% { fill-opacity: 0.5; r: 7; filter: brightness(0.7) saturate(0.7); }
+}
+
+
+@keyframes loading-logo-pulse { /* Fallback or general pulse if needed, currently overridden by specific part animations */
   0%, 100% {
     transform: scale(0.95);
     opacity: 0.8;
@@ -306,9 +345,4 @@
     transform: scale(1.05);
     opacity: 1;
   }
-}
-
-@keyframes pulse-accent-kf {
-  from { fill-opacity: 0.7; r: 9; }
-  to { fill-opacity: 1; r: 11; }
 }
