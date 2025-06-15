@@ -102,7 +102,7 @@ const TargetForm: React.FC<TargetFormProps> = ({ initialData, onSave, onClose })
           </PopoverContent>
         </Popover>
       </div>
-      <DialogFooter className="pt-3">
+      <DialogFooter className="pt-3 space-y-2 sm:space-y-0">
         <DialogClose asChild>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </DialogClose>
@@ -192,7 +192,7 @@ const TargetItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) =>
           <Progress value={progress} className="h-2 bg-secondary" indicatorClassName="bg-primary" />
         </div>
       </CardContent>
-      <CardFooter className="flex flex-wrap gap-2 justify-end">
+      <CardFooter className="flex flex-row flex-nowrap items-center justify-end gap-2">
         {goal.status === 'active' && (
           <Button
             variant="outline"
@@ -200,7 +200,7 @@ const TargetItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) =>
             className="border-green-500 text-green-500 hover:bg-green-500 hover:text-primary-foreground"
             onClick={() => {toggleGoalStatus(goal.id, 'completed'); playSound('buttonClick');}}
           >
-            <CheckCircle className="mr-2 h-4 w-4" /> Mark Complete
+            <CheckCircle className="mr-2 h-4 w-4" /> Complete
           </Button>
         )}
         {goal.status === 'active' && (
@@ -226,6 +226,7 @@ const TargetItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) =>
         <Button
           variant="destructive"
           size="sm"
+          aria-label="Delete Target"
           onClick={() => {
             if(window.confirm(`Are you sure you want to delete the target "${goal.name}"? This cannot be undone.`)) {
               deleteGoal(goal.id);
@@ -234,7 +235,7 @@ const TargetItem: React.FC<{ goal: Goal; tasks: Task[] }> = ({ goal, tasks }) =>
             }
           }}
         >
-          <Trash2 className="mr-2 h-4 w-4" /> Delete
+          <Trash2 className="h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>
@@ -336,3 +337,4 @@ export default function GoalsPage() {
     </AppWrapper>
   );
 }
+
