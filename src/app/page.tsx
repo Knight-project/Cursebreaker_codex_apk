@@ -538,9 +538,18 @@ export default function HomePage() {
           <CardHeader className="items-center text-center flex flex-col p-4">
              <div className="avatar-arc-container mb-3 w-[120px] h-[120px]">
                 <div onClick={handleUserAvatarClick} className="cursor-pointer relative group w-[100px] h-[100px] border-2 border-primary p-0.5 rounded-full overflow-hidden">
-                    {userProfile.avatarUrl ? (
+                    {hasMounted && userProfile.avatarUrl ? (
                     <Image
                         src={userProfile.avatarUrl}
+                        alt="Your Avatar"
+                        width={100}
+                        height={100}
+                        className="object-cover w-full h-full rounded-full"
+                        data-ai-hint="user avatar"
+                    />
+                    ) : !hasMounted && INITIAL_USER_PROFILE.avatarUrl ? (
+                     <Image
+                        src={INITIAL_USER_PROFILE.avatarUrl}
                         alt="Your Avatar"
                         width={100}
                         height={100}
@@ -587,7 +596,10 @@ export default function HomePage() {
             )}
             <div className="h-0.5 w-2/3 my-2 bg-accent" />
             <CardTitle className="font-headline text-xl text-primary uppercase tracking-wider">
-              <RankDisplay rankName={userProfile.rankName} subRank={userProfile.subRank} />
+              <RankDisplay 
+                rankName={hasMounted ? userProfile.rankName : INITIAL_USER_PROFILE.rankName} 
+                subRank={hasMounted ? userProfile.subRank : INITIAL_USER_PROFILE.subRank} 
+              />
             </CardTitle>
 
             {isEditingQuote ? (
@@ -625,13 +637,22 @@ export default function HomePage() {
             <div>
               <div className="flex justify-between text-xs mb-1 font-code">
                 <span className="text-foreground uppercase">EXP</span>
-                <span className="text-primary">{userProfile.currentExpInSubRank} / {userProfile.expToNextSubRank}</span>
+                <span className="text-primary">
+                  {hasMounted ? userProfile.currentExpInSubRank : INITIAL_USER_PROFILE.currentExpInSubRank} / {hasMounted ? userProfile.expToNextSubRank : INITIAL_USER_PROFILE.expToNextSubRank}
+                </span>
               </div>
-              <Progress value={(userProfile.expToNextSubRank > 0 ? userProfile.currentExpInSubRank / userProfile.expToNextSubRank : 0) * 100} className="h-2 bg-secondary" indicatorClassName="bg-primary" />
+              <Progress 
+                value={
+                  hasMounted 
+                  ? (userProfile.expToNextSubRank > 0 ? userProfile.currentExpInSubRank / userProfile.expToNextSubRank : 0) * 100 
+                  : (INITIAL_USER_PROFILE.expToNextSubRank > 0 ? INITIAL_USER_PROFILE.currentExpInSubRank / INITIAL_USER_PROFILE.expToNextSubRank : 0) * 100
+                } 
+                className="h-2 bg-secondary" indicatorClassName="bg-primary" 
+              />
             </div>
             <div className="flex justify-between text-xs font-code">
-              <span className="text-foreground uppercase">Streak: <span className="text-primary font-bold">{userProfile.currentStreak}</span></span>
-              <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{userProfile.dailyTaskCompletionPercentage.toFixed(1)}%</span></span>
+              <span className="text-foreground uppercase">Streak: <span className="text-primary font-bold">{hasMounted ? userProfile.currentStreak : INITIAL_USER_PROFILE.currentStreak}</span></span>
+              <span className="text-foreground uppercase">Completion: <span className="text-primary font-bold">{(hasMounted ? userProfile.dailyTaskCompletionPercentage : INITIAL_USER_PROFILE.dailyTaskCompletionPercentage).toFixed(1)}%</span></span>
             </div>
           </CardContent>
         </Card>

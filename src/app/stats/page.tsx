@@ -5,9 +5,9 @@
 import AppWrapper from '@/components/layout/AppWrapper';
 import { Card, CardContent } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { UserStat, Attribute } from '@/lib/types';
-import { ATTRIBUTES_LIST } from '@/lib/types';
+import { ATTRIBUTES_LIST, INITIAL_USER_PROFILE, DEFAULT_USER_STAT } from '@/lib/types';
 import { BarChart, Brain, Zap, Shield, Palette, Smile, TrendingUp } from 'lucide-react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -60,10 +60,17 @@ const AttributeBar = ({ value, maxValue, colorClass = 'bg-primary' }: { value: n
 
 export default function StatsPage() {
   const { userProfile, setActiveTab, appSettings } = useApp();
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     setActiveTab('stats');
   }, [setActiveTab]);
+
+  const currentProfile = hasMounted ? userProfile : INITIAL_USER_PROFILE;
 
   const {
     userName,
@@ -75,7 +82,7 @@ export default function StatsPage() {
     dailyTaskCompletionPercentage,
     stats,
     customQuote,
-  } = userProfile;
+  } = currentProfile;
 
   const attributeDisplayOrder: Attribute[] = ["Strength", "Intelligence", "Endurance", "Creativity", "Charisma"];
 
@@ -166,7 +173,7 @@ export default function StatsPage() {
             <h3 className="text-xs text-center text-muted-foreground uppercase mb-2 tracking-widest">FIELD ASSESSMENT // CORE ATTRIBUTES</h3>
             <div className="space-y-2.5">
               {attributeDisplayOrder.map(attrKey => {
-                const stat = stats[attrKey.toLowerCase() as keyof typeof stats];
+                const stat = stats[attrKey.toLowerCase() as keyof typeof stats] || DEFAULT_USER_STAT;
                 if (!stat) return null;
                 const Icon = attributeIcons[attrKey as typeof ATTRIBUTES_LIST[number]] || Zap;
 
@@ -200,4 +207,3 @@ export default function StatsPage() {
     </AppWrapper>
   );
 }
-
