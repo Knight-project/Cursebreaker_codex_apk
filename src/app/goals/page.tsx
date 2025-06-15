@@ -102,7 +102,7 @@ const TargetForm: React.FC<TargetFormProps> = ({ initialData, onSave, onClose })
           </PopoverContent>
         </Popover>
       </div>
-      <DialogFooter className="pt-3 space-y-2 sm:space-y-0">
+      <DialogFooter className="pt-3 space-y-3 sm:space-y-0">
         <DialogClose asChild>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </DialogClose>
