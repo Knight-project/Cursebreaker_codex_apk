@@ -1,3 +1,4 @@
+
 // src/app/settings/page.tsx
 'use client';
 
@@ -25,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { INITIAL_APP_SETTINGS } from '@/lib/types';
 
 export default function SettingsPage() {
   const { 
@@ -40,18 +42,27 @@ export default function SettingsPage() {
   const [currentCustomQuote, setCurrentCustomQuote] = useState(userProfile.customQuote);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     setActiveTab('settings');
   }, [setActiveTab]);
 
   useEffect(() => {
-    setCurrentUserName(userProfile.userName);
-  }, [userProfile.userName]);
+    if (hasMounted) {
+      setCurrentUserName(userProfile.userName);
+    }
+  }, [userProfile.userName, hasMounted]);
 
   useEffect(() => {
-    setCurrentCustomQuote(userProfile.customQuote);
-  }, [userProfile.customQuote]);
+    if (hasMounted) {
+      setCurrentCustomQuote(userProfile.customQuote);
+    }
+  }, [userProfile.customQuote, hasMounted]);
 
 
   const handleSettingsChange = (key: keyof typeof appSettings, value: any) => {
@@ -163,7 +174,7 @@ export default function SettingsPage() {
               <Input
                 id="userNameInput"
                 type="text"
-                value={currentUserName}
+                value={hasMounted ? currentUserName : INITIAL_USER_PROFILE.userName}
                 onChange={handleUserNameChange}
                 onBlur={handleUserNameBlur}
                 placeholder="Enter your codename"
@@ -178,7 +189,7 @@ export default function SettingsPage() {
               <Input
                 id="customQuoteInput"
                 type="text"
-                value={currentCustomQuote}
+                value={hasMounted ? currentCustomQuote : INITIAL_USER_PROFILE.customQuote}
                 onChange={handleCustomQuoteChange}
                 onBlur={handleCustomQuoteBlur}
                 placeholder="Enter your guiding principle"
@@ -201,7 +212,7 @@ export default function SettingsPage() {
               <Label htmlFor="enableAnimations" className="text-lg font-medium">Enable Animations</Label>
               <Switch
                 id="enableAnimations"
-                checked={appSettings.enableAnimations}
+                checked={hasMounted ? appSettings.enableAnimations : INITIAL_APP_SETTINGS.enableAnimations}
                 onCheckedChange={(checked) => handleSettingsChange('enableAnimations', checked)}
                 aria-label="Toggle animations"
               />
@@ -211,7 +222,7 @@ export default function SettingsPage() {
               <Label htmlFor="enableSoundEffects" className="text-lg font-medium">Enable Sound Effects</Label>
               <Switch
                 id="enableSoundEffects"
-                checked={appSettings.enableSoundEffects}
+                checked={hasMounted ? appSettings.enableSoundEffects : INITIAL_APP_SETTINGS.enableSoundEffects}
                 onCheckedChange={(checked) => handleSettingsChange('enableSoundEffects', checked)}
                 aria-label="Toggle sound effects"
               />
@@ -220,7 +231,7 @@ export default function SettingsPage() {
             <div className="p-4 rounded-md border bg-background/30 space-y-2">
               <Label htmlFor="rivalName" className="text-lg font-medium">Rival Name</Label>
               <Select
-                value={rival.name}
+                value={hasMounted ? rival.name : INITIAL_APP_SETTINGS.rivalName || RIVAL_NAMES_POOL[0]}
                 onValueChange={handleRivalNameChange}
               >
                 <SelectTrigger id="rivalName" className="w-full bg-input/50 focus:bg-input">
@@ -238,7 +249,7 @@ export default function SettingsPage() {
             <div className="p-4 rounded-md border bg-background/30 space-y-2">
               <Label htmlFor="rivalDifficulty" className="text-lg font-medium">Rival Difficulty</Label>
               <Select
-                value={appSettings.rivalDifficulty}
+                value={hasMounted ? appSettings.rivalDifficulty : INITIAL_APP_SETTINGS.rivalDifficulty}
                 onValueChange={(value) => handleSettingsChange('rivalDifficulty', value as "Easy" | "Normal" | "Hard")}
               >
                 <SelectTrigger id="rivalDifficulty" className="w-full bg-input/50 focus:bg-input">
@@ -257,7 +268,7 @@ export default function SettingsPage() {
               <Label htmlFor="autoAssignStatExp" className="text-lg font-medium">Auto-Assign Stat XP</Label>
               <Switch
                 id="autoAssignStatExp"
-                checked={appSettings.autoAssignStatExp}
+                checked={hasMounted ? appSettings.autoAssignStatExp : INITIAL_APP_SETTINGS.autoAssignStatExp}
                 onCheckedChange={(checked) => handleSettingsChange('autoAssignStatExp', checked)}
                 aria-label="Toggle automatic stat experience assignment"
               />
@@ -287,7 +298,7 @@ export default function SettingsPage() {
                    <Button 
                      variant="outline" 
                      className="w-full sm:w-auto border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                     onClick={() => fileInputRef.current?.click()} 
+                     onClick={() => { playSound('buttonClick'); fileInputRef.current?.click();}}
                     >
                     <Upload className="mr-2 h-5 w-5" /> Import Data
                   </Button>
@@ -332,3 +343,4 @@ export default function SettingsPage() {
     </AppWrapper>
   );
 }
+

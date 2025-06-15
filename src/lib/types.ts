@@ -1,3 +1,4 @@
+
 import type { format } from 'date-fns';
 
 export type Attribute = "Strength" | "Intelligence" | "Endurance" | "Creativity" | "Charisma" | "None";
@@ -80,6 +81,7 @@ export interface AppSettings {
   rivalDifficulty: "Easy" | "Normal" | "Hard";
   autoAssignStatExp: boolean;
   enableSoundEffects: boolean; 
+  rivalName?: string; // Added for INITIAL_APP_SETTINGS consistency
 }
 
 export interface PomodoroSettings {
@@ -211,6 +213,7 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
   rivalDifficulty: "Normal",
   autoAssignStatExp: true,
   enableSoundEffects: true, 
+  rivalName: "Kairos", // Default rival name added here
 };
 
 export const INITIAL_INTERVAL_TIMER_SETTINGS: IntervalTimerSetting[] = [];
